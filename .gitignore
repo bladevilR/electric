@@ -1,0 +1,57 @@
+# OS / editor / local tool state
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.omc/
+
+# Dependency/build output
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+*.log
+
+# Raw business files and large binary references
+*.xlsx
+*.xls
+*.xlsm
+*.pdf
+*.ppt
+*.pptx
+*.doc
+*.docx
+*.m4a
+*.mp3
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Extracted/generated working assets
+.ppt_extract/
+work_crops/
+task_list_pretty.docx
+
+# Local conversations, dumps, and third-party platform bundles
+1.txt
+/*.txt
+/*.html
+*.har
+__jspec_app.js
+对话.txt
+企业转型与能源服务.txt
+
+# JSPEC capture outputs and cloned browser profiles may contain business data.
+jspec-capture/output/
+jspec-capture/work/
+
+# Trading system generated local data/previews
+trading-ai-system/data/*.js
+trading-ai-system/preview*.png
+
+# Keep empty data directory available for local generated files.
+!trading-ai-system/data/.gitkeep

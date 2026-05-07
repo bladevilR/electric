@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>苏州地铁电力交易 AI 辅助策略系统</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div>
+          <strong>苏州地铁</strong>
+          <span>电力交易AI辅助策略系统</span>
+        </div>
+      </div>
+
+      <nav class="side-nav" id="sideNav"></nav>
+
+      <section class="side-card">
+        <span>当前决策窗口</span>
+        <strong>D-1 日前申报</strong>
+        <p>已接入 JSPEC 96 点申报、出清与实时均价数据。</p>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">
+          <span>首页</span>
+          <strong id="moduleCrumb">运营报告</strong>
+        </div>
+        <div class="top-actions">
+          <label class="select-like">
+            交易日
+            <select id="dateSelect"></select>
+          </label>
+          <button class="ghost-button" id="refreshButton">刷新本地数据</button>
+          <button class="primary-button">生成策略报告</button>
+        </div>
+      </header>
+
+      <section class="workspace" id="workspace"></section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
