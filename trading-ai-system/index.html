@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>苏州地铁电力交易 AI 辅助策略系统</title>
+  <title>电力交易 AI 助手</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -12,33 +12,33 @@
       <div class="brand">
         <div class="brand-mark">AI</div>
         <div>
-          <strong>苏州地铁</strong>
-          <span>电力交易AI辅助策略系统</span>
+          <strong>电力交易</strong>
+          <span>AI 辅助助手</span>
         </div>
       </div>
 
       <nav class="side-nav" id="sideNav"></nav>
 
       <section class="side-card">
-        <span>当前决策窗口</span>
-        <strong>D-1 日前申报</strong>
-        <p>已接入 JSPEC 96 点申报、出清与实时均价数据。</p>
+        <span>本地试用版</span>
+        <strong>先看数据，再看建议</strong>
+        <p>只做辅助判断，不会自动提交交易。实时数据需要用户自己插 UKey 登录后采集。</p>
       </section>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div class="crumb">
-          <span>首页</span>
-          <strong id="moduleCrumb">运营报告</strong>
+          <span>当前位置</span>
+          <strong id="moduleCrumb">今日概览</strong>
         </div>
         <div class="top-actions">
           <label class="select-like">
             交易日
             <select id="dateSelect"></select>
           </label>
-          <button class="ghost-button" id="refreshButton">刷新本地数据</button>
-          <button class="primary-button">生成策略报告</button>
+          <button class="ghost-button" id="refreshButton">刷新数据</button>
+          <button class="primary-button" id="reportButton">生成建议报告</button>
         </div>
       </header>
 

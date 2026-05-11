@@ -2,11 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
 async function startServer() {
-  const port = 6200 + Math.floor(Math.random() * 1000);
-  const server = spawn(process.execPath, ['server.mjs', '--port', String(port)], {
+  const port = 7200 + Math.floor(Math.random() * 1000);
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-server-'));
+  const auditPath = path.join(temp, 'audit-log.ndjson');
+  const server = spawn(process.execPath, ['server.mjs', '--port', String(port), '--audit', auditPath], {
     cwd: new URL('..', import.meta.url),
+    env: { ...process.env, JSPEC_MANAGED_BROWSER_DISABLED: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -32,6 +38,7 @@ async function startServer() {
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
+      await rm(temp, { recursive: true, force: true });
     },
   };
 }
@@ -40,19 +47,83 @@ test('local server exposes the P0 system loop', async () => {
   const server = await startServer();
 
   try {
-    const [home, health, summary, strategy] = await Promise.all([
+    const [
+      home,
+      appScript,
+      health,
+      summary,
+      strategy,
+      strategyReport,
+      strategyReportMarkdown,
+      integrations,
+      integrationsMarkdown,
+      productionReadiness,
+      businessInputs,
+      ukeyAssistant,
+      modelRuntime,
+      refresh,
+    ] = await Promise.all([
       fetch(`${server.baseUrl}/`).then((response) => response.text()),
+      fetch(`${server.baseUrl}/app.js`).then((response) => response.text()),
       fetch(`${server.baseUrl}/api/health`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/summary`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/strategy?date=2026-05-07`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/strategy-report?date=2026-05-07`, { method: 'POST' }).then(
+        (response) => response.json()
+      ),
+      fetch(`${server.baseUrl}/api/strategy-report.md?date=2026-05-07`).then((response) =>
+        response.text()
+      ),
+      fetch(`${server.baseUrl}/api/integrations`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/integrations.md`).then((response) => response.text()),
+      fetch(`${server.baseUrl}/api/production/readiness`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/business-inputs`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/ukey-assistant`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/ai/model`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/refresh`, { method: 'POST' }).then((response) =>
+        response.json()
+      ),
     ]);
 
-    assert.match(home, /苏州地铁电力交易 AI 辅助策略系统/);
+    assert.match(home, /电力交易 AI 助手/);
     assert.match(home, /<script src="\.\/app\.js"><\/script>/);
+    assert.match(home, /id="reportButton"/);
     assert.doesNotMatch(home, /data\/standard-96\.js/);
+    assert.match(appScript, /dataQuality/);
+    assert.match(appScript, /数据准备情况/);
+    assert.match(appScript, /业务数据是否到位/);
+    assert.match(appScript, /当前交易日点位/);
+    assert.match(appScript, /\/api\/integrations/);
+    assert.match(appScript, /integrationClosure/);
+    assert.match(appScript, /\/api\/strategy/);
+    assert.match(appScript, /strategySuggestions/);
+    assert.match(appScript, /AI策略建议/);
+    assert.match(appScript, /blockingReasons/);
+    assert.match(appScript, /不会自动提交/);
+    assert.match(appScript, /\/api\/strategy-report/);
+    assert.match(appScript, /\/api\/production\/readiness/);
+    assert.match(appScript, /\/api\/execution\/proposal/);
+    assert.match(appScript, /\/api\/execution\/review/);
+    assert.match(appScript, /\/api\/audit/);
+    assert.match(appScript, /\/api\/business-inputs/);
+    assert.match(appScript, /\/api\/ukey-assistant/);
+    assert.match(appScript, /\/api\/ukey-assistant\/browser\/start/);
+    assert.match(appScript, /\/api\/ukey-assistant\/collector\/sample/);
+    assert.match(appScript, /ukeyStartBrowserButton/);
+    assert.match(appScript, /ukeySampleButton/);
+    assert.match(appScript, /renderUkeyAssistant/);
+    assert.match(appScript, /data-review-decision/);
+    assert.match(appScript, /strategyReport/);
+    assert.match(appScript, /productionReadiness/);
+    assert.match(appScript, /businessInputs/);
+    assert.match(appScript, /报告已生成/);
+    assert.doesNotMatch(appScript, /待接入/);
+    assert.doesNotMatch(appScript, /72,783|218 ~ 728|协鑫能科|GCL-ET|10:30-14:30|17:30-20:30|21:00-22:00|\+2\.8 万kWh|\+1\.2 ~ \+2\.6|2026-03/);
 
     assert.equal(health.ok, true);
     assert.equal(health.name, 'trading-ai-system');
+    assert.equal(health.modelRuntime.provider, 'openai_compatible');
+    assert.equal(health.modelRuntime.configured, false);
 
     assert.equal(summary.rowCount, 192);
     assert.equal(summary.p0SourceCoverage.present, 8);
@@ -60,9 +131,122 @@ test('local server exposes the P0 system loop', async () => {
     assert.ok(summary.gapCount >= 1);
 
     assert.ok(Array.isArray(strategy.suggestions));
+    assert.equal(strategy.modelRuntime.provider, 'openai_compatible');
+    assert.equal(strategy.modelPrediction.status, 'disabled');
+    assert.equal(strategy.advice.status, 'observation_ready');
+    assert.equal(strategy.advice.executionBoundary.executable, false);
+    assert.equal(strategy.advice.realtimePrice.required, true);
+    assert.equal(strategy.advice.realtimePrice.status, 'available_snapshot');
     assert.ok(strategy.suggestions.some((item) => item.type === 'low_price'));
     assert.ok(strategy.suggestions.some((item) => item.type === 'high_price_risk'));
     assert.ok(strategy.suggestions.some((item) => item.type === 'data_gap'));
+    assert.ok(strategy.suggestions.every((item) => item.executable === false));
+    assert.ok(strategy.suggestions.every((item) => item.requiredData.length > 0));
+    assert.ok(strategy.suggestions.every((item) => item.blockingReasons.length > 0));
+    assert.doesNotMatch(JSON.stringify(strategy), /待接入/);
+
+    assert.equal(strategyReport.title, '苏州地铁电力交易 AI 辅助策略报告');
+    assert.equal(strategyReport.status, 'trial_only');
+    assert.equal(strategyReport.statusText, '可试算，不可执行');
+    assert.ok(strategyReport.closureItems.some((item) => item.id === 'actual_load_96'));
+    assert.ok(strategyReport.blockingReasons.some((item) => item.includes('日结算')));
+    assert.doesNotMatch(JSON.stringify(strategyReport), /待接入/);
+
+    assert.match(strategyReportMarkdown, /^# 苏州地铁电力交易 AI 辅助策略报告/);
+    assert.match(strategyReportMarkdown, /状态：可试算，不可执行/);
+    assert.match(strategyReportMarkdown, /闭环清单/);
+    assert.doesNotMatch(strategyReportMarkdown, /待接入/);
+
+    assert.equal(integrations.completion.accounted, integrations.completion.total);
+    assert.ok(integrations.items.some((item) => item.id === 'trade_ledger' && item.status === 'closed'));
+    assert.ok(integrations.items.some((item) => item.id === 'actual_load_96' && item.status === 'source_empty'));
+    assert.doesNotMatch(JSON.stringify(integrations), /待接入/);
+
+    assert.match(integrationsMarkdown, /^# \u6570\u636e\u95ed\u73af\u53f0\u8d26/);
+    assert.match(integrationsMarkdown, /\u95ed\u73af\u5b8c\u6210\u5ea6\uff1a8\/8/);
+    assert.match(integrationsMarkdown, /\u6e90\u8fd4\u56de\u7a7a/);
+    assert.doesNotMatch(integrationsMarkdown, /\u5f85\u63a5\u5165/);
+
+    assert.equal(productionReadiness.status, 'decision_support_ready');
+    assert.equal(productionReadiness.capabilities.autoSubmit, false);
+    assert.equal(productionReadiness.blockers.some((item) => item.id === 'ca_ukey'), false);
+    assert.ok(productionReadiness.warnings.some((item) => item.id === 'source_empty_data'));
+    assert.doesNotMatch(JSON.stringify(productionReadiness), /寰呮帴鍏?/);
+    assert.equal(businessInputs.summary.readyForDraftPrefill, false);
+    assert.ok(businessInputs.templates.forecastLoad96.endsWith('forecast-load-96.csv'));
+    assert.equal(ukeyAssistant.mode, 'local_integrated_ukey_assistant');
+    assert.equal(ukeyAssistant.capabilities.serverReadsCredential, false);
+    assert.ok(ukeyAssistant.prohibitedActions.includes('read_cookie'));
+    assert.equal(ukeyAssistant.browserWindow.debugAddress, '127.0.0.1');
+    assert.equal(ukeyAssistant.browserWindow.profileDir.endsWith('.browser\\jspec-managed-profile') || ukeyAssistant.browserWindow.profileDir.endsWith('.browser/jspec-managed-profile'), true);
+    assert.equal(ukeyAssistant.collector.intervalSeconds, 30);
+    assert.equal(ukeyAssistant.collector.state, 'stopped');
+    assert.equal(modelRuntime.provider, 'openai_compatible');
+    assert.equal(modelRuntime.configured, false);
+    assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
+
+    const browserStart = await fetch(`${server.baseUrl}/api/ukey-assistant/browser/start`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(typeof browserStart.ok, 'boolean');
+    assert.ok(browserStart.browserWindow);
+
+    const collectorSample = await fetch(`${server.baseUrl}/api/ukey-assistant/collector/sample`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(typeof collectorSample.ok, 'boolean');
+    assert.ok(collectorSample.collector);
+
+    const collectorStart = await fetch(`${server.baseUrl}/api/ukey-assistant/collector/start`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(typeof collectorStart.ok, 'boolean');
+    assert.ok(collectorStart.collector);
+
+    const collectorStop = await fetch(`${server.baseUrl}/api/ukey-assistant/collector/stop`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(collectorStop.ok, true);
+    assert.equal(collectorStop.collector.state, 'stopped');
+
+    const browserStop = await fetch(`${server.baseUrl}/api/ukey-assistant/browser/stop`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(browserStop.ok, true);
+    assert.ok(browserStop.browserWindow);
+
+    assert.equal(refresh.ok, true);
+    assert.equal(refresh.integrationClosure.completion.accounted, refresh.integrationClosure.completion.total);
+    assert.ok(refresh.integrationSummary.generatedAt);
+
+    const executionProposal = await fetch(
+      `${server.baseUrl}/api/execution/proposal?date=2026-05-07`,
+      { method: 'POST', headers: { 'x-operator-id': 'contract-test' } }
+    ).then((response) => response.json());
+    const audit = await fetch(`${server.baseUrl}/api/audit?limit=20`).then((response) =>
+      response.json()
+    );
+
+    assert.equal(executionProposal.status, 'draft_ready');
+    assert.equal(executionProposal.autoSubmit, false);
+    assert.equal(executionProposal.humanDecisionRequired, true);
+    assert.deepEqual(executionProposal.orderLines, []);
+    assert.ok(executionProposal.proposalLines.length > 0);
+    assert.ok(executionProposal.proposalLines.every((item) => item.editable));
+    assert.equal(executionProposal.blockers.some((item) => item.includes('CA/UKey')), false);
+
+    const review = await fetch(
+      `${server.baseUrl}/api/execution/review?proposalId=${executionProposal.proposalLines[0].id}&date=2026-05-07&decision=accepted&note=manual`,
+      { method: 'POST', headers: { 'x-reviewer-id': 'reviewer-test' } }
+    ).then((response) => response.json());
+    assert.ok(audit.events.some((item) => item.type === 'execution_proposal_created'));
+    assert.equal(review.decision, 'accepted');
+    assert.equal(review.autoSubmit, false);
+
+    const auditAfterReview = await fetch(`${server.baseUrl}/api/audit?limit=20`).then((response) =>
+      response.json()
+    );
+    assert.ok(auditAfterReview.events.some((item) => item.type === 'proposal_review_recorded'));
   } finally {
     await server.close();
   }

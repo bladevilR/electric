@@ -21,25 +21,71 @@ function normalizeDataset(dataset) {
 
 let rawData = normalizeDataset(window.TRADING_SYSTEM_DATA || emptyDataset());
 
+const sourceCatalog = [
+  { id: 'user_bid_96', label: '主动申报 96 点' },
+  { id: 'user_default_bid_96', label: '默认申报 96 点' },
+  { id: 'dayahead_user_clearing', label: '日前用户侧价格' },
+  { id: 'dayahead_public_clearing', label: '日前市场价格' },
+  { id: 'realtime_public_clearing', label: '实时市场价格' },
+  { id: 'realtime_average_price', label: '实时均价' },
+  { id: 'actual_load_96', label: '实际负荷 96 点' },
+  { id: 'settle_day', label: '日结算结果' },
+];
+
+const importantFields = [
+  { id: 'realTimeAvgPrice', label: '实时均价' },
+  { id: 'dayAheadPublicPrice', label: '日前市场价' },
+  { id: 'dayAheadUserPrice', label: '日前用户价' },
+  { id: 'defaultDeclarationPower', label: '默认申报' },
+  { id: 'declarationPower', label: '主动申报' },
+  { id: 'actualKwh', label: '实际负荷' },
+  { id: 'settleAmount', label: '结算金额' },
+];
+
 const modules = [
-  { id: 'report', group: 'AI智能运营', label: '运营报告', icon: '报' },
-  { id: 'revenue', group: 'AI智能运营', label: '收益明细', icon: '益' },
-  { id: 'operator', group: 'AI智能运营', label: '运营商管理', icon: '商' },
-  { id: 'settlement', group: 'AI智能运营', label: '自动结算', icon: '结' },
-  { id: 'review', group: 'AI智能运营', label: '复盘对标', icon: '复' },
-  { id: 'publicData', group: '数据中心', label: '公共数据', icon: '公' },
-  { id: 'privateData', group: '数据中心', label: '私有数据', icon: '私' },
-  { id: 'strategy', group: '策略中心', label: 'AI策略工作台', icon: 'AI' },
+  { id: 'report', group: '总览', label: '今日概览', icon: '总' },
+  { id: 'revenue', group: '总览', label: '收益情况', icon: '收' },
+  { id: 'operator', group: '总览', label: '主体信息', icon: '主' },
+  { id: 'settlement', group: '总览', label: '结算复盘', icon: '结' },
+  { id: 'review', group: '总览', label: '复盘看板', icon: '复' },
+  { id: 'publicData', group: '数据', label: '市场数据', icon: '市' },
+  { id: 'privateData', group: '数据', label: '我的数据', icon: '私' },
+  { id: 'dataQuality', group: '数据', label: '数据准备情况', icon: '数' },
+  { id: 'ukey', group: '实时', label: '实时数据助手', icon: '实' },
+  { id: 'strategy', group: '策略', label: 'AI策略建议', icon: 'AI' },
+  { id: 'production', group: '策略', label: '交易草稿复核', icon: '稿' },
 ];
 
 let state = {
   moduleId: 'report',
   date: rawData.quality?.dates?.[0] || '',
   loadError: '',
+  integrationClosure: null,
+  integrationError: '',
+  strategyAdvice: null,
+  strategyModelPrediction: null,
+  strategySuggestions: [],
+  strategyGeneratedAt: '',
+  strategyError: '',
+  strategyReport: null,
+  strategyReportError: '',
+  productionReadiness: null,
+  productionError: '',
+  businessInputs: null,
+  auditEvents: [],
+  executionProposal: null,
+  executionError: '',
+  ukeyAssistant: null,
+  ukeyError: '',
 };
 
 const formatNumber = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 3 });
-const currency = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
+const formatDateTime = new Intl.DateTimeFormat('zh-CN', {
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 function n(value) {
   const numeric = Number(value);
@@ -51,10 +97,33 @@ function fmt(value, fallback = '-') {
   return numeric === null ? fallback : formatNumber.format(numeric);
 }
 
+function money(value) {
+  const numeric = n(value);
+  return numeric === null ? '-' : `${formatNumber.format(numeric)} 元`;
+}
+
+function timeText(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : formatDateTime.format(date);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function avg(values) {
   const clean = values.map(n).filter((value) => value !== null);
-  if (!clean.length) return null;
-  return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+  return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : null;
+}
+
+function sum(values) {
+  return values.map(n).filter((value) => value !== null).reduce((total, value) => total + value, 0);
 }
 
 function max(values) {
@@ -69,69 +138,77 @@ function min(values) {
 
 function rowsForDate(date = state.date) {
   const rows = rawData.rows || [];
-  if (!date) return rows;
-  return rows.filter((row) => row.date === date);
+  return date ? rows.filter((row) => row.date === date) : rows;
 }
 
 function allDates() {
   return rawData.quality?.dates?.length
     ? rawData.quality.dates
-    : [...new Set((rawData.rows || []).map((row) => row.date))].sort();
+    : [...new Set((rawData.rows || []).map((row) => row.date).filter(Boolean))].sort();
+}
+
+function fieldCount(field) {
+  return Number(rawData.quality?.fieldCompleteness?.[field] || 0);
 }
 
 function sourceCount() {
-  const p0 = [
-    'user_bid_96',
-    'user_default_bid_96',
-    'dayahead_user_clearing',
-    'dayahead_public_clearing',
-    'realtime_public_clearing',
-    'realtime_average_price',
-    'actual_load_96',
-    'settle_day',
-  ];
-  return p0.filter((id) => rawData.sources?.[id]).length;
+  return sourceCatalog.filter((source) => rawData.sources?.[source.id]).length;
 }
 
-function highPriceRows(limit = 6) {
-  const rows = rowsForDate().filter((row) => n(row.realTimeAvgPrice) !== null);
-  const values = rows.map((row) => n(row.realTimeAvgPrice)).sort((a, b) => a - b);
-  const threshold = values.length ? values[Math.floor(values.length * 0.78)] : null;
-  if (threshold === null) return [];
-  return rows
-    .filter((row) => n(row.realTimeAvgPrice) >= threshold)
-    .slice(0, limit);
+function dataReadyPercent() {
+  if (!sourceCatalog.length) return 0;
+  return Math.round((sourceCount() / sourceCatalog.length) * 100);
 }
 
-function lowPriceRows(limit = 6) {
-  const rows = rowsForDate().filter((row) => n(row.realTimeAvgPrice) !== null);
-  return rows
-    .slice()
-    .sort((a, b) => n(a.realTimeAvgPrice) - n(b.realTimeAvgPrice))
-    .slice(0, limit);
+function selectedModule() {
+  return modules.find((item) => item.id === state.moduleId) || modules[0];
 }
 
-function estimateDefaultEnergy() {
-  const total = rowsForDate()
-    .map((row) => n(row.defaultDeclarationPower))
-    .filter((value) => value !== null)
-    .reduce((sum, value) => sum + value * 0.25, 0);
-  return total || null;
+function severityLabel(value) {
+  return (
+    {
+      info: '观察',
+      warning: '提醒',
+      high: '重点',
+      critical: '高风险',
+    }[value] || '建议'
+  );
 }
 
-function riskLevel() {
-  const gaps = rawData.quality?.gaps?.length || 0;
-  if (gaps >= 4) return { text: '需补数据', className: 'warn' };
-  if (gaps) return { text: '可试算', className: 'warn' };
-  return { text: '可运行', className: '' };
+function statusText(value) {
+  return (
+    {
+      closed: '已整理',
+      registered: '已登记',
+      source_empty: '暂时没有数据',
+      ready: '已准备好',
+      warning: '需要人工看一眼',
+      action_required: '需要补充设置',
+      blocked: '暂时不能生成可用草稿',
+      decision_support_ready: '可以辅助判断',
+      data_blocked: '数据还不够',
+      running: '正在采集',
+      stopped: '未自动采集',
+      not_started: '未打开',
+      started: '已打开',
+      ready_for_local_user: '可以使用',
+      snapshot_available: '已有实时数据',
+      waiting_for_visible_page: '等你打开实时页面',
+      available_snapshot: '已有价格',
+      missing: '缺少数据',
+      observation_ready: '可以先看建议',
+      waiting_for_realtime_price: '等待实时价格',
+      trial_only: '只作参考，不会自动提交',
+    }[value] || value || '-'
+  );
 }
 
 function pageTitle(title, desc, action = '') {
   return `
     <div class="page-title">
       <div>
-        <h1>${title}</h1>
-        <p>${desc}</p>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(desc)}</p>
       </div>
       <div>${action}</div>
     </div>
@@ -141,12 +218,11 @@ function pageTitle(title, desc, action = '') {
 function toolbar(extra = '') {
   return `
     <div class="toolbar">
-      <label class="field">市场主体 <input value="苏州市轨道交通集团有限公司"></label>
-      <label class="field">交易品种 <select><option>江苏省内现货</option><option>中长期交易</option></select></label>
-      <label class="field">数据口径 <select><option>15分钟 / 96点</option><option>小时级</option></select></label>
+      <label class="field">交易主体 <input value="苏州市轨道交通集团有限公司" readonly></label>
+      <label class="field">交易日 <select>${allDates()
+        .map((date) => `<option ${date === state.date ? 'selected' : ''}>${escapeHtml(date)}</option>`)
+        .join('')}</select></label>
       ${extra}
-      <button class="primary-button">查询</button>
-      <button class="ghost-button">导出</button>
     </div>
   `;
 }
@@ -154,397 +230,548 @@ function toolbar(extra = '') {
 function kpi(label, value, note, pill = '') {
   return `
     <article class="card kpi">
-      <span>${label}</span>
-      <strong>${value}</strong>
-      <small>${note}</small>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(note)}</small>
       ${pill}
     </article>
   `;
 }
 
-function linePath(rows, field, width = 760, height = 238) {
-  const valid = rows
-    .filter((row) => n(row[field]) !== null && n(row.pointIndex) !== null)
-    .map((row) => ({ x: n(row.pointIndex), y: n(row[field]) }));
-  if (!valid.length) return '';
-  const values = valid.map((point) => point.y);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const span = maxValue === minValue ? 1 : maxValue - minValue;
-  return valid
-    .map((point, index) => {
-      const x = 36 + ((point.x - 1) / 95) * (width - 58);
-      const y = height - 26 - ((point.y - minValue) / span) * (height - 58);
-      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(' ');
+function emptyCard(title, note) {
+  return `
+    <article class="card pending-card">
+      <h2>${escapeHtml(title)}</h2>
+      <div class="empty">${escapeHtml(note)}</div>
+    </article>
+  `;
 }
 
-function chart(rows, series) {
-  const width = 760;
-  const height = 238;
+function table(columns, rows) {
+  if (!rows.length) {
+    return '<div class="empty">现在还没有可展示的数据。</div>';
+  }
   return `
-    <div class="chart-box">
-      <svg viewBox="0 0 ${width} ${height}" aria-label="chart">
-        <line class="axis-line" x1="36" y1="${height - 26}" x2="${width - 22}" y2="${height - 26}"></line>
-        <line class="axis-line" x1="36" y1="18" x2="36" y2="${height - 26}"></line>
-        ${series
+    <table>
+      <thead><tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr></thead>
+      <tbody>
+        ${rows
           .map(
-            (item) =>
-              `<path class="${item.className}" d="${linePath(rows, item.field, width, height)}"></path>`
+            (row) => `
+              <tr>
+                ${columns
+                  .map((column) => {
+                    const value = typeof column.render === 'function' ? column.render(row) : row[column.key];
+                    return `<td>${escapeHtml(value)}</td>`;
+                  })
+                  .join('')}
+              </tr>
+            `
           )
           .join('')}
-      </svg>
+      </tbody>
+    </table>
+  `;
+}
+
+function simpleList(items) {
+  if (!items.length) return '<div class="empty">暂时没有需要处理的事项。</div>';
+  return `
+    <div class="pending-list">
+      ${items
+        .map((item) => `<div><strong>${escapeHtml(item.title || item.label || item.name || '-')}</strong><span>${escapeHtml(item.note || item.description || item.detail || '')}</span></div>`)
+        .join('')}
     </div>
   `;
 }
 
-function barChart(items) {
-  const maxValue = Math.max(...items.map((item) => Math.abs(item.value)), 1);
-  return items
-    .map(
-      (item) => `
-        <div class="progress-row">
-          <span>${item.label}</span>
-          <div class="progress"><b style="width:${Math.max(
-            6,
-            (Math.abs(item.value) / maxValue) * 100
-          )}%;background:${item.color}"></b></div>
-          <strong style="color:${item.color}">${item.value > 0 ? '+' : ''}${item.value} 万</strong>
-        </div>`
-    )
-    .join('');
-}
-
-function table(headers, rows) {
+function lineChart(rows, series) {
+  const values = rows.flatMap((row) => series.map((item) => n(row[item.field]))).filter((value) => value !== null);
+  if (!values.length) return '<div class="empty">还没有价格曲线。</div>';
+  const ceiling = Math.max(...values, 1);
   return `
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr>${headers.map((item) => `<th class="${item.num ? 'num' : ''}">${item.label}</th>`).join('')}</tr></thead>
-        <tbody>
-          ${rows
-            .map(
-              (row) =>
-                `<tr>${headers
-                  .map((head) => `<td class="${head.num ? 'num' : ''}">${row[head.key] ?? '-'}</td>`)
-                  .join('')}</tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function heatmap(rows, field) {
-  const values = rows.map((row) => n(row[field])).filter((value) => value !== null);
-  const minValue = values.length ? Math.min(...values) : 0;
-  const maxValue = values.length ? Math.max(...values) : 1;
-  const span = maxValue === minValue ? 1 : maxValue - minValue;
-  return `
-    <div class="heatmap">
-      ${Array.from({ length: 96 }, (_, index) => {
-        const row = rows.find((item) => item.pointIndex === index + 1);
-        const value = n(row?.[field]);
-        const ratio = value === null ? 0.08 : (value - minValue) / span;
-        const color = field.includes('Price')
-          ? `rgba(47, 124, 246, ${0.18 + ratio * 0.76})`
-          : `rgba(24, 166, 106, ${0.18 + ratio * 0.76})`;
-        return `<div class="heat-cell" title="${row?.timePoint || ''} ${fmt(value)}" style="background:${color}"></div>`;
-      }).join('')}
-    </div>
-  `;
-}
-
-function strategyCards() {
-  const highs = highPriceRows(4);
-  const lows = lowPriceRows(4);
-  return `
-    <div class="grid cols-3">
-      <article class="strategy-card">
-        <h3>低价窗口补足</h3>
-        <p>优先观察 ${lows.map((row) => row.timePoint).join('、') || '待补实时价'} 等低价点位，适合做缺口补足和低风险增配。</p>
-        <div class="tag-list"><span class="tag">动作：增配买入</span><span class="tag">置信度：试算</span></div>
-      </article>
-      <article class="strategy-card">
-        <h3>晚高峰风险控制</h3>
-        <p>${highs.map((row) => row.timePoint).join('、') || '晚峰'} 为高价观察窗口，建议先锁定申报偏差和负荷异常。</p>
-        <div class="tag-list"><span class="tag">动作：控制暴露</span><span class="tag">需人工确认</span></div>
-      </article>
-      <article class="strategy-card">
-        <h3>数据补齐优先级</h3>
-        <p>当前实际日电量和日结算为空，系统可做策略试算，但收益归因与偏差考核需要补齐。</p>
-        <div class="tag-list"><span class="tag">补数据：实际负荷</span><span class="tag">补数据：日结算</span></div>
-      </article>
-    </div>
-  `;
-}
-
-function renderReport() {
-  const rows = rowsForDate();
-  const realtimeAvg = avg(rows.map((row) => row.realTimeAvgPrice));
-  const risk = riskLevel();
-  return `
-    ${pageTitle('运营报告', '按截图系统的运营报表形态呈现交易规模、收益测算、风险窗口和数据完整性。')}
-    ${toolbar('<label class="field">日期 <input value="' + state.date + '"></label>')}
-    <section class="grid cols-4">
-      ${kpi('年度交易规模', '72,783 万度', '来自既有方案口径，用于收益测算基准')}
-      ${kpi('预计节约区间', '218 ~ 728 万/年', '按 0.3 ~ 1.0 分/度合理预期测算')}
-      ${kpi('实时均价', fmt(realtimeAvg), '当前日期已返回实时均价点数 ' + fieldCount('realTimeAvgPrice'))}
-      ${kpi('系统状态', risk.text, 'P0 数据源覆盖 ' + sourceCount() + '/8', `<span class="status-pill ${risk.className}">${risk.text}</span>`)}
-    </section>
-    <section class="grid layout-7-5" style="margin-top:10px">
-      <article class="card">
-        <h2>价格与负荷联合曲线</h2>
-        <div class="legend">
-          <span><i style="background:#2f7cf6"></i>实时均价</span>
-          <span><i style="background:#19a778"></i>缺省申报</span>
-          <span><i style="background:#e49a21"></i>日前公开价</span>
-        </div>
-        ${chart(rows, [
-          { field: 'realTimeAvgPrice', className: 'line-blue' },
-          { field: 'defaultDeclarationPower', className: 'line-green' },
-          { field: 'dayAheadPublicPrice', className: 'line-orange' },
-        ])}
-      </article>
-      <article class="card">
-        <h2>数据完整性</h2>
-        ${barChart([
-          { label: '缺省申报', value: fieldCount('defaultDeclarationPower'), color: '#18a66a' },
-          { label: '实时均价', value: fieldCount('realTimeAvgPrice'), color: '#2f7cf6' },
-          { label: '实际负荷', value: fieldCount('actualKwh'), color: '#df5d5d' },
-          { label: '日结算', value: fieldCount('settleAmount'), color: '#e7a23c' },
-        ])}
-      </article>
-    </section>
-  `;
-}
-
-function fieldCount(field) {
-  return rawData.quality?.fieldCompleteness?.[field] || 0;
-}
-
-function renderRevenue() {
-  const rows = rowsForDate();
-  return `
-    ${pageTitle('收益明细', '透明化收益分成与收益明细，按业务系统样式提供筛选、曲线和明细表。')}
-    ${toolbar('<label class="field">收益类型 <select><option>策略优化收益</option><option>偏差控制收益</option></select></label>')}
-    <section class="grid layout-7-5">
-      <article class="card">
-        <h2>日内收益测算曲线</h2>
-        ${chart(rows, [
-          { field: 'realTimeAvgPrice', className: 'line-blue' },
-          { field: 'defaultDeclarationPower', className: 'line-green' },
-        ])}
-      </article>
-      <article class="card">
-        <h2>收益拆解</h2>
-        ${barChart([
-          { label: '午间低价增配', value: 43, color: '#18a66a' },
-          { label: '晚峰控暴露', value: 35, color: '#2f7cf6' },
-          { label: '富余电量卖出', value: 18, color: '#16a39a' },
-          { label: '识别损失', value: -11, color: '#df5d5d' },
-        ])}
-      </article>
-    </section>
-    <article class="card" style="margin-top:10px">
-      <h2>收益明细表</h2>
-      ${table(
-        [
-          { key: 'period', label: '时段' },
-          { key: 'action', label: '策略动作' },
-          { key: 'energy', label: '影响电量', num: true },
-          { key: 'gain', label: '预计收益', num: true },
-          { key: 'risk', label: '风险说明' },
-        ],
-        [
-          { period: '10:30-14:30', action: '低价窗口补足', energy: '+2.8 万kWh', gain: '+1.2 ~ +2.6 万元', risk: '负荷预测偏差不超过 2.5%' },
-          { period: '17:30-20:30', action: '晚峰控暴露', energy: '0', gain: '以避损为主', risk: '保护牵引负荷，避免高峰误买' },
-          { period: '21:00-22:00', action: '小仓位择机卖出', energy: '-0.6 万kWh', gain: '+0.2 ~ +0.7 万元', risk: '仅在预测富余仍成立时执行' },
-        ]
-      )}
-    </article>
-  `;
-}
-
-function renderOperator() {
-  return `
-    ${pageTitle('运营商管理', '管理售电代理、数据来源、账号权限和服务绩效。')}
-    ${toolbar('<label class="field">运营商 <input value="协鑫能科"></label><label class="field">状态 <select><option>全部</option><option>正常</option></select></label>')}
-    <article class="card">
-      <h2>运营商台账</h2>
-      ${table(
-        [
-          { key: 'name', label: '运营商名称' },
-          { key: 'role', label: '服务角色' },
-          { key: 'data', label: '数据接口' },
-          { key: 'score', label: '服务评分', num: true },
-          { key: 'status', label: '状态' },
-          { key: 'action', label: '操作' },
-        ],
-        [
-          { name: '协鑫能科 GCL-ET', role: '电力交易代理', data: '结算、现货、公共数据', score: '92', status: '正常', action: '<button class="mini-button">查看</button>' },
-          { name: '国网江苏交易平台', role: '市场数据来源', data: '出清、申报、结算', score: '接口中', status: '需CA登录', action: '<button class="mini-button">采集</button>' },
-          { name: '苏州地铁内部台账', role: '私有负荷/合同', data: 'Excel、核对单、人工确认', score: '86', status: '待治理', action: '<button class="mini-button">治理</button>' },
-        ]
-      )}
-    </article>
-  `;
-}
-
-function renderSettlement() {
-  return `
-    ${pageTitle('自动结算', '对接日结算、月结算和现货核对单，形成自动归因和差异解释。')}
-    ${toolbar('<label class="field">结算周期 <select><option>日结算</option><option>月结算</option></select></label>')}
-    <section class="grid cols-4">
-      ${kpi('日结算记录', fieldCount('settleAmount'), '当前 JSPEC 日结算返回空列表')}
-      ${kpi('待核对月份', '2026-03', '已有现货核对单文件可作为下一步接入源')}
-      ${kpi('异常项', '4', '价格口径、偏差电量、线损和系统运行费')}
-      ${kpi('自动匹配率', '待计算', '需补日结算和实际负荷')}
-    </section>
-    <section class="grid cols-2" style="margin-top:10px">
-      <article class="card"><h2>结算差异归因</h2>${barChart([
-        { label: '交易价格差异', value: 21, color: '#2f7cf6' },
-        { label: '偏差考核', value: -8, color: '#df5d5d' },
-        { label: '线损/基金附加', value: 14, color: '#e7a23c' },
-      ])}</article>
-      <article class="card"><h2>日结算缺口</h2><div class="empty">本次 JSPEC 捕获中，日结算接口 queryDaySettleResult 返回 total = 0。系统已保留接口位，待有记录后自动入表。</div></article>
-    </section>
-  `;
-}
-
-function renderReview() {
-  return `
-    ${pageTitle('复盘对标', '把人工策略、模型建议、实际结果放在同一张表里复盘。')}
-    ${toolbar('<label class="field">复盘周期 <select><option>日</option><option>周</option><option>月</option></select></label>')}
-    <section class="grid cols-2">
-      <article class="card"><h2>价格热力</h2>${heatmap(rowsForDate(), 'realTimeAvgPrice')}</article>
-      <article class="card"><h2>申报热力</h2>${heatmap(rowsForDate(), 'defaultDeclarationPower')}</article>
-    </section>
-    <section class="grid cols-2" style="margin-top:10px">
-      <article class="card"><h2>复盘时间线</h2>${timeline()}</article>
-      <article class="card"><h2>复盘台账</h2>${reviewTable()}</article>
-    </section>
-  `;
-}
-
-function timeline() {
-  return `
-    <div class="timeline">
-      ${[
-        ['08:40', '读取日前曲线', '导入 D 日日前价格预测、负荷预测和申报草案。'],
-        ['10:20', '识别午间低价窗口', '系统提示 10:30-14:30 可作为主增配时段。'],
-        ['14:15', '发出拐点告警', '监测到午后新能源扰动可能抬升实时价。'],
-        ['17:45', '锁定高峰风险', '晚高峰负荷上修概率升高，禁止激进卖出。'],
-      ]
+    <div class="line-chart">
+      ${series
         .map(
-          ([time, title, text]) =>
-            `<div class="event"><time>${time}</time><div><strong>${title}</strong><p>${text}</p></div></div>`
+          (item) => `
+            <div class="line-row">
+              <span>${escapeHtml(item.label)}</span>
+              <div class="bars">
+                ${rows
+                  .slice(0, 96)
+                  .map((row) => {
+                    const value = n(row[item.field]);
+                    const height = value === null ? 4 : Math.max(6, Math.round((value / ceiling) * 86));
+                    return `<i class="${item.className || ''}" title="${escapeHtml(row.timePoint || '')} ${fmt(value)}" style="height:${height}%"></i>`;
+                  })
+                  .join('')}
+              </div>
+            </div>
+          `
         )
         .join('')}
     </div>
   `;
 }
 
-function reviewTable() {
+function heatmap(rows, field) {
+  const values = rows.map((row) => n(row[field])).filter((value) => value !== null);
+  if (!values.length) return '<div class="empty">还没有实时价格。</div>';
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const range = Math.max(high - low, 1);
+  return `
+    <div class="heatmap">
+      ${rows
+        .slice(0, 96)
+        .map((row) => {
+          const value = n(row[field]);
+          const intensity = value === null ? 0 : (value - low) / range;
+          const color = `rgba(45, 125, 210, ${0.18 + intensity * 0.7})`;
+          return `<span style="background:${color}" title="${escapeHtml(row.timePoint || '')} ${fmt(value)}"></span>`;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
+function pointTable(rows, limit = 12) {
   return table(
     [
-      { key: 'date', label: '日期' },
-      { key: 'suggestion', label: '建议' },
-      { key: 'result', label: '结果' },
-      { key: 'reason', label: '核心判断' },
+      { key: 'pointIndex', label: '点位' },
+      { key: 'timePoint', label: '时间' },
+      { label: '实时均价', render: (row) => fmt(row.realTimeAvgPrice) },
+      { label: '日前市场价', render: (row) => fmt(row.dayAheadPublicPrice) },
+      { label: '主动申报', render: (row) => fmt(row.declarationPower) },
+      { label: '实际负荷', render: (row) => fmt(row.actualKwh) },
     ],
-    [
-      { date: '2026-05-07', suggestion: '晚峰控暴露', result: '等待实际结算', reason: '实时均价高位窗口已出现' },
-      { date: '2026-05-08', suggestion: '缺省申报复核', result: '待执行', reason: '缺省申报曲线已完整' },
-    ]
+    rows.slice(0, limit)
   );
+}
+
+function renderStrategyReportPanel() {
+  const report = state.strategyReport;
+  if (state.strategyReportError) return emptyCard('报告没有生成', state.strategyReportError);
+  if (!report) return emptyCard('还没有生成报告', '点击右上角“生成建议报告”，系统会把当前交易日的数据和建议整理成一份报告。');
+  const suggestions = Array.isArray(report.suggestions) ? report.suggestions : [];
+  return `
+    <article class="card report-card">
+      <div class="report-head">
+        <div>
+          <span class="status-pill">报告已生成</span>
+          <h2>${escapeHtml(report.title || 'AI建议报告')}</h2>
+          <p>交易日：${escapeHtml(report.date || state.date)} · 生成时间：${escapeHtml(timeText(report.generatedAt))}</p>
+        </div>
+      </div>
+      <div class="strategy-grid">
+        ${kpi('覆盖点位', String(report.market?.rowCount || 0), '本交易日已读取的点位数')}
+        ${kpi('实时价格点位', String(report.market?.realTimePricePoints || 0), '用于判断低价和高价窗口')}
+        ${kpi('平均实时价', fmt(report.market?.averageRealTimePrice), '元/MWh')}
+      </div>
+      <h3>报告里的建议</h3>
+      ${simpleList(
+        suggestions.map((item) => ({
+          title: item.title,
+          note: `${item.description || ''} ${item.executable ? '' : '目前只作为参考，不会自动提交。'}`,
+        }))
+      )}
+    </article>
+  `;
+}
+
+function renderReport() {
+  const rows = rowsForDate();
+  const realTimeAverage = avg(rows.map((row) => row.realTimeAvgPrice));
+  const settlementChecks = state.integrationClosure?.settlementChecks || {};
+  const suggestions = state.strategySuggestions || [];
+  const warningCount = suggestions.filter((item) => item.severity === 'warning').length;
+  return `
+    ${pageTitle('今日概览', '先看当天价格、数据是否齐，再决定要不要进入策略页。')}
+    ${state.loadError ? `<div class="notice warn">${escapeHtml(state.loadError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('已读取点位', String(rows.length), '通常一天应有 96 个点')}
+      ${kpi('实时均价', fmt(realTimeAverage), '元/MWh')}
+      ${kpi('数据准备度', `${dataReadyPercent()}%`, `${sourceCount()}/${sourceCatalog.length} 类数据已读取`)}
+      ${kpi('AI提醒', String(suggestions.length), warningCount ? `${warningCount} 条需要重点看` : '没有高风险提醒')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>价格走势</h2>
+        ${lineChart(rows, [
+          { field: 'realTimeAvgPrice', label: '实时均价', className: 'line-blue' },
+          { field: 'dayAheadPublicPrice', label: '日前市场价', className: 'line-orange' },
+        ])}
+      </article>
+      <article class="card">
+        <h2>今天能做什么</h2>
+        ${simpleList([
+          { title: '先看实时数据', note: fieldCount('realTimeAvgPrice') ? '已经有实时价格，可以进入 AI策略建议。' : '还没有实时价格，先打开实时数据助手采集。' },
+          { title: '再看负荷和持仓', note: fieldCount('actualKwh') ? '已有实际负荷，可用于复盘。' : '实际负荷未到齐时，策略只作参考。' },
+          { title: '最后人工确认', note: '系统只给建议和草稿，最终申报仍由人确认。' },
+        ])}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>最近点位</h2>
+        ${pointTable(rows)}
+      </article>
+      <article class="card">
+        <h2>结算文件</h2>
+        ${simpleList([
+          { title: '已读取文件', note: `${settlementChecks.fileCount || 0} 个` },
+          { title: '需要留意', note: settlementChecks.gapCount ? `${settlementChecks.gapCount} 项数据还需要补齐` : '目前没有明显缺项' },
+        ])}
+      </article>
+    </section>
+  `;
+}
+
+function renderRevenue() {
+  const rows = rowsForDate();
+  const ledger = state.integrationClosure?.ledger || {};
+  return `
+    ${pageTitle('收益情况', '把价格、申报、负荷和结算放在一起看，帮助判断收益变化来自哪里。')}
+    <section class="kpi-grid">
+      ${kpi('交易记录', String(ledger.rowCount || rows.length), '已纳入分析的记录')}
+      ${kpi('结算金额', money(sum(rows.map((row) => row.settleAmount))), '当前交易日合计')}
+      ${kpi('实时最高价', fmt(max(rows.map((row) => row.realTimeAvgPrice))), '元/MWh')}
+      ${kpi('实时最低价', fmt(min(rows.map((row) => row.realTimeAvgPrice))), '元/MWh')}
+    </section>
+    <section class="grid two">
+      <article class="card"><h2>价格对比</h2>${lineChart(rows, [
+        { field: 'realTimeAvgPrice', label: '实时均价', className: 'line-blue' },
+        { field: 'dayAheadUserPrice', label: '日前用户价', className: 'line-red' },
+      ])}</article>
+      <article class="card"><h2>收益判断</h2>${simpleList([
+        { title: '看价差', note: '实时价格高于日前价格的时段，需要重点关注偏差风险。' },
+        { title: '看负荷', note: fieldCount('actualKwh') ? '已有实际负荷，可以做更完整的收益复盘。' : '实际负荷还缺，收益归因先按参考口径看。' },
+        { title: '看结算', note: fieldCount('settleAmount') ? '已有结算金额。' : '结算金额未到齐，暂不判断最终收益。' },
+      ])}</article>
+    </section>
+  `;
+}
+
+function renderOperator() {
+  const participants = Array.isArray(state.integrationClosure?.participants) ? state.integrationClosure.participants : [];
+  const rows = participants.length
+    ? participants
+    : [{ name: '苏州市轨道交通集团有限公司', role: '市场主体', status: '已登记', note: '用于本地试用展示。' }];
+  return `
+    ${pageTitle('主体信息', '这里放交易主体、角色和状态，方便确认当前看的数据属于谁。')}
+    <section class="grid two">
+      <article class="card">
+        <h2>交易主体</h2>
+        ${table(
+          [
+            { key: 'name', label: '名称' },
+            { key: 'role', label: '角色' },
+            { label: '状态', render: (row) => statusText(row.status) },
+            { key: 'note', label: '说明' },
+          ],
+          rows
+        )}
+      </article>
+      <article class="card">
+        <h2>使用提醒</h2>
+        ${simpleList([
+          { title: '本机登录', note: 'UKey 登录动作在用户自己的浏览器里完成。' },
+          { title: '只给建议', note: '系统不会代替用户提交交易。' },
+          { title: '人工留痕', note: '草稿通过后，仍建议保留人工确认记录。' },
+        ])}
+      </article>
+    </section>
+  `;
+}
+
+function renderSettlement() {
+  const checks = state.integrationClosure?.settlementChecks || {};
+  const gaps = Array.isArray(checks.gaps) ? checks.gaps : [];
+  return `
+    ${pageTitle('结算复盘', '用于核对结算文件、价格点位和负荷数据，发现缺项后再回到数据页补齐。')}
+    <section class="kpi-grid">
+      ${kpi('结算文件', String(checks.fileCount || 0), '已读取的核对单')}
+      ${kpi('缺项数量', String(checks.gapCount || gaps.length || 0), '需要人工确认的项目')}
+      ${kpi('结算金额点位', String(fieldCount('settleAmount')), '已读取的结算记录')}
+      ${kpi('实际负荷点位', String(fieldCount('actualKwh')), '用于偏差复盘')}
+    </section>
+    <article class="card">
+      <h2>需要关注的缺项</h2>
+      ${simpleList(gaps.map((item) => ({ title: item.name || item.id || '缺项', note: item.note || item.reason || '需要补齐后再复盘。' })))}
+    </article>
+  `;
+}
+
+function renderReview() {
+  const rows = rowsForDate();
+  return `
+    ${pageTitle('复盘看板', '把一天 96 个点摊开看，快速找出高价、低价和异常时段。')}
+    <section class="grid two">
+      <article class="card"><h2>价格热力</h2>${heatmap(rows, 'realTimeAvgPrice')}</article>
+      <article class="card"><h2>复盘重点</h2>${simpleList([
+        { title: '低价窗口', note: '适合观察是否有补足空间。' },
+        { title: '高价窗口', note: '需要检查申报和实际负荷有没有偏差。' },
+        { title: '空白点位', note: '如果出现空白，先回到实时数据助手重新采集。' },
+      ])}</article>
+    </section>
+    <article class="card">
+      <h2>点位明细</h2>
+      ${pointTable(rows, 24)}
+    </article>
+  `;
 }
 
 function renderPublicData() {
   const rows = rowsForDate();
   return `
-    ${pageTitle('公共数据', '对应截图中的公共数据页面：日前、实时、平均价、节点价等市场公开数据。')}
-    ${toolbar('<label class="field">数据类型 <select><option>实时加权均价</option><option>日前公开出清</option></select></label>')}
-    <section class="grid layout-7-5">
-      <article class="card"><h2>公开价格曲线</h2>${chart(rows, [
-        { field: 'realTimeAvgPrice', className: 'line-blue' },
-        { field: 'dayAheadPublicPrice', className: 'line-orange' },
-      ])}</article>
-      <article class="card"><h2>市场指标</h2>
-        ${kpi('实时均价最高', fmt(max(rows.map((row) => row.realTimeAvgPrice))), '当前捕获日期')}
-        ${kpi('实时均价最低', fmt(min(rows.map((row) => row.realTimeAvgPrice))), '当前捕获日期')}
-      </article>
+    ${pageTitle('市场数据', '展示市场侧价格，主要用于判断当天价格区间和波动。')}
+    <section class="kpi-grid">
+      ${kpi('实时价格点位', String(fieldCount('realTimeAvgPrice')), '已读取点位')}
+      ${kpi('日前价格点位', String(fieldCount('dayAheadPublicPrice')), '已读取点位')}
+      ${kpi('实时最高价', fmt(max(rows.map((row) => row.realTimeAvgPrice))), '元/MWh')}
+      ${kpi('实时最低价', fmt(min(rows.map((row) => row.realTimeAvgPrice))), '元/MWh')}
     </section>
-    <article class="card" style="margin-top:10px"><h2>96点公开数据</h2>${pointTable(rows)}</article>
+    <article class="card">
+      <h2>市场价格明细</h2>
+      ${table(
+        [
+          { key: 'pointIndex', label: '点位' },
+          { key: 'timePoint', label: '时间' },
+          { label: '实时均价', render: (row) => fmt(row.realTimeAvgPrice) },
+          { label: '实时节点价', render: (row) => fmt(row.realTimePointPriceCurrent) },
+          { label: '日前市场价', render: (row) => fmt(row.dayAheadPublicPrice) },
+        ],
+        rows.slice(0, 48)
+      )}
+    </article>
   `;
 }
 
 function renderPrivateData() {
   const rows = rowsForDate();
   return `
-    ${pageTitle('私有数据', '对应截图中的私有数据页面：申报曲线、实际负荷、结算和内部台账。')}
-    ${toolbar('<label class="field">私有数据源 <select><option>JSPEC 申报</option><option>现货核对单</option><option>人工台账</option></select></label>')}
-    <section class="grid cols-4">
-      ${kpi('缺省申报点数', fieldCount('defaultDeclarationPower'), '已拿到完整 96 点缺省申报')}
-      ${kpi('主动申报点数', fieldCount('declarationPower'), '当前主动申报功率为空')}
-      ${kpi('实际日电量', fieldCount('actualKwh'), '接口已通但返回空列表')}
-      ${kpi('日结算', fieldCount('settleAmount'), '接口已通但返回空列表')}
+    ${pageTitle('我的数据', '展示本主体相关的申报、负荷和结算数据。')}
+    <section class="kpi-grid">
+      ${kpi('主动申报点位', String(fieldCount('declarationPower')), '用户主动申报')}
+      ${kpi('默认申报点位', String(fieldCount('defaultDeclarationPower')), '平台默认申报')}
+      ${kpi('实际负荷点位', String(fieldCount('actualKwh')), '实际用电')}
+      ${kpi('结算点位', String(fieldCount('settleAmount')), '结算金额')}
     </section>
-    <section class="grid cols-2" style="margin-top:10px">
-      <article class="card"><h2>申报曲线</h2>${chart(rows, [{ field: 'defaultDeclarationPower', className: 'line-green' }])}</article>
-      <article class="card"><h2>私有数据明细</h2>${pointTable(rows)}</article>
+    <article class="card">
+      <h2>我的点位明细</h2>
+      ${pointTable(rows, 48)}
+    </article>
+  `;
+}
+
+function renderDataQuality() {
+  const rows = sourceCatalog.map((source) => ({
+    name: source.label,
+    status: rawData.sources?.[source.id] ? '已读取' : '暂时没有',
+    note: rawData.sources?.[source.id] ? '可以用于页面分析' : '缺少时相关判断只作参考',
+  }));
+  const fieldRows = importantFields.map((field) => ({
+    name: field.label,
+    count: fieldCount(field.id),
+    note: fieldCount(field.id) ? '已读取' : '暂时没有',
+  }));
+  return `
+    ${pageTitle('数据准备情况', '不用看字段名，只看哪些业务数据已经到位，哪些还会影响建议可信度。')}
+    <section class="kpi-grid">
+      ${kpi('整体准备度', `${dataReadyPercent()}%`, `${sourceCount()}/${sourceCatalog.length} 类数据已读取`)}
+      ${kpi('交易日数量', String(allDates().length), '可切换查看')}
+      ${kpi('当前点位', String(rowsForDate().length), '当前交易日记录')}
+      ${kpi('缺项提醒', String(rawData.quality?.gaps?.length || 0), '需要补数据或人工确认')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>业务数据是否到位</h2>
+        ${table(
+          [
+            { key: 'name', label: '数据' },
+            { key: 'status', label: '状态' },
+            { key: 'note', label: '影响' },
+          ],
+          rows
+        )}
+      </article>
+      <article class="card">
+        <h2>当前交易日点位</h2>
+        ${table(
+          [
+            { key: 'name', label: '内容' },
+            { key: 'count', label: '点位数' },
+            { key: 'note', label: '状态' },
+          ],
+          fieldRows
+        )}
+      </article>
+    </section>
+  `;
+}
+
+function renderUkeyAssistant() {
+  const status = state.ukeyAssistant || {};
+  const browser = status.browserWindow || {};
+  const collector = status.collector || {};
+  const snapshot = status.lastSnapshot || status.visibleSnapshot || {};
+  const realtime = status.realtimeData || {};
+  const lastError = collector.lastError || browser.lastError || state.ukeyError || '';
+  return `
+    ${pageTitle(
+      '实时数据助手',
+      '插上 UKey 后，在本机打开交易平台页面；系统只读取页面上已经显示的业务表格。',
+      '<button class="primary-button" id="ukeyRefreshButton">刷新状态</button>'
+    )}
+    <section class="kpi-grid">
+      ${kpi('数据窗口', statusText(browser.state || browser.status || 'not_started'), '点击按钮后会打开专用浏览器')}
+      ${kpi('自动采集', statusText(collector.state || 'stopped'), collector.intervalSeconds ? `约 ${collector.intervalSeconds} 秒一次` : '默认约 30 秒一次')}
+      ${kpi('最近采集', snapshot.generatedAt ? timeText(snapshot.generatedAt) : '-', snapshot.rowCount ? `${snapshot.rowCount} 行` : '还没有采集到表格')}
+      ${kpi('实时价格', realtime.pointCount ? `${realtime.pointCount} 点` : '等待页面', statusText(realtime.status))}
+    </section>
+    ${lastError ? `<div class="notice warn">${escapeHtml(lastError)}</div>` : ''}
+    <section class="grid two">
+      <article class="card">
+        <h2>一键操作</h2>
+        <div class="action-row">
+          <button class="primary-button" id="ukeyStartBrowserButton">打开数据窗口</button>
+          <button class="ghost-button" id="ukeySampleButton">采集一次</button>
+          <button class="ghost-button" id="ukeyStartCollectorButton">开始自动采集</button>
+          <button class="ghost-button" id="ukeyStopCollectorButton">停止自动采集</button>
+        </div>
+        ${simpleList([
+          { title: '第一步', note: '插上 UKey，点击“打开数据窗口”。' },
+          { title: '第二步', note: '在打开的浏览器里手动登录，并进入实时价格或申报页面。' },
+          { title: '第三步', note: '回到本软件点击“采集一次”，确认有行数后再开启自动采集。' },
+        ])}
+      </article>
+      <article class="card">
+        <h2>当前页面识别</h2>
+        ${table(
+          [
+            { key: 'item', label: '项目' },
+            { key: 'value', label: '状态' },
+          ],
+          [
+            { item: '页面', value: browser.currentUrl || '还没打开实时页面' },
+            { item: '登录', value: browser.currentUrl ? '以页面实际显示为准' : '等待打开数据窗口' },
+            { item: '采集结果', value: snapshot.accepted ? `已读取 ${snapshot.rowCount || 0} 行` : '还没有读到可用表格' },
+          ]
+        )}
+      </article>
+    </section>
+    <article class="card">
+      <h2>使用边界</h2>
+      ${simpleList([
+        { title: '只读屏幕上看得到的数据', note: '比如时间点、价格、申报量、负荷等业务表格。' },
+        { title: '不会替你点提交', note: 'AI 只给建议和草稿，最终操作仍由用户确认。' },
+        { title: '登录留在本机', note: 'UKey 和浏览器登录状态只保存在使用者电脑上。' },
+      ])}
+    </article>
+  `;
+}
+
+function renderStrategyAdvicePanel() {
+  if (state.strategyError) return emptyCard('AI建议暂时没出来', state.strategyError);
+  const advice = state.strategyAdvice || {};
+  const signal = advice.priceSignal || {};
+  const realtime = advice.realtimePrice || {};
+  const modelPrediction = state.strategyModelPrediction;
+  const suggestions = state.strategySuggestions || [];
+  const modelText = modelPrediction?.content || modelPrediction?.text || '';
+  return `
+    <section class="kpi-grid">
+      ${kpi('实时价格', realtime.pointCount ? `${realtime.pointCount} 点` : '未读取', statusText(realtime.status))}
+      ${kpi('平均实时价', fmt(signal.averageRealTimePrice), '元/MWh')}
+      ${kpi('低价观察点', Array.isArray(signal.lowWindowPoints) ? String(signal.lowWindowPoints.length) : '0', '可用于观察补足机会')}
+      ${kpi('高价观察点', Array.isArray(signal.highWindowPoints) ? String(signal.highWindowPoints.length) : '0', '需要留意偏差风险')}
+    </section>
+    ${modelText ? `<article class="card ai-card"><h2>模型预测</h2><p>${escapeHtml(modelText)}</p></article>` : ''}
+    <section class="grid two">
+      <article class="card">
+        <h2>系统建议</h2>
+        ${simpleList(
+          suggestions.map((item) => ({
+            title: `${severityLabel(item.severity)}：${item.title}`,
+            note: `${item.description || ''}${item.action ? ` 建议方向：${item.action}。` : ''}`,
+          }))
+        )}
+      </article>
+      <article class="card">
+        <h2>为什么还不能直接照做</h2>
+        ${simpleList(
+          suggestions
+            .flatMap((item) => item.blockingReasons || [])
+            .map((reason) => ({ title: '需要人工确认', note: reason }))
+        )}
+      </article>
     </section>
   `;
 }
 
 function renderStrategy() {
   return `
-    ${pageTitle('AI策略工作台', '围绕月度分配、D-2/D-3 能量块、D-1 日前申报和 D 日风控输出可解释建议。', '<span class="status-pill warn">辅助决策，不自动下单</span>')}
-    ${toolbar('<label class="field">策略场景 <select><option>D-1 日前申报</option><option>D-2/D-3 能量块</option><option>D 日实时风控</option></select></label>')}
-    ${strategyCards()}
-    <section class="grid cols-2" style="margin-top:10px">
-      <article class="card"><h2>推荐原因拆解</h2>
-        <div class="strategy-card"><h3>负荷曲线稳定，午间预测误差较小</h3><p>如果补齐实际负荷，系统会自动计算 WAPE/MAPE 并进入策略评分。</p></div>
-        <div class="strategy-card" style="margin-top:10px"><h3>目前与实时价差结构呈“午低晚高”</h3><p>低价补足、高价控暴露是第一版最稳健的策略方向。</p></div>
-      </article>
-      <article class="card"><h2>策略执行单</h2>${table(
-        [
-          { key: 'time', label: '时段' },
-          { key: 'action', label: '建议动作' },
-          { key: 'effect', label: '预计影响' },
-          { key: 'guard', label: '执行约束' },
-        ],
-        [
-          { time: '10:30-14:30', action: '低价增配', effect: '+2.8万kWh', guard: '负荷预测偏差不超过 2.5%' },
-          { time: '17:30-20:30', action: '控制暴露', effect: '以避损为主', guard: '牵引负荷安全优先' },
-          { time: '21:00-22:00', action: '小仓位择机卖出', effect: '-0.6万kWh', guard: '富余电量预测仍成立' },
-        ]
-      )}</article>
-    </section>
+    ${pageTitle(
+      'AI策略建议',
+      '这里把实时价格转换成“观察窗口”和“风险提醒”。它不是下单器，只帮你少漏看。'
+    )}
+    ${renderStrategyAdvicePanel()}
+    ${renderStrategyReportPanel()}
   `;
 }
 
-function pointTable(rows) {
-  const visible = rows.slice(0, 24).map((row) => ({
-    point: row.timePoint,
-    rt: fmt(row.realTimeAvgPrice),
-    da: fmt(row.dayAheadPublicPrice),
-    def: fmt(row.defaultDeclarationPower),
-    actual: fmt(row.actualKwh),
-    source: (row.sourceTargets || []).join(' / '),
-  }));
-  return table(
-    [
-      { key: 'point', label: '点位' },
-      { key: 'rt', label: '实时均价', num: true },
-      { key: 'da', label: '日前公开价', num: true },
-      { key: 'def', label: '缺省申报', num: true },
-      { key: 'actual', label: '实际kWh', num: true },
-      { key: 'source', label: '来源' },
-    ],
-    visible
-  );
+function renderProduction() {
+  const readiness = state.productionReadiness || {};
+  const controls = Array.isArray(readiness.controls) ? readiness.controls : [];
+  const proposal = state.executionProposal;
+  const tradeLimits = state.businessInputs?.inputs?.tradeLimits || {};
+  return `
+    ${pageTitle(
+      '交易草稿复核',
+      '把 AI 建议整理成草稿，给人复核用；这里不会自动提交交易。',
+      '<button class="primary-button" id="proposalButton">生成草稿</button>'
+    )}
+    ${state.executionError ? `<div class="notice warn">${escapeHtml(state.executionError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('当前状态', statusText(readiness.status), readiness.capabilities?.proposalDraft ? '可以生成草稿' : '数据不足时只能查看')}
+      ${kpi('最大单次电量', tradeLimits.maxSingleTradeMwh ? `${fmt(tradeLimits.maxSingleTradeMwh)} MWh` : '-', '来自本地交易限制')}
+      ${kpi('最小申报电量', tradeLimits.minDeclarationMwh ? `${fmt(tradeLimits.minDeclarationMwh)} MWh` : '-', '来自本地交易限制')}
+      ${kpi('人工确认', '必须', '最终申报由用户在交易平台确认')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>生成前检查</h2>
+        ${table(
+          [
+            { key: 'title', label: '检查项' },
+            { label: '状态', render: (row) => statusText(row.status) },
+            { key: 'description', label: '说明' },
+          ],
+          controls.slice(0, 8)
+        )}
+      </article>
+      <article class="card">
+        <h2>草稿</h2>
+        ${
+          proposal
+            ? simpleList([
+                { title: '草稿状态', note: statusText(proposal.status || 'trial_only') },
+                { title: '交易日', note: proposal.date || state.date || '-' },
+                { title: '说明', note: proposal.summary || proposal.note || '已生成，仍需人工核对。' },
+              ])
+            : '<div class="empty">还没有草稿。点击“生成草稿”后，先看清楚内容再决定是否采纳。</div>'
+        }
+        ${
+          proposal
+            ? `<div class="action-row">
+                <button class="ghost-button data-review-decision" data-decision="approve">记录为已看过</button>
+                <button class="ghost-button data-review-decision" data-decision="reject">记录为不采纳</button>
+              </div>`
+            : ''
+        }
+      </article>
+    </section>
+  `;
 }
 
 const renderers = {
@@ -555,101 +782,267 @@ const renderers = {
   review: renderReview,
   publicData: renderPublicData,
   privateData: renderPrivateData,
+  dataQuality: renderDataQuality,
+  ukey: renderUkeyAssistant,
   strategy: renderStrategy,
+  production: renderProduction,
 };
 
 function renderNav() {
-  const nav = document.getElementById('sideNav');
+  const nav = document.querySelector('#sideNav');
+  if (!nav) return;
   const groups = [...new Set(modules.map((item) => item.group))];
   nav.innerHTML = groups
     .map(
       (group) => `
-        <div class="nav-group-title">${group}</div>
+        <div class="nav-group-title">${escapeHtml(group)}</div>
         ${modules
           .filter((item) => item.group === group)
           .map(
             (item) => `
               <button class="nav-item ${item.id === state.moduleId ? 'active' : ''}" data-module="${item.id}">
-                <span class="nav-icon">${item.icon}</span>
-                <span>${item.label}</span>
-              </button>`
+                <span class="nav-icon">${escapeHtml(item.icon)}</span>
+                ${escapeHtml(item.label)}
+              </button>
+            `
           )
           .join('')}
       `
     )
     .join('');
-
-  nav.querySelectorAll('[data-module]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.moduleId = button.dataset.module;
-      render();
-    });
-  });
 }
 
 function renderDates() {
-  const select = document.getElementById('dateSelect');
-  select.innerHTML = allDates()
-    .map((date) => `<option value="${date}" ${date === state.date ? 'selected' : ''}>${date}</option>`)
-    .join('');
-  select.onchange = () => {
-    state.date = select.value;
-    render();
-  };
+  const select = document.querySelector('#dateSelect');
+  if (!select) return;
+  const dates = allDates();
+  if (!state.date && dates.length) state.date = dates[0];
+  select.innerHTML = dates.map((date) => `<option value="${escapeHtml(date)}" ${date === state.date ? 'selected' : ''}>${escapeHtml(date)}</option>`).join('');
 }
 
 function render() {
-  const active = modules.find((item) => item.id === state.moduleId) || modules[0];
-  document.getElementById('moduleCrumb').textContent = active.label;
-  renderDates();
   renderNav();
-  const alert = state.loadError
-    ? `<div class="system-alert">${state.loadError}</div>`
-    : '';
-  document.getElementById('workspace').innerHTML = alert + renderers[state.moduleId]();
+  renderDates();
+  const module = selectedModule();
+  const crumb = document.querySelector('#moduleCrumb');
+  if (crumb) crumb.textContent = module.label;
+  const workspace = document.querySelector('#workspace');
+  if (!workspace) return;
+  workspace.innerHTML = renderers[state.moduleId]?.() || renderReport();
+  bindDynamicActions();
+}
+
+function bindDynamicActions() {
+  document.querySelector('#proposalButton')?.addEventListener('click', createExecutionProposal);
+  document.querySelectorAll('.data-review-decision').forEach((button) => {
+    button.addEventListener('click', () => recordProposalReview(button.dataset.decision));
+  });
+  wireUkeyActionButton('ukeyStartBrowserButton', '/api/ukey-assistant/browser/start', { label: '打开中...' });
+  wireUkeyActionButton('ukeySampleButton', '/api/ukey-assistant/collector/sample', { label: '采集中...' });
+  wireUkeyActionButton('ukeyStartCollectorButton', '/api/ukey-assistant/collector/start', { label: '启动中...' });
+  wireUkeyActionButton('ukeyStopCollectorButton', '/api/ukey-assistant/collector/stop', { label: '停止中...' });
+  document.querySelector('#ukeyRefreshButton')?.addEventListener('click', async () => {
+    await loadUkeyAssistant();
+    render();
+  });
+}
+
+function wireUkeyActionButton(id, endpoint, options = {}) {
+  const button = document.querySelector(`#${id}`);
+  if (!button) return;
+  button.addEventListener('click', async () => {
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = options.label || '处理中...';
+    await postUkeyAssistantAction(endpoint, options);
+    button.disabled = false;
+    button.textContent = original;
+  });
+}
+
+async function loadProductionState() {
+  try {
+    const [readinessResponse, auditResponse, businessInputsResponse] = await Promise.all([
+      fetch('/api/production/readiness', { cache: 'no-store' }),
+      fetch('/api/audit?limit=20', { cache: 'no-store' }),
+      fetch('/api/business-inputs', { cache: 'no-store' }),
+    ]);
+    state.productionReadiness = await readinessResponse.json();
+    const auditPayload = await auditResponse.json();
+    state.auditEvents = Array.isArray(auditPayload.events) ? auditPayload.events : [];
+    state.businessInputs = await businessInputsResponse.json();
+    state.productionError = '';
+  } catch (error) {
+    state.productionError = `交易草稿信息没有读到：${error.message}`;
+  }
+}
+
+async function loadUkeyAssistant() {
+  try {
+    const response = await fetch('/api/ukey-assistant', { cache: 'no-store' });
+    state.ukeyAssistant = await response.json();
+    state.ukeyError = '';
+  } catch (error) {
+    state.ukeyError = `实时数据助手状态没有读到：${error.message}`;
+  }
+}
+
+async function loadStrategySuggestions() {
+  try {
+    const response = await fetch(`/api/strategy?date=${encodeURIComponent(state.date)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    const payload = await response.json();
+    state.strategyAdvice = payload;
+    state.strategySuggestions = Array.isArray(payload.suggestions) ? payload.suggestions : [];
+    state.strategyModelPrediction = payload.modelPrediction || null;
+    state.strategyGeneratedAt = payload.generatedAt || '';
+    state.strategyError = '';
+  } catch (error) {
+    state.strategyAdvice = null;
+    state.strategySuggestions = [];
+    state.strategyModelPrediction = null;
+    state.strategyError = `AI建议暂时没有生成：${error.message}`;
+  }
 }
 
 async function loadSystemData() {
   try {
-    const response = await fetch('/api/dataset', { cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    rawData = normalizeDataset(await response.json());
+    const [datasetResponse, integrationsResponse] = await Promise.all([
+      fetch('/api/dataset', { cache: 'no-store' }),
+      fetch('/api/integrations', { cache: 'no-store' }),
+    ]);
+    if (!datasetResponse.ok) throw new Error(`服务返回 ${datasetResponse.status}`);
+    rawData = normalizeDataset(await datasetResponse.json());
+    state.integrationClosure = await integrationsResponse.json();
     state.loadError = '';
+    if (!state.date) state.date = allDates()[0] || '';
   } catch (error) {
-    state.loadError = `API 数据加载失败，当前使用本地降级数据：${error.message}`;
-    rawData = normalizeDataset(window.TRADING_SYSTEM_DATA || rawData || emptyDataset());
+    state.loadError = `数据没读到，请重新启动软件或检查文件是否完整：${error.message}`;
+    state.integrationClosure = null;
   }
+  await Promise.all([loadProductionState(), loadUkeyAssistant(), loadStrategySuggestions()]);
+  render();
+}
 
-  const dates = allDates();
-  if (!state.date || !dates.includes(state.date)) {
-    state.date = dates[0] || '';
+async function refreshData() {
+  const button = document.querySelector('#refreshButton');
+  if (button) {
+    button.disabled = true;
+    button.textContent = '刷新中...';
+  }
+  try {
+    const response = await fetch('/api/refresh', { method: 'POST', cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+  } catch (error) {
+    state.loadError = `刷新失败：${error.message}`;
+  }
+  await loadSystemData();
+  if (button) {
+    button.disabled = false;
+    button.textContent = '刷新数据';
+  }
+}
+
+async function loadStrategyReport() {
+  const button = document.querySelector('#reportButton');
+  if (button) {
+    button.disabled = true;
+    button.textContent = '生成中...';
+  }
+  try {
+    const response = await fetch(`/api/strategy-report?date=${encodeURIComponent(state.date)}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.strategyReport = await response.json();
+    state.strategyReportError = '';
+    state.moduleId = 'strategy';
+  } catch (error) {
+    state.strategyReportError = `报告没有生成：${error.message}`;
+  }
+  if (button) {
+    button.disabled = false;
+    button.textContent = '生成建议报告';
   }
   render();
 }
 
-async function refreshSystemData() {
-  const button = document.getElementById('refreshButton');
-  const originalText = button.textContent;
-  button.disabled = true;
-  button.textContent = '刷新中';
-
+async function postUkeyAssistantAction(endpoint, options = {}) {
   try {
-    const response = await fetch('/api/refresh', { method: 'POST', cache: 'no-store' });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    const request = { method: 'POST', cache: 'no-store' };
+    if (options.body) {
+      request.headers = { 'content-type': 'application/json' };
+      request.body = JSON.stringify(options.body);
     }
-    await loadSystemData();
+    const response = await fetch(endpoint, request);
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `服务返回 ${response.status}`);
+    state.ukeyAssistant = payload.status || payload;
+    state.ukeyError = '';
   } catch (error) {
-    state.loadError = `刷新失败：${error.message}`;
-    render();
-  } finally {
-    button.disabled = false;
-    button.textContent = originalText;
+    state.ukeyError = `操作失败：${error.message}`;
   }
+  await loadUkeyAssistant();
+  await loadStrategySuggestions();
+  render();
 }
 
-document.getElementById('refreshButton').addEventListener('click', refreshSystemData);
+async function createExecutionProposal() {
+  const button = document.querySelector('#proposalButton');
+  if (button) {
+    button.disabled = true;
+    button.textContent = '生成中...';
+  }
+  try {
+    const response = await fetch(`/api/execution/proposal?date=${encodeURIComponent(state.date)}`, {
+      method: 'POST',
+      cache: 'no-store',
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `服务返回 ${response.status}`);
+    state.executionProposal = payload;
+    state.executionError = '';
+  } catch (error) {
+    state.executionError = `草稿没有生成：${error.message}`;
+  }
+  if (button) {
+    button.disabled = false;
+    button.textContent = '生成草稿';
+  }
+  render();
+}
+
+async function recordProposalReview(decision) {
+  try {
+    const params = new URLSearchParams({ date: state.date, decision: decision || 'reviewed' });
+    const response = await fetch(`/api/execution/review?${params.toString()}`, {
+      method: 'POST',
+      cache: 'no-store',
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `服务返回 ${response.status}`);
+    state.executionProposal = payload.proposal || state.executionProposal;
+    state.executionError = decision === 'approve' ? '已记录：人工已看过。' : '已记录：本次不采纳。';
+  } catch (error) {
+    state.executionError = `复核记录没有保存：${error.message}`;
+  }
+  render();
+}
+
+document.querySelector('#sideNav')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-module]');
+  if (!button) return;
+  state.moduleId = button.dataset.module;
+  render();
+});
+
+document.querySelector('#dateSelect')?.addEventListener('change', async (event) => {
+  state.date = event.target.value;
+  await loadStrategySuggestions();
+  render();
+});
+
+document.querySelector('#refreshButton')?.addEventListener('click', refreshData);
+document.querySelector('#reportButton')?.addEventListener('click', loadStrategyReport);
 
 loadSystemData();

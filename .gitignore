@@ -50,7 +50,12 @@ jspec-capture/output/
 jspec-capture/work/
 
 # Trading system generated local data/previews
+trading-ai-system/.browser/
+trading-ai-system/start-ukey-assistant.bat
+trading-ai-system/start-*.local.bat
 trading-ai-system/data/*.js
+trading-ai-system/data/audit-log.ndjson
+trading-ai-system/data/ukey-visible-snapshot.json
 trading-ai-system/preview*.png
 
 # Keep empty data directory available for local generated files.

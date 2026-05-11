@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快速上手 - 电力交易 AI 助手</title>
+  <style>
+    :root {
+      --bg: #f5f8fc;
+      --text: #17324d;
+      --muted: #63788e;
+      --blue: #2d7dd2;
+      --green: #15845a;
+      --line: #d9e5f2;
+      --panel: #ffffff;
+      --warn: #9a5b00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      line-height: 1.7;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 34px 18px 46px;
+    }
+    header, section {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 10px 26px rgba(45, 125, 210, 0.08);
+    }
+    header {
+      padding: 28px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+    }
+    section {
+      margin-top: 16px;
+      padding: 20px;
+    }
+    h1, h2 { margin: 0 0 10px; line-height: 1.3; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 20px; }
+    p { margin: 0 0 10px; color: var(--muted); }
+    ol, ul { margin: 0; padding-left: 22px; }
+    li { margin: 8px 0; }
+    code {
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: #0f4d82;
+      background: #eef6ff;
+      font-family: Consolas, "Courier New", monospace;
+    }
+    .badge {
+      display: inline-flex;
+      margin-bottom: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      color: var(--green);
+      background: #e9f8ef;
+      border: 1px solid #c9efdf;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+    .step {
+      padding: 13px 14px;
+      border: 1px dashed #b8cbe4;
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+    .step strong {
+      display: block;
+      color: var(--blue);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+    .card strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .note {
+      border-color: #f1d18d;
+      background: #fffaf0;
+    }
+    .note h2 { color: var(--warn); }
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      header { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="badge">双击即用 · 已内置模型 · 不自动下单</span>
+      <h1>电力交易 AI 助手怎么用</h1>
+      <p>这份试用包是本地软件。它帮你看数据、采集 JSPEC 页面上已经显示出来的实时信息、给出策略建议。最终交易仍然由人确认。</p>
+    </header>
+
+    <section>
+      <h2>先启动</h2>
+      <div class="steps">
+        <div class="step">
+          <strong>1. 解压</strong>
+          <span>把压缩包解压到桌面、D 盘或其他文件夹。</span>
+        </div>
+        <div class="step">
+          <strong>2. 双击启动</strong>
+          <span>双击 <code>start-ukey-assistant.bat</code>。模型已经配好，不需要再填 Key。</span>
+        </div>
+        <div class="step">
+          <strong>3. 进入系统</strong>
+          <span>浏览器会自动打开系统页面。如果没有自动打开，手动访问 <code>http://127.0.0.1:5177</code>。</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>实时数据怎么采</h2>
+      <ol>
+        <li>插上 UKey。</li>
+        <li>进入左侧 <strong>实时数据助手</strong>。</li>
+        <li>点击 <strong>打开数据窗口</strong>。</li>
+        <li>在弹出的浏览器窗口里手动登录 JSPEC，打开实时价格、申报或实际负荷页面。</li>
+        <li>回到助手页面，点击 <strong>采集一次</strong>；需要持续观察时再点 <strong>开始自动采集</strong>。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>AI 策略页看什么</h2>
+      <div class="grid">
+        <div class="card">
+          <strong>看价格</strong>
+          <p>系统会提示哪些时间点价格偏低，哪些时间点风险偏高。</p>
+        </div>
+        <div class="card">
+          <strong>看缺什么</strong>
+          <p>如果预测负荷、持仓边界、交易限额还没填，页面会直接提示。</p>
+        </div>
+        <div class="card">
+          <strong>看建议</strong>
+          <p>AI 只给辅助判断，不会替你提交交易。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>交易草稿怎么用</h2>
+      <p>进入 <strong>交易草稿复核</strong>，点击 <strong>生成交易草稿</strong>。系统会把建议整理出来，但电量、限价和是否采纳都需要人工确认。</p>
+    </section>
+
+    <section class="note">
+      <h2>注意</h2>
+      <ul>
+        <li>UKey 登录在你自己的浏览器窗口里完成，系统只读页面上已经显示出来的数据。</li>
+        <li>试用包内置了模型 Key，方便试用；正式使用时建议换成你们自己的 Key。</li>
+        <li>AI 建议只是辅助判断，不是交易指令。</li>
+      </ul>
+    </section>
+
+    <footer>遇到问题时，关闭命令窗口，再重新双击启动。</footer>
+  </main>
+</body>
+</html>

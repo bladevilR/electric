@@ -1,0 +1,189 @@
+{
+  "generatedAt": "2026-05-11T00:42:25.900044Z",
+  "ledger": {
+    "sourceFile": "2026年交易电量、电价、结算一览表.xlsx",
+    "months": [
+      {
+        "month": "1月",
+        "actualSettlementEnergyWanKwh": 5341.5655,
+        "settlementPriceYuanPerKwh": 0.641901,
+        "gridProxyPriceYuanPerKwh": 0.3937,
+        "spotShare": 0.207029,
+        "savingVsMarketUserWanYuan": 17.8301,
+        "savingVsMarketTotalWanYuan": 60.146,
+        "savingVsGridWanYuan": 330.255
+      },
+      {
+        "month": "2月",
+        "actualSettlementEnergyWanKwh": 4682.3859,
+        "settlementPriceYuanPerKwh": 0.676719,
+        "gridProxyPriceYuanPerKwh": 0.3102,
+        "spotShare": 0.218111,
+        "savingVsMarketUserWanYuan": 19.2586,
+        "savingVsMarketTotalWanYuan": 48.2426,
+        "savingVsGridWanYuan": -62.2703
+      }
+    ]
+  },
+  "settlementChecks": {
+    "files": [
+      {
+        "fileName": "2025年06月现货核对单 .xlsx",
+        "month": "2025-06",
+        "dailySheets": 30,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 59143.999,
+        "totalTradeFeeYuan": 23836573.84,
+        "totalSavingYuan": 245603.06
+      },
+      {
+        "fileName": "2026年03月21日苏州市轨道交通集团有限公司现货核对单.xlsx",
+        "month": "2026-03",
+        "dailySheets": 0,
+        "monthlyPointRows": 0,
+        "totalUsageMwh": 0.0,
+        "totalTradeFeeYuan": 0.0,
+        "totalSavingYuan": 0.0
+      },
+      {
+        "fileName": "4、2025年09月现货核对单 .xlsx",
+        "month": "2025-09",
+        "dailySheets": 30,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 73852.923,
+        "totalTradeFeeYuan": 30002989.28,
+        "totalSavingYuan": -44567.24
+      },
+      {
+        "fileName": "4、2025年10月现货核对单 .xlsx",
+        "month": "2025-10",
+        "dailySheets": 31,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 65149.582,
+        "totalTradeFeeYuan": 26122904.96,
+        "totalSavingYuan": -101237.26
+      },
+      {
+        "fileName": "4、2025年11月现货核对单 .xlsx",
+        "month": "2025-11",
+        "dailySheets": 31,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 51733.65,
+        "totalTradeFeeYuan": 19333942.46,
+        "totalSavingYuan": -307660.53
+      },
+      {
+        "fileName": "4、2025年12月现货核对单 .xlsx",
+        "month": "2025-12",
+        "dailySheets": 31,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 51951.371,
+        "totalTradeFeeYuan": 19393026.86,
+        "totalSavingYuan": -15688.72
+      },
+      {
+        "fileName": "4、2026年1月现货核对单 .xlsx",
+        "month": "2026-01",
+        "dailySheets": 31,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 53426.132,
+        "totalTradeFeeYuan": 17555985.67,
+        "totalSavingYuan": 1036458.47
+      },
+      {
+        "fileName": "4、2026年2月现货核对单 .xlsx",
+        "month": "2026-02",
+        "dailySheets": 28,
+        "monthlyPointRows": 96,
+        "totalUsageMwh": 46919.716,
+        "totalTradeFeeYuan": 15191443.73,
+        "totalSavingYuan": 424368.09
+      }
+    ]
+  },
+  "participants": [
+    {
+      "ddParticipantId": "3377981199799550968",
+      "ddParticipantName": "苏州市轨道交通集团有限公司",
+      "participantId": "200579",
+      "participantName": "苏州市轨道交通集团有限公司",
+      "generatorId": "200579",
+      "generatorName": "苏州市轨道交通集团有限公司",
+      "ddGeneratorId": "3377981199799550968",
+      "ddGeneratorName": "苏州市轨道交通集团有限公司",
+      "normalCap": "10000.0"
+    }
+  ],
+  "standard": {
+    "p0SourceCoverage": {
+      "present": 8,
+      "total": 8
+    },
+    "gaps": [
+      {
+        "id": "settle_day_empty",
+        "severity": "medium",
+        "message": "P0 source settle_day was captured but returned no standard rows."
+      },
+      {
+        "id": "actual_load_96_empty",
+        "severity": "medium",
+        "message": "P0 source actual_load_96 was captured but returned no standard rows."
+      },
+      {
+        "id": "mixed_dates",
+        "severity": "medium",
+        "message": "Captured rows span 2 dates. This can be valid, but downstream strategy should not compare day-ahead and real-time rows as the same day without checking date."
+      },
+      {
+        "id": "actual_load_values_missing",
+        "severity": "medium",
+        "message": "Actual-load endpoint was captured, but no kWh values are available in this capture."
+      }
+    ],
+    "fieldCompleteness": {
+      "date": 192,
+      "pointIndex": 192,
+      "timePoint": 192,
+      "declarationPower": 0,
+      "declarationPowerUpper": 0,
+      "declarationPowerLower": 0,
+      "declarationStartStopState": 0,
+      "declarationPercent": 0,
+      "defaultDeclarationPower": 96,
+      "defaultDeclarationPowerUpper": 0,
+      "defaultDeclarationPowerLower": 0,
+      "defaultDeclarationStartStopState": 0,
+      "defaultDeclarationPercent": 0,
+      "dayAheadUserMediumLongPower": 0,
+      "dayAheadUserStandardPower": 0,
+      "dayAheadUserSumPower": 0,
+      "dayAheadUserClearingPower": 0,
+      "dayAheadUserPrice": 0,
+      "dayAheadUserPriceFinal": 0,
+      "dayAheadUserSouthPrice": 0,
+      "dayAheadUserNorthPrice": 0,
+      "dayAheadPublicClearingPower": 0,
+      "dayAheadPublicPrice": 0,
+      "dayAheadPublicSouthPrice": 0,
+      "dayAheadPublicNorthPrice": 0,
+      "dayAheadPublicSouthNodePrice": 0,
+      "dayAheadPublicNorthNodePrice": 0,
+      "realTimeSouthPrice": 0,
+      "realTimeNorthPrice": 0,
+      "realTimeSouthNodePrice": 0,
+      "realTimeNorthNodePrice": 0,
+      "realTimeSouthReleaseType": 0,
+      "realTimeNorthReleaseType": 0,
+      "realTimeClearingPower": 0,
+      "realTimeAvgPrice": 57,
+      "realTimePointPrice": 0,
+      "realTimeAvgPriceCurrent": 0,
+      "realTimePointPriceCurrent": 0,
+      "realTimeAvgPriceFinal": 0,
+      "realTimePointPriceFinal": 0,
+      "actualKwh": 0,
+      "settleAmount": 0
+    }
+  }
+}
