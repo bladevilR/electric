@@ -109,6 +109,10 @@ test('buildForecastFeatureStore merges historical reconciliation labels', () => 
         actualKwh: 20163,
         settleAmount: 6579.17,
         settlementPrice: 326.299,
+        dayAheadForecastMwh: 9.275,
+        dayAheadActualRatio: 0.46,
+        outOfBandMwh: 9.87985,
+        totalTradeSavingYuan: 111.296,
         sourceFile: '4、2026年1月现货核对单 .xlsx',
         sourceSheet: '1',
       },
@@ -122,6 +126,10 @@ test('buildForecastFeatureStore merges historical reconciliation labels', () => 
   assert.equal(normalized.length, 1);
   assert.equal(row.actualKwh, 20163);
   assert.equal(row.settleAmount, 6579.17);
+  assert.equal(row.dayAheadForecastMwh, 9.275);
+  assert.equal(row.dayAheadActualRatio, 0.46);
+  assert.equal(row.outOfBandMwh, 9.87985);
+  assert.equal(row.totalTradeSavingYuan, 111.296);
   assert.equal(row.sourceFiles.includes('4、2026年1月现货核对单 .xlsx'), true);
   assert.equal(row.sourceEndpoints.includes('settlement-reference'), true);
   assert.equal(row.missingFields.includes('actualKwh'), false);

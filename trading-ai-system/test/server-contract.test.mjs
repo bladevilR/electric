@@ -177,6 +177,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /历史标签点/);
     assert.match(appScript, /交易计算表 CSV/);
     assert.match(appScript, /小时持仓参考/);
+    assert.match(appScript, /月度结算概览/);
+    assert.match(appScript, /额外复盘点/);
     assert.match(appScript, /forecastLab/);
     assert.match(appScript, /backtestReport/);
     assert.match(appScript, /backfillPlan/);
@@ -276,6 +278,9 @@ test('local server exposes the P0 system loop', async () => {
     assert.ok(settlementReference.summary.settleAmountCandidateRows >= 17000);
     assert.ok(settlementReference.summary.transactionCalculationHourlySummaryRows >= 720);
     assert.ok(settlementReference.summary.transactionCalculationPositionHourlyRows >= 240);
+    assert.ok(settlementReference.summary.monthlyOverviewRows >= 2);
+    assert.ok(Array.isArray(settlementReference.monthlyOverviewRows));
+    assert.ok(settlementReference.monthlyOverviewRows.some((item) => item.monthKey === '2026-01'));
     assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
     assert.equal(historicalForecastFeatures.rows.length, 96);
@@ -283,6 +288,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(historicalForecastFeatures.summary.fieldCompleteness.settleAmount, 96);
     assert.equal(historicalForecastFeatures.rows[0].actualKwh, 20163);
     assert.equal(historicalForecastFeatures.rows[0].settleAmount, 6579.17);
+    assert.equal(historicalForecastFeatures.rows[0].dayAheadForecastMwh, 9.275);
+    assert.equal(historicalForecastFeatures.rows[0].totalTradeSavingYuan, 111.296);
     assert.equal(transactionForecastFeatures.rows.length, 96);
     assert.equal(transactionForecastFeatures.summary.fieldCompleteness.actualKwh, 96);
     assert.equal(transactionForecastFeatures.summary.fieldCompleteness.declarationPower, 96);

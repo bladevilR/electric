@@ -40,6 +40,11 @@
 
 这层的定位是“复核参考”和“升级钩子”。历史现货核对单中逐日 96 点的 `用电量` 和 `交易电费` 可以补历史 `actualKwh` / `settleAmount` 训练标签；交易计算表标准化 CSV 中的 `customer_usage_96.csv` 和 `submission_power_96.csv` 可以补部分月末历史 `actualKwh` / `declarationPower`，`hourly_summary_rows.csv` 和 `hourly_transaction.csv` 可以补小时级持仓、操作量、近三天用电均值和交易测算参考。但这些数据不能代表目标交易日已经有实际负荷、结算、持仓或交易限额。月度交易电量电价表只能做长期背景，不能当作日内点位结算；手工导出 manifest 如果 `files` 为空，只说明补采目标已经登记，不说明数据已经到位。
 
+本轮重新盘点后，系统还显式接入了两类容易漏掉的本地信息：
+
+- `2026年交易电量、电价、结算一览表.xlsx` 的 2026 年月度行，目前可解析 2026-01 和 2026-02 的实际结算电量、结算电价、国网代理价格、现货占比和节约金额。这些字段通过 `/api/settlement/reference` 的 `monthlyOverviewRows` 暴露，用于长期成本背景和人工复核。
+- `4、2026年1月现货核对单 .xlsx` 的每日 96 点页不仅有 `用电量` 和 `交易电费`，还包含日前曲线预估、日前/实际比例、低于 95% 或高于 105% 电量、日前偏差、实时偏差、能量块结算和交易节约费用。系统现在把这些额外点位指标作为 `featureRows` 的参考字段带入 `/api/forecast/features`，但不把它们当成目标日可执行约束。
+
 因此系统仍保持：
 - 历史核对单可提供历史 `actualKwh` / `settleAmount` 候选行。
 - 交易计算表标准化 CSV 可提供部分历史 `actualKwh` / `declarationPower` 候选行。

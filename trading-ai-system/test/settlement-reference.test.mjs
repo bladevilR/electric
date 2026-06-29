@@ -25,6 +25,9 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.ok(reference.summary.transactionCalculationHourlyTransactionRows >= 3000);
   assert.ok(reference.summary.transactionCalculationPositionHourlyRows >= 240);
   assert.ok(reference.summary.transactionCalculationOperationHourlyRows >= 240);
+  assert.ok(reference.summary.monthlyOverviewRows >= 2);
+  assert.ok(reference.summary.monthlyOverviewMonths.includes('2026-01'));
+  assert.ok(reference.summary.monthlyOverviewMonths.includes('2026-02'));
   assert.equal(reference.summary.actualDaily96ExportFiles, 0);
   assert.equal(reference.summary.settlementExportFiles, 0);
   assert.equal(reference.summary.positionExportFiles, 0);
@@ -37,6 +40,16 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.equal(january.validDailySheetCount, 31);
   assert.equal(january.actualKwhRows, 31 * 96);
   assert.equal(january.settleAmountRows, 31 * 96);
+  assert.equal(january.extraPointMetricRows, 31 * 96);
+  assert.ok(
+    january.featureRows.some(
+      (item) =>
+        item.date === '2026-01-01' &&
+        item.pointIndex === 1 &&
+        item.dayAheadForecastMwh === 9.275 &&
+        item.totalTradeSavingYuan === 111.296
+    )
+  );
 
   const november = reference.workbooks.find((item) => item.fileName.includes('2025年11月现货核对单'));
   assert.ok(november);
@@ -50,6 +63,15 @@ test('buildSettlementReference inventories local Excel and manual export referen
   const monthly = reference.workbooks.find((item) => item.kind === 'monthly_settlement_overview');
   assert.ok(monthly);
   assert.ok(monthly.sheets.some((sheet) => sheet.name === '2026年' && sheet.numericRows >= 10));
+  assert.ok(monthly.monthlyOverviewRowCount >= 2);
+  assert.ok(
+    reference.monthlyOverviewRows.some(
+      (item) =>
+        item.monthKey === '2026-01' &&
+        item.actualSettlementEnergyWanKwh === 5341.5655 &&
+        item.settlementPriceYuanPerKwh === 0.641901
+    )
+  );
 
   assert.ok(reference.workbooks.filter((item) => item.kind === 'transaction_calculation').length >= 5);
   assert.ok(

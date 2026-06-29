@@ -52,6 +52,13 @@ def numeric(value):
         return None
 
 
+def round_number(value, digits=6):
+    number = numeric(value)
+    if number is None:
+        return None
+    return round(number, digits)
+
+
 def column_index(cell_ref):
     match = re.match(r"([A-Z]+)\d+", cell_ref or "")
     if not match:
@@ -76,8 +83,29 @@ def worksheet_rows(worksheet, shared_strings):
             yield values
 
 
+def header_index(rows, label, default=None):
+    header_a = rows[4] if len(rows) > 4 else []
+    header_b = rows[5] if len(rows) > 5 else []
+    candidates = []
+    width = max(len(header_a), len(header_b))
+    for index in range(width):
+        first = header_a[index] if index < len(header_a) else ""
+        second = header_b[index] if index < len(header_b) else ""
+        text = f"{first or ''}{second or ''}"
+        if label in text:
+            candidates.append(index)
+    return candidates[-1] if candidates else default
+
+
+def row_number(values, index):
+    if index is None or index < 0 or index >= len(values):
+        return None
+    return numeric(values[index])
+
+
 def summarize_sheet(name, worksheet, shared_strings):
     dimension = worksheet.find("a:dimension", NS)
+    rows = list(worksheet_rows(worksheet, shared_strings))
     sample_rows = []
     non_empty_rows = 0
     numeric_rows = 0
@@ -88,8 +116,14 @@ def summarize_sheet(name, worksheet, shared_strings):
     actual_load_mwh = 0.0
     settlement_amount_yuan = 0.0
     point_values = []
+    settlement_amount_index = header_index(rows, "交易电费", 14)
+    settlement_price_index = header_index(rows, "交易单价", 15)
+    day_ahead_forecast_index = header_index(rows, "日前曲线预估", 16)
+    day_ahead_actual_ratio_index = header_index(rows, "日前/实际", 17)
+    out_of_band_index = header_index(rows, "低于95", 18)
+    total_trade_saving_index = header_index(rows, "交易节约费用", 28)
 
-    for values in worksheet_rows(worksheet, shared_strings):
+    for values in rows:
         non_empty_rows += 1
         if sum(1 for value in values if is_numeric(value)) >= 3:
             numeric_rows += 1
@@ -99,8 +133,8 @@ def summarize_sheet(name, worksheet, shared_strings):
         if values and TIME_POINT_RE.fullmatch(str(values[0]).strip()):
             point_rows += 1
             load_value = numeric(values[1] if len(values) > 1 else "")
-            settlement_value = numeric(values[14] if len(values) > 14 else "")
-            price_value = numeric(values[15] if len(values) > 15 else "")
+            settlement_value = row_number(values, settlement_amount_index)
+            price_value = row_number(values, settlement_price_index)
             if load_value is not None:
                 actual_load_points += 1
                 actual_load_mwh += load_value
@@ -116,6 +150,20 @@ def summarize_sheet(name, worksheet, shared_strings):
                     "actualLoadMwh": load_value,
                     "settlementAmountYuan": settlement_value,
                     "settlementPrice": price_value,
+                    "longTermContractMwh": row_number(values, 2),
+                    "longTermContractFeeYuan": row_number(values, 3),
+                    "energyBlockMwh": row_number(values, 4),
+                    "energyBlockFeeYuan": row_number(values, 5),
+                    "dayAheadDeviationMwh": row_number(values, 8),
+                    "dayAheadDeviationPrice": row_number(values, 9),
+                    "dayAheadDeviationFeeYuan": row_number(values, 10),
+                    "realtimeDeviationMwh": row_number(values, 11),
+                    "realtimeDeviationPrice": row_number(values, 12),
+                    "realtimeDeviationFeeYuan": row_number(values, 13),
+                    "dayAheadForecastMwh": row_number(values, day_ahead_forecast_index),
+                    "dayAheadActualRatio": row_number(values, day_ahead_actual_ratio_index),
+                    "outOfBandMwh": row_number(values, out_of_band_index),
+                    "totalTradeSavingYuan": row_number(values, total_trade_saving_index),
                 }
             )
 
@@ -152,6 +200,65 @@ def workbook_sheets(workbook_path):
             worksheet = ET.fromstring(archive.read(target))
             sheets.append(summarize_sheet(name, worksheet, shared_strings))
         return sheets
+
+
+def parse_month_label(value):
+    text = str(value or "").strip()
+    match = re.fullmatch(r"(\d{1,2})月", text)
+    if not match:
+        return None
+    month = int(match.group(1))
+    return month if 1 <= month <= 12 else None
+
+
+def monthly_overview_rows(workbook_path):
+    if workbook_path.suffix.lower() != ".xlsx":
+        return []
+    rows = []
+    try:
+        with zipfile.ZipFile(workbook_path) as archive:
+            workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+            rels = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+            rid_to_target = {rel.attrib["Id"]: rel.attrib["Target"] for rel in rels}
+            shared_strings = read_shared_strings(archive)
+            for sheet in workbook.find("a:sheets", NS):
+                sheet_name = sheet.attrib.get("name", "")
+                year_match = re.fullmatch(r"(20\d{2})年", sheet_name)
+                if not year_match:
+                    continue
+                rid = sheet.attrib.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id")
+                target = rid_to_target[rid].lstrip("/")
+                if not target.startswith("xl/"):
+                    target = "xl/" + target
+                worksheet = ET.fromstring(archive.read(target))
+                year = int(year_match.group(1))
+                for values in worksheet_rows(worksheet, shared_strings):
+                    month = parse_month_label(values[0] if values else "")
+                    if month is None:
+                        continue
+                    actual_energy = row_number(values, 31)
+                    if actual_energy is None:
+                        continue
+                    rows.append(
+                        {
+                            "year": year,
+                            "month": month,
+                            "monthLabel": f"{month}月",
+                            "monthKey": f"{year}-{month:02d}",
+                            "actualSettlementEnergyWanKwh": round_number(actual_energy, 4),
+                            "settlementPriceYuanPerKwh": round_number(row_number(values, 30), 6),
+                            "gridProxyPriceYuanPerKwh": round_number(row_number(values, 8), 6),
+                            "spotShare": round_number(row_number(values, 32), 6),
+                            "savingVsMarketUserWanYuan": round_number(row_number(values, 38), 4),
+                            "savingVsMarketTotalWanYuan": round_number(row_number(values, 40), 4),
+                            "savingVsGridWanYuan": round_number(row_number(values, 42), 4),
+                            "sourceFile": workbook_path.name,
+                            "sourceSheet": sheet_name,
+                        }
+                    )
+    except Exception:
+        return []
+    return rows
 
 
 def is_daily_sheet(sheet):
@@ -227,16 +334,21 @@ def workbook_record(path):
             "validDailySheetCount": 0,
             "actualKwhRows": 0,
             "settleAmountRows": 0,
+            "extraPointMetricRows": 0,
+            "monthlyOverviewRowCount": 0,
+            "monthlyOverviewMonths": [],
             "canFillActualKwh": False,
             "canFillSettleAmount": False,
             "badDailySheets": [],
             "referenceStrength": workbook_reference_strength(kind, 0),
+            "monthlyOverviewRows": [],
         }
 
     sheets = workbook_sheets(path)
     kind = classify_workbook(path, sheets)
     valid_daily = [sheet for sheet in sheets if valid_daily_sheet(sheet)]
     coverage = infer_coverage(path)
+    monthly_rows = monthly_overview_rows(path) if kind == "monthly_settlement_overview" else []
     feature_rows = []
     for sheet in valid_daily:
         date = date_for_daily_sheet(coverage, sheet["name"])
@@ -255,6 +367,20 @@ def workbook_record(path):
                     "actualKwh": round(load_mwh * 1000, 6),
                     "settleAmount": settlement_yuan,
                     "settlementPrice": point.get("settlementPrice"),
+                    "longTermContractMwh": point.get("longTermContractMwh"),
+                    "longTermContractFeeYuan": point.get("longTermContractFeeYuan"),
+                    "energyBlockMwh": point.get("energyBlockMwh"),
+                    "energyBlockFeeYuan": point.get("energyBlockFeeYuan"),
+                    "dayAheadDeviationMwh": point.get("dayAheadDeviationMwh"),
+                    "dayAheadDeviationPrice": point.get("dayAheadDeviationPrice"),
+                    "dayAheadDeviationFeeYuan": point.get("dayAheadDeviationFeeYuan"),
+                    "realtimeDeviationMwh": point.get("realtimeDeviationMwh"),
+                    "realtimeDeviationPrice": point.get("realtimeDeviationPrice"),
+                    "realtimeDeviationFeeYuan": point.get("realtimeDeviationFeeYuan"),
+                    "dayAheadForecastMwh": point.get("dayAheadForecastMwh"),
+                    "dayAheadActualRatio": point.get("dayAheadActualRatio"),
+                    "outOfBandMwh": point.get("outOfBandMwh"),
+                    "totalTradeSavingYuan": point.get("totalTradeSavingYuan"),
                     "sourceFile": path.name,
                     "sourceSheet": sheet["name"],
                 }
@@ -273,6 +399,17 @@ def workbook_record(path):
     ]
     actual_rows = len(valid_daily) * 96
     settlement_rows = len(valid_daily) * 96
+    extra_metric_fields = [
+        "dayAheadForecastMwh",
+        "dayAheadActualRatio",
+        "outOfBandMwh",
+        "totalTradeSavingYuan",
+    ]
+    extra_point_metric_rows = sum(
+        1
+        for row in feature_rows
+        if any(row.get(field) is not None for field in extra_metric_fields)
+    )
 
     return {
         "fileName": path.name,
@@ -285,12 +422,16 @@ def workbook_record(path):
         "validDailySheetCount": len(valid_daily),
         "actualKwhRows": actual_rows,
         "settleAmountRows": settlement_rows,
+        "extraPointMetricRows": extra_point_metric_rows,
+        "monthlyOverviewRowCount": len(monthly_rows),
+        "monthlyOverviewMonths": [row["monthKey"] for row in monthly_rows],
         "featureRowCount": len(feature_rows),
         "canFillActualKwh": actual_rows > 0,
         "canFillSettleAmount": settlement_rows > 0,
         "badDailySheets": bad_daily,
         "referenceStrength": workbook_reference_strength(kind, len(valid_daily)),
         "featureRows": feature_rows,
+        "monthlyOverviewRows": monthly_rows,
     }
 
 
@@ -520,6 +661,8 @@ def main():
     transaction_feature_rows = transaction_standardized["featureRows"]
     actual_candidate_rows = sum(item.get("actualKwhRows", 0) for item in workbooks) + transaction_actual_rows
     settlement_candidate_rows = sum(item.get("settleAmountRows", 0) for item in workbooks)
+    extra_point_metric_rows = sum(item.get("extraPointMetricRows", 0) for item in workbooks)
+    monthly_overview_rows = [row for item in workbooks for row in item.get("monthlyOverviewRows", [])]
     feature_rows = transaction_feature_rows + [row for item in workbooks for row in item.get("featureRows", [])]
 
     result = {
@@ -540,6 +683,9 @@ def main():
             "transactionCalculationPowerHourlyRows": transaction_standardized["summary"]["powerHourlyRows"],
             "transactionCalculationFeatureRowCount": transaction_standardized["summary"]["featureRowCount"],
             "transactionCalculationHourlyBusinessRowCount": transaction_standardized["summary"]["hourlyBusinessRowCount"],
+            "monthlyOverviewRows": len(monthly_overview_rows),
+            "monthlyOverviewMonths": [row["monthKey"] for row in monthly_overview_rows],
+            "extraPointMetricRows": extra_point_metric_rows,
             "manualManifestCount": len(manual_exports),
             "actualDaily96ExportFiles": actual_files,
             "settlementExportFiles": settlement_files,
@@ -553,6 +699,7 @@ def main():
         },
         "workbooks": workbooks,
         "featureRows": feature_rows,
+        "monthlyOverviewRows": monthly_overview_rows,
         "transactionCalculationStandardized": transaction_standardized,
         "manualExports": manual_exports,
         "usageBoundaries": [

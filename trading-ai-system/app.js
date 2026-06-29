@@ -824,6 +824,15 @@ function renderSettlementReference() {
   const summary = reference.summary || {};
   const workbooks = asArray(reference.workbooks);
   const manualExports = asArray(reference.manualExports);
+  const monthlyRows = asArray(reference.monthlyOverviewRows).map((item) => ({
+    monthKey: item.monthKey,
+    energy: fmt(item.actualSettlementEnergyWanKwh),
+    settlementPrice: fmt(item.settlementPriceYuanPerKwh),
+    gridPrice: fmt(item.gridProxyPriceYuanPerKwh),
+    spotShare: item.spotShare === null || item.spotShare === undefined ? '--' : `${fmt(Number(item.spotShare) * 100)}%`,
+    savingMarket: fmt(item.savingVsMarketTotalWanYuan),
+    savingGrid: fmt(item.savingVsGridWanYuan),
+  }));
   const workbookRows = workbooks.map((item) => ({
     fileName: item.fileName,
     kind:
@@ -873,8 +882,25 @@ function renderSettlementReference() {
       ${kpi('交易计算表 CSV', String(summary.transactionCalculationFeatureRowCount || 0), '用电/申报候选')}
       ${kpi('小时持仓参考', String(summary.transactionCalculationPositionHourlyRows || 0), '历史约束参考')}
       ${kpi('操作量参考', String(summary.transactionCalculationOperationHourlyRows || 0), '历史买卖测算')}
+      ${kpi('月度概览', String(summary.monthlyOverviewRows || 0), '交易电量/电价/结算')}
+      ${kpi('额外复盘点', String(summary.extraPointMetricRows || 0), '日前预估/节约费用')}
       ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', '历史 actualKwh / settleAmount')}
     </section>
+    <article class="card">
+      <h2>月度结算概览</h2>
+      ${table(
+        [
+          { key: 'monthKey', label: '月份' },
+          { key: 'energy', label: '结算电量(万度)' },
+          { key: 'settlementPrice', label: '结算价(元/度)' },
+          { key: 'gridPrice', label: '国网价(元/度)' },
+          { key: 'spotShare', label: '现货占比' },
+          { key: 'savingMarket', label: '较市场节约(万元)' },
+          { key: 'savingGrid', label: '较国网节约(万元)' },
+        ],
+        monthlyRows
+      )}
+    </article>
     <section class="grid two">
       <article class="card">
         <h2>Excel 参考文件</h2>

@@ -13,6 +13,24 @@ const FEATURE_FIELDS = [
   'settleAmount',
 ];
 
+const SETTLEMENT_REFERENCE_EXTRA_FIELDS = [
+  'settlementPrice',
+  'longTermContractMwh',
+  'longTermContractFeeYuan',
+  'energyBlockMwh',
+  'energyBlockFeeYuan',
+  'dayAheadDeviationMwh',
+  'dayAheadDeviationPrice',
+  'dayAheadDeviationFeeYuan',
+  'realtimeDeviationMwh',
+  'realtimeDeviationPrice',
+  'realtimeDeviationFeeYuan',
+  'dayAheadForecastMwh',
+  'dayAheadActualRatio',
+  'outOfBandMwh',
+  'totalTradeSavingYuan',
+];
+
 function cleanString(value) {
   return value == null ? '' : String(value).replace(/\s+/g, ' ').trim();
 }
@@ -210,6 +228,9 @@ export function normalizeSettlementReferenceRows(reference = {}) {
           settleAmount: numberOrNull(row.settleAmount),
           declarationPower: numberOrNull(row.declarationPower),
           defaultDeclarationPower: numberOrNull(row.defaultDeclarationPower),
+          ...Object.fromEntries(
+            SETTLEMENT_REFERENCE_EXTRA_FIELDS.map((field) => [field, numberOrNull(row[field])])
+          ),
         },
         source: {
           sourceFile: row.sourceFile || row.fileName || 'settlement-reference',
