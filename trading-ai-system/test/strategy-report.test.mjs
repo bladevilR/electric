@@ -58,6 +58,9 @@ test('buildStrategyReport deduplicates blockers and closure items', () => {
         actualDaily96ExportFiles: 0,
         settlementExportFiles: 0,
         positionExportFiles: 0,
+        actualKwhCandidateRows: 20256,
+        settleAmountCandidateRows: 20256,
+        transactionCalculationWorkbookCount: 5,
       },
     },
   });
@@ -69,6 +72,9 @@ test('buildStrategyReport deduplicates blockers and closure items', () => {
   assert.ok(report.nextActions.some((item) => item.id === 'targeted_backfill'));
   assert.equal(report.settlementReferenceSummary.hasSettlementReference, true);
   assert.equal(report.settlementReferenceSummary.referenceWorkbookCount, 2);
+  assert.equal(report.settlementReferenceSummary.actualKwhCandidateRows, 20256);
+  assert.equal(report.settlementReferenceSummary.settleAmountCandidateRows, 20256);
+  assert.equal(report.settlementReferenceSummary.transactionCalculationWorkbookCount, 5);
   assert.equal(
     report.closureItems.filter((item) => item.id === 'forecast_load_96').length,
     1

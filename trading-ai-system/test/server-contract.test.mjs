@@ -258,8 +258,10 @@ test('local server exposes the P0 system loop', async () => {
     assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
     assert.ok(dataAssets.summary);
     assert.ok(settlementReference.summary);
-    assert.equal(settlementReference.summary.canFillActualKwh, false);
-    assert.equal(settlementReference.summary.canFillSettleAmount, false);
+    assert.equal(settlementReference.summary.canFillActualKwh, true);
+    assert.equal(settlementReference.summary.canFillSettleAmount, true);
+    assert.ok(settlementReference.summary.actualKwhCandidateRows >= 17000);
+    assert.ok(settlementReference.summary.settleAmountCandidateRows >= 17000);
     assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
     assert.ok(forecastModel.status);

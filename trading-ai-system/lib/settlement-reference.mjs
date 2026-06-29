@@ -15,9 +15,12 @@ export function summarizeSettlementReference(reference = {}) {
     referenceWorkbookCount: Number(summary.workbookCount || 0),
     spotReconciliationWorkbookCount: Number(summary.spotReconciliationWorkbookCount || 0),
     monthlySettlementWorkbookCount: Number(summary.monthlySettlementWorkbookCount || 0),
+    transactionCalculationWorkbookCount: Number(summary.transactionCalculationWorkbookCount || 0),
     actualDaily96ExportFiles: Number(summary.actualDaily96ExportFiles || 0),
     settlementExportFiles: Number(summary.settlementExportFiles || 0),
     positionExportFiles: Number(summary.positionExportFiles || 0),
+    actualKwhCandidateRows: Number(summary.actualKwhCandidateRows || 0),
+    settleAmountCandidateRows: Number(summary.settleAmountCandidateRows || 0),
     canFillActualKwh: Boolean(summary.canFillActualKwh),
     canFillSettleAmount: Boolean(summary.canFillSettleAmount),
   };
