@@ -7,12 +7,16 @@ const DEFAULT_JSPEC_URL = 'https://www.jspec.com.cn/';
 const DEFAULT_DEBUG_ADDRESS = '127.0.0.1';
 const DEFAULT_DEBUG_PORT = 9224;
 const DEFAULT_INTERVAL_SECONDS = 30;
-const DEFAULT_SWEEP_DELAY_MS = 8000;
+const DEFAULT_SWEEP_DELAY_MS = 20000;
+const MIN_SWEEP_DELAY_MS = 12000;
 const SNAPSHOT_SOURCE = 'jspec_managed_browser_visible_page';
 const SWEEP_SOURCE = 'jspec_managed_browser_auto_sweep';
 const SENSITIVE_FIELD_PATTERN =
   /cookie|token|ticket|authorization|password|passwd|secret|credential|cert|private.?key|pin/i;
 const FORBIDDEN_SWEEP_ROUTE_PATTERN = /tradeDemo|rollMatchTrade|submit|commit|save|delete|cancel/i;
+const RATE_LIMIT_WARNING_PATTERN =
+  /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
+const RATE_LIMIT_SWEEP_STOP_MESSAGE = 'JSPEC reported high API access frequency; sweep stopped before remaining targets.';
 
 const DEFAULT_SWEEP_TARGETS = [
   {
@@ -385,11 +389,24 @@ function resolveSweepDelayMs(value) {
   if (!Number.isFinite(numeric) || numeric < 0) {
     return DEFAULT_SWEEP_DELAY_MS;
   }
-  return Math.min(Math.max(Math.round(numeric), 1000), 120000);
+  return Math.min(Math.max(Math.round(numeric), MIN_SWEEP_DELAY_MS), 120000);
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function detectSweepRateLimitWarning(pageSnapshot = {}) {
+  return RATE_LIMIT_WARNING_PATTERN.test(
+    [
+      pageSnapshot.title,
+      pageSnapshot.bodyText,
+      pageSnapshot.url,
+    ]
+      .map(cleanString)
+      .filter(Boolean)
+      .join('\n')
+  );
 }
 
 export function buildAutoSweepTargets(options = {}) {
@@ -864,6 +881,10 @@ export function createUkeyBrowserCollector(options = {}) {
         try {
           const pageSnapshot = await captureSweepTarget(browserTarget, target, delayMs);
           const snapshot = parseVisibleBusinessSnapshot(pageSnapshot);
+          if (detectSweepRateLimitWarning(pageSnapshot)) {
+            pageResults.push({ target, snapshot, error: RATE_LIMIT_SWEEP_STOP_MESSAGE });
+            break;
+          }
           pageResults.push({ target, snapshot });
         } catch (error) {
           pageResults.push({ target, error: error?.message || String(error) });

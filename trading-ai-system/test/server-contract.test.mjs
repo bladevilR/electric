@@ -184,6 +184,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(ukeyAssistant.collector.intervalSeconds, 30);
     assert.equal(ukeyAssistant.collector.state, 'stopped');
     assert.equal(ukeyAssistant.sweep.state, 'idle');
+    assert.equal(ukeyAssistant.sweep.defaultDelayMs, 20000);
     assert.ok(ukeyAssistant.sweep.targetCount >= 10);
     assert.ok(ukeyAssistant.sweep.targetIds.includes('energy_block_trades'));
     assert.equal(modelRuntime.provider, 'openai_compatible');

@@ -7,6 +7,8 @@ import {
   buildAutoSweepSummary,
   buildAutoSweepTargets,
   buildManagedBrowserLaunch,
+  createUkeyBrowserCollector,
+  detectSweepRateLimitWarning,
   parseVisibleBusinessSnapshot,
 } from '../lib/ukey-browser-collector.mjs';
 
@@ -72,6 +74,32 @@ test('buildAutoSweepTargets creates a read-only JSPEC route sweep without menu c
   );
   assert.equal(
     targets.some((target) => /tradeDemo|rollMatchTrade|submit|commit/i.test(target.routeFragment)),
+    false
+  );
+});
+
+test('collector defaults to a moderate sweep pace instead of the earlier fast scan', () => {
+  const collector = createUkeyBrowserCollector({
+    rootDir: 'E:\\electric\\trading-ai-system',
+    env: { JSPEC_MANAGED_BROWSER_DISABLED: '1' },
+  });
+
+  assert.equal(collector.status().sweep.defaultDelayMs, 20000);
+});
+
+test('detectSweepRateLimitWarning catches JSPEC frequency alarms', () => {
+  assert.equal(
+    detectSweepRateLimitWarning({
+      title: '电力交易平台',
+      bodyText: '系统提示：API访问频率过高，请稍后重试。',
+    }),
+    true
+  );
+  assert.equal(
+    detectSweepRateLimitWarning({
+      title: '电力交易平台',
+      bodyText: '用户：苏州市轨道交通集团有限公司 江苏省内现货',
+    }),
     false
   );
 });
