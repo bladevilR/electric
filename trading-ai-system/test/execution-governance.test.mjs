@@ -86,12 +86,19 @@ test('createExecutionProposal generates editable draft lines without auto submit
     assert.equal(proposal.autoSubmit, false);
     assert.equal(proposal.humanDecisionRequired, true);
     assert.deepEqual(proposal.orderLines, []);
+    assert.ok(proposal.costStrategy);
+    assert.equal(
+      proposal.costStrategy.policyTiers.some((item) => item.id === 'aggressive' && item.executable === false),
+      true
+    );
     assert.ok(proposal.proposalLines.length > 0);
     assert.ok(proposal.proposalLines.every((item) => item.editable === true));
     assert.equal(proposal.proposalLines[0].quantityMwh, 0.4);
     assert.equal(proposal.proposalLines[0].priceLimit, 180);
     assert.ok(proposal.proposalLines[0].evidence.some((item) => item.includes('预测负荷')));
     assert.ok(proposal.reviewWarnings.some((item) => item.includes('实际负荷')));
+    assert.ok(proposal.reviewWarnings.some((item) => item.includes('省钱策略置信度')));
+    assert.ok(proposal.reviewWarnings.some((item) => item.includes('人工决策支持')));
     assert.equal(proposal.blockers.some((item) => item.includes('CA/UKey')), false);
 
     const events = await readAuditLog(auditPath);

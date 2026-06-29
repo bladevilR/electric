@@ -1,5 +1,8 @@
 import { buildStrategySuggestions, numeric } from './strategy-engine.mjs';
 import { summarizeDataset } from './system-data.mjs';
+import { buildForecastModelReport } from './forecast-models.mjs';
+import { runForecastBacktest } from './backtest-engine.mjs';
+import { buildCostStrategy } from './cost-optimizer.mjs';
 
 function rowsForDate(dataset, date) {
   const rows = Array.isArray(dataset?.rows) ? dataset.rows : [];
@@ -30,12 +33,56 @@ function uniqueText(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function summarizeForecastReport(report = {}) {
+  const readiness = report.readiness || {};
+  return {
+    status: report.status || 'unavailable',
+    targetDate: report.targetDate || '',
+    historicalDateCount: readiness.historicalDateCount || 0,
+    comparablePointCount: readiness.comparablePointCount || 0,
+    missingReasons: Array.isArray(readiness.missingReasons) ? readiness.missingReasons : [],
+    forecastCount: Array.isArray(report.forecasts) ? report.forecasts.length : 0,
+  };
+}
+
+function summarizeBacktestReport(report = {}) {
+  return {
+    status: report.status || 'unavailable',
+    evaluationDateCount: Array.isArray(report.evaluationDates) ? report.evaluationDates.length : 0,
+    metrics: report.metrics || {},
+    warnings: Array.isArray(report.warnings) ? report.warnings : [],
+    strategyStatus: report.strategyComparison?.status || 'unavailable',
+  };
+}
+
+function primarySavingsAction(costStrategy = {}) {
+  const tiers = Array.isArray(costStrategy.policyTiers) ? costStrategy.policyTiers : [];
+  const neutral = tiers.find((item) => item.id === 'neutral' && item.enabled);
+  const conservative = tiers.find((item) => item.id === 'conservative');
+  return neutral?.action || conservative?.action || '只做人工观察，不输出可执行电量。';
+}
+
 export function buildStrategyReport(dataset, options = {}) {
   const summary = summarizeDataset(dataset);
   const date = options.date || summary.dates?.[0] || '';
   const rows = rowsForDate(dataset, date);
   const realTimePrices = rows.map((row) => row.realTimeAvgPrice).filter((value) => numeric(value) !== null);
   const suggestions = buildStrategySuggestions(dataset, { date });
+  const featureStore = options.featureStore || dataset;
+  const forecastReport =
+    options.forecastReport || options.modelReport || buildForecastModelReport(featureStore, { targetDate: date });
+  const backtestReport = options.backtestReport || runForecastBacktest(featureStore);
+  const costStrategy =
+    options.costStrategy ||
+    buildCostStrategy(options.strategyDataset || dataset, {
+      date,
+      assets: options.assets,
+      modelReport: forecastReport,
+      backtestReport,
+    });
+  const forecastSummary = summarizeForecastReport(forecastReport);
+  const backtestSummary = summarizeBacktestReport(backtestReport);
+  const dataNeeds = Array.isArray(costStrategy.nextBestData) ? costStrategy.nextBestData : [];
   const pendingIntegrations = uniqueById(suggestions.flatMap((item) => item.requiredData || []));
   const closureItems = Array.isArray(options.integrationClosure?.items)
     ? options.integrationClosure.items
@@ -65,15 +112,34 @@ export function buildStrategyReport(dataset, options = {}) {
       gaps: summary.gaps,
       fieldCompleteness: summary.fieldCompleteness,
     },
-    suggestions,
+      suggestions,
+    forecastSummary,
+    backtestSummary,
+    costStrategy,
+    savingsFocus: {
+      modelMode: costStrategy.modelMode || forecastSummary.status || 'heuristic_fallback',
+      primaryAction: primarySavingsAction(costStrategy),
+      confidenceScore: Number(costStrategy.dataConfidence?.score || 0),
+      dataNeeds,
+    },
     closureItems,
     blockingReasons,
-    nextActions: closureItems.map((item) => ({
-      id: item.id,
-      title: item.name,
-      note: item.closureText || item.note,
-      status: item.status,
-    })),
+    nextActions: [
+      ...closureItems.map((item) => ({
+        id: item.id,
+        title: item.name,
+        note: item.closureText || item.note,
+        status: item.status,
+      })),
+      {
+        id: 'targeted_backfill',
+        title: '定向补采',
+        note: dataNeeds.length
+          ? dataNeeds.map((item) => item.reason || item.id).join('；')
+          : '按补采计划慢速核对缺口，不连续扫站。',
+        status: 'registered',
+      },
+    ],
   };
 }
 
@@ -83,6 +149,9 @@ export function renderStrategyReportMarkdown(report) {
   const suggestions = Array.isArray(report.suggestions) ? report.suggestions : [];
   const integrations = Array.isArray(report.closureItems) ? report.closureItems : [];
   const blockers = Array.isArray(report.blockingReasons) ? report.blockingReasons : [];
+  const savingsFocus = report.savingsFocus || {};
+  const forecastSummary = report.forecastSummary || {};
+  const backtestSummary = report.backtestSummary || {};
 
   return [
     `# ${report.title}`,
@@ -97,6 +166,14 @@ export function renderStrategyReportMarkdown(report) {
     `- 实时均价点：${market.realTimePricePoints ?? 0}`,
     `- 实时均价均值：${market.averageRealTimePrice ?? '无可用值'}`,
     `- 数据缺口数：${quality.gapCount ?? 0}`,
+    '',
+    '## 省钱策略焦点',
+    '',
+    `- 模型模式：${savingsFocus.modelMode || 'heuristic_fallback'}`,
+    `- 置信度：${savingsFocus.confidenceScore ?? 0}/100`,
+    `- 首要动作：${savingsFocus.primaryAction || '人工观察'}`,
+    `- 预测状态：${forecastSummary.status || 'unavailable'}，历史天数 ${forecastSummary.historicalDateCount ?? 0}`,
+    `- 回测状态：${backtestSummary.status || 'unavailable'}，评估日期 ${backtestSummary.evaluationDateCount ?? 0}`,
     '',
     '## 策略建议',
     '',

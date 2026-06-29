@@ -539,22 +539,34 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/strategy-report') {
-    const dataset = await loadDataset();
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
     sendJson(
       response,
-      buildStrategyReport(dataset, {
-        date: url.searchParams.get('date'),
+      buildStrategyReport(context.dataset, {
+        date,
         integrationClosure: await loadIntegrationClosure(),
+        assets: context.assets,
+        featureStore: context.allFeatureStore,
+        strategyDataset: context.strategyDataset,
+        modelReport: context.modelReport,
+        backtestReport: context.backtestReport,
       })
     );
     return;
   }
 
   if (request.method === 'GET' && url.pathname === '/api/strategy-report.md') {
-    const dataset = await loadDataset();
-    const report = buildStrategyReport(dataset, {
-      date: url.searchParams.get('date'),
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
+    const report = buildStrategyReport(context.dataset, {
+      date,
       integrationClosure: await loadIntegrationClosure(),
+      assets: context.assets,
+      featureStore: context.allFeatureStore,
+      strategyDataset: context.strategyDataset,
+      modelReport: context.modelReport,
+      backtestReport: context.backtestReport,
     });
     sendText(response, renderStrategyReportMarkdown(report), 'text/markdown; charset=utf-8');
     return;
@@ -590,16 +602,22 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/execution/proposal') {
-    const dataset = await loadDataset();
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
     const integrationClosure = await loadIntegrationClosure();
     const readiness = await loadProductionReadiness();
     const businessInputs = await loadBusinessInputs();
     const proposal = await createExecutionProposal({
-      dataset,
-      date: url.searchParams.get('date'),
+      dataset: context.dataset,
+      date,
       integrationClosure,
       readiness,
       businessInputs,
+      assets: context.assets,
+      featureStore: context.allFeatureStore,
+      strategyDataset: context.strategyDataset,
+      modelReport: context.modelReport,
+      backtestReport: context.backtestReport,
       auditPath: auditLogPath,
       actor: request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-operator',
     });

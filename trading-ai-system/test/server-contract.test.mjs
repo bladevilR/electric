@@ -206,6 +206,11 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(strategyReport.title, '苏州地铁电力交易 AI 辅助策略报告');
     assert.equal(strategyReport.status, 'trial_only');
     assert.equal(strategyReport.statusText, '可试算，不可执行');
+    assert.ok(strategyReport.forecastSummary);
+    assert.ok(strategyReport.backtestSummary);
+    assert.ok(strategyReport.costStrategy);
+    assert.ok(strategyReport.savingsFocus);
+    assert.ok(strategyReport.nextActions.some((item) => item.id === 'targeted_backfill'));
     assert.ok(strategyReport.closureItems.some((item) => item.id === 'actual_load_96'));
     assert.ok(strategyReport.blockingReasons.some((item) => item.includes('日结算')));
     assert.doesNotMatch(JSON.stringify(strategyReport), /待接入/);
@@ -307,6 +312,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(executionProposal.autoSubmit, false);
     assert.equal(executionProposal.humanDecisionRequired, true);
     assert.deepEqual(executionProposal.orderLines, []);
+    assert.ok(executionProposal.costStrategy);
+    assert.ok(executionProposal.reviewWarnings.some((item) => item.includes('省钱策略置信度')));
     assert.ok(executionProposal.proposalLines.length > 0);
     assert.ok(executionProposal.proposalLines.every((item) => item.editable));
     assert.equal(executionProposal.blockers.some((item) => item.includes('CA/UKey')), false);

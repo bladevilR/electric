@@ -34,6 +34,12 @@ test('buildStrategyReport creates a trial-only report from real dataset fields',
   assert.equal(report.market.realTimePricePoints, 4);
   assert.equal(report.market.averageRealTimePrice, 153.75);
   assert.equal(report.dataQuality.gapCount, 2);
+  assert.ok(report.forecastSummary);
+  assert.ok(report.backtestSummary);
+  assert.ok(report.costStrategy);
+  assert.equal(report.savingsFocus.modelMode, report.costStrategy.modelMode);
+  assert.equal(typeof report.savingsFocus.confidenceScore, 'number');
+  assert.ok(report.savingsFocus.dataNeeds.length > 0);
   assert.ok(report.suggestions.some((item) => item.type === 'low_price'));
   assert.ok(report.suggestions.every((item) => item.executable === false));
 });
@@ -45,6 +51,7 @@ test('buildStrategyReport deduplicates blockers and closure items', () => {
   assert.ok(report.blockingReasons.includes('实际负荷未接入，不能校验策略对负荷偏差的影响'));
   assert.ok(report.closureItems.some((item) => item.id === 'forecast_load_96'));
   assert.ok(report.closureItems.some((item) => item.id === 'actual_load_96'));
+  assert.ok(report.nextActions.some((item) => item.id === 'targeted_backfill'));
   assert.equal(
     report.closureItems.filter((item) => item.id === 'forecast_load_96').length,
     1
