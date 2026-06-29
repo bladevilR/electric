@@ -6,6 +6,7 @@ import path from 'node:path';
 import {
   buildAutoSweepSummary,
   buildAutoSweepTargets,
+  buildBackfillPlan,
   buildManagedBrowserLaunch,
   createUkeyBrowserCollector,
   detectSweepRateLimitWarning,
@@ -94,6 +95,47 @@ test('buildAutoSweepTargets can limit a run to the core low-frequency pages', ()
     targets.map((target) => target.id),
     ['dashboard', 'realtime_average_price', 'actual_load_96', 'settle_day']
   );
+});
+
+test('buildBackfillPlan prioritizes missing model-critical data at a safe pace', () => {
+  const plan = buildBackfillPlan(
+    {
+      generatedAt: '2026-06-29T01:00:00.000Z',
+      quality: { fieldCompleteness: { realTimeAvgPrice: 79, actualKwh: 0, settleAmount: 0 } },
+      rows: [{ date: '2026-06-29', pointIndex: 1, realTimeAvgPrice: 300 }],
+    },
+    {
+      now: '2026-06-29T01:45:00.000Z',
+      date: '2026-06-29',
+      assets: {
+        summary: {
+          dayAheadPublicClearingRows: 0,
+          dayAheadUserClearingRows: 0,
+          userDefaultBidRows: 0,
+          systemLoadForecastRows: 0,
+          contractCurrentTotal: 176,
+          contractCurrentCapturedRows: 10,
+        },
+      },
+    }
+  );
+
+  assert.equal(plan.mode, 'targeted');
+  assert.equal(plan.targets.length <= 4, true);
+  assert.ok(plan.targets.some((item) => item.id === 'realtime_average_price'));
+  assert.ok(plan.targets.some((item) => item.id === 'actual_load_96'));
+  assert.ok(plan.targets.some((item) => item.id === 'settle_day'));
+  assert.ok(plan.targets.every((item) => item.delayMs >= 20000));
+});
+
+test('buildBackfillPlan records rate limit state instead of recommending a broad sweep', () => {
+  const plan = buildBackfillPlan(
+    { quality: { fieldCompleteness: {} }, rows: [] },
+    { date: '2026-06-29', rateLimited: true }
+  );
+
+  assert.equal(plan.rateLimited, true);
+  assert.equal(plan.targets.length <= 4, true);
 });
 
 test('detectSweepRateLimitWarning catches JSPEC frequency alarms', () => {

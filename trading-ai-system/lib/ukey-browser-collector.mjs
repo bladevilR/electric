@@ -425,6 +425,139 @@ export function buildAutoSweepTargets(options = {}) {
   return targets;
 }
 
+function numericValue(value) {
+  const result = Number(value);
+  return Number.isFinite(result) ? result : 0;
+}
+
+function fieldCompleteness(dataset = {}, field) {
+  const explicit = Number(dataset?.quality?.fieldCompleteness?.[field]);
+  if (Number.isFinite(explicit)) {
+    return explicit;
+  }
+  return (Array.isArray(dataset.rows) ? dataset.rows : []).filter((row) => numberOrNull(row[field]) !== null).length;
+}
+
+function rowsForDate(dataset = {}, date = '') {
+  const rows = Array.isArray(dataset.rows) ? dataset.rows : [];
+  return date ? rows.filter((row) => row.date === date) : rows;
+}
+
+function isOlderThanMinutes(timestamp, now, minutes) {
+  if (!timestamp) {
+    return true;
+  }
+  const thenMs = Date.parse(timestamp);
+  const nowMs = Date.parse(now || new Date().toISOString());
+  if (!Number.isFinite(thenMs) || !Number.isFinite(nowMs)) {
+    return true;
+  }
+  return nowMs - thenMs > minutes * 60 * 1000;
+}
+
+function backfillTarget(id, reason, priority, expectedBenefit) {
+  return {
+    id,
+    reason,
+    priority,
+    delayMs: DEFAULT_SWEEP_DELAY_MS,
+    expectedBenefit,
+  };
+}
+
+function pushUniqueTarget(targets, target) {
+  if (!targets.some((item) => item.id === target.id)) {
+    targets.push(target);
+  }
+}
+
+export function buildBackfillPlan(dataset = {}, options = {}) {
+  const date = cleanString(options.date);
+  const summary = options.assets?.summary || {};
+  const dateRows = rowsForDate(dataset, date);
+  const realtimePoints = dateRows.length
+    ? dateRows.filter((row) => numberOrNull(row.realTimeAvgPrice) !== null).length
+    : fieldCompleteness(dataset, 'realTimeAvgPrice');
+  const targets = [];
+
+  if (realtimePoints < 96 || isOlderThanMinutes(dataset.generatedAt, options.now, 30)) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget(
+        'realtime_average_price',
+        '实时均价不足 96 点或快照超过 30 分钟。',
+        'P0',
+        '刷新低价窗口和高价暴露判断。'
+      )
+    );
+  }
+  if (fieldCompleteness(dataset, 'actualKwh') === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('actual_load_96', '用户实际负荷为空。', 'P0', '补齐移峰影响和真实负荷校验。')
+    );
+  }
+  if (fieldCompleteness(dataset, 'settleAmount') === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('settle_day', '日结算金额为空。', 'P0', '补齐真实节省金额回测依据。')
+    );
+  }
+  if (numericValue(summary.dayAheadPublicClearingRows) === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('dayahead_public_clearing', '目标日期日前公开价缺失。', 'P1', '补齐日前-实时价差特征。')
+    );
+  }
+  if (numericValue(summary.dayAheadUserClearingRows) === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('dayahead_user_clearing', '目标日期用户日前出清缺失。', 'P1', '补齐用户侧价差和出清背景。')
+    );
+  }
+  if (numericValue(summary.userDefaultBidRows) === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('user_default_bid_96', '目标日期缺省申报缺失。', 'P1', '补齐用户暴露代理曲线。')
+    );
+  }
+  if (numericValue(summary.systemLoadForecastRows) === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('short_system_load_forecast', '系统负荷预测缺失。', 'P1', '补齐市场压力解释特征。')
+    );
+  }
+  if (numericValue(summary.contractCurrentTotal) > numericValue(summary.contractCurrentCapturedRows)) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('current_contract', '当前合同只抓到第一页。', 'P2', '补齐合约覆盖和持仓背景。')
+    );
+  }
+  if (numericValue(summary.contractHistoryTotal) > numericValue(summary.contractHistoryCapturedRows)) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('history_contract', '历史合同只抓到第一页。', 'P2', '补齐历史合约背景。')
+    );
+  }
+  if (numericValue(summary.tradeSequenceRows) === 0) {
+    pushUniqueTarget(
+      targets,
+      backfillTarget('trade_sequence', '交易序列缺失或太旧。', 'P2', '补齐可交易背景。')
+    );
+  }
+
+  const selectedTargets = targets.slice(0, 4);
+  return {
+    mode: 'targeted',
+    date,
+    generatedAt: new Date().toISOString(),
+    estimatedSeconds: Math.ceil((selectedTargets.length * DEFAULT_SWEEP_DELAY_MS) / 1000),
+    rateLimited: Boolean(options.rateLimited),
+    targets: selectedTargets,
+    note: options.rateLimited ? '最近出现平台频率警告，建议等待后再执行单目标补采。' : null,
+  };
+}
+
 export function buildAutoSweepSummary(pageResults = [], options = {}) {
   const startedAt = options.startedAt || new Date().toISOString();
   const finishedAt = options.finishedAt || new Date().toISOString();
