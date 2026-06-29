@@ -123,6 +123,23 @@ test('buildDataAssetInventory records empty actual-load and settlement evidence'
   assert.equal(inventory.summary.actualUserLoadRows, 0);
 });
 
+test('buildDataAssetInventory keeps case-variant raw keys PowerShell-safe', () => {
+  const inventory = buildDataAssetInventory([
+    capture(
+      'contract-case-variant.json',
+      'https://www.jspec.com.cn/px-contract-extranet/contractApi/getContractListById',
+      {
+        total: 1,
+        list: [{ contractId: 'C1', isDaypart: true, isDayPart: false }],
+      }
+    ),
+  ]);
+
+  assert.equal(inventory.assets.contractsCurrent[0].raw.isDaypart, true);
+  assert.equal(inventory.assets.contractsCurrent[0].raw.isDayPart_caseVariant, false);
+  assert.equal(Object.hasOwn(inventory.assets.contractsCurrent[0].raw, 'isDayPart'), false);
+});
+
 test('readCaptureDirectory reads nested response files and buildInventoryFromDirectories combines them', async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'data-assets-'));
   try {

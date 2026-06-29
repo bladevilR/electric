@@ -69,3 +69,17 @@ test('buildCostStrategy returns three non-executable policy tiers with fallback 
   assert.equal(strategy.policyTiers.find((item) => item.id === 'aggressive')?.enabled, false);
   assert.ok(strategy.nextBestData.some((item) => item.id === 'actual_load_96'));
 });
+
+test('buildCostStrategy keeps savings mode heuristic until strategy savings backtest is ready', () => {
+  const strategy = buildCostStrategy(dataset, {
+    date: '2026-06-29',
+    assets,
+    modelReport: { status: 'baseline_ready' },
+    backtestReport: {
+      status: 'ready',
+      strategyComparison: { status: 'insufficient_actuals' },
+    },
+  });
+
+  assert.equal(strategy.modelMode, 'heuristic_fallback');
+});

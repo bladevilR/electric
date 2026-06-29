@@ -50,7 +50,11 @@ export function computePriceSpreadRows(rows = []) {
 }
 
 function modelMode(modelReport = {}, backtestReport = {}) {
-  if (modelReport.status === 'baseline_ready' && backtestReport.status === 'ready') {
+  if (
+    modelReport.status === 'baseline_ready' &&
+    backtestReport.status === 'ready' &&
+    backtestReport.strategyComparison?.status === 'ready'
+  ) {
     return 'baseline_ready';
   }
   if (modelReport.status === 'insufficient_history' || backtestReport.status === 'insufficient_history') {

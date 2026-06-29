@@ -185,6 +185,26 @@ function extractAssetRows(assetKey, data) {
   return listFromData(data) || [];
 }
 
+function powerShellSafeJsonKeys(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => powerShellSafeJsonKeys(item));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const seen = new Map();
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => {
+      const lowerKey = key.toLocaleLowerCase();
+      const count = seen.get(lowerKey) || 0;
+      seen.set(lowerKey, count + 1);
+      const safeKey = count === 0 ? key : `${key}_caseVariant${count > 1 ? count : ''}`;
+      return [safeKey, powerShellSafeJsonKeys(item)];
+    })
+  );
+}
+
 function assetRecord(capture, assetKey, raw, rowIndex = 0) {
   const endpoint = endpointOf(capture);
   return {
@@ -193,7 +213,7 @@ function assetRecord(capture, assetKey, raw, rowIndex = 0) {
     capturedAt: cleanString(capture.meta?.capturedAt),
     targetId: targetIdOf(capture, assetKey),
     rowIndex,
-    raw,
+    raw: powerShellSafeJsonKeys(raw),
   };
 }
 
