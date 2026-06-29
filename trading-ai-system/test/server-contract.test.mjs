@@ -84,6 +84,8 @@ test('local server exposes the P0 system loop', async () => {
       dataAssets,
       settlementReference,
       forecastFeatures,
+      historicalForecastFeatures,
+      transactionForecastFeatures,
       forecastModel,
       backtest,
       costStrategy,
@@ -110,6 +112,12 @@ test('local server exposes the P0 system loop', async () => {
       fetch(`${server.baseUrl}/api/data-assets`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/settlement/reference`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/forecast/features?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-01-01`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-03-31`).then((response) =>
         response.json()
       ),
       fetch(`${server.baseUrl}/api/forecast/model?date=2026-05-07`).then((response) =>
@@ -165,6 +173,9 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /costStrategy/);
     assert.match(appScript, /dataAssets/);
     assert.match(appScript, /settlementReference/);
+    assert.match(appScript, /结算参考/);
+    assert.match(appScript, /历史标签点/);
+    assert.match(appScript, /交易计算表 CSV/);
     assert.match(appScript, /forecastLab/);
     assert.match(appScript, /backtestReport/);
     assert.match(appScript, /backfillPlan/);
@@ -264,6 +275,18 @@ test('local server exposes the P0 system loop', async () => {
     assert.ok(settlementReference.summary.settleAmountCandidateRows >= 17000);
     assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
+    assert.equal(historicalForecastFeatures.rows.length, 96);
+    assert.equal(historicalForecastFeatures.summary.fieldCompleteness.actualKwh, 96);
+    assert.equal(historicalForecastFeatures.summary.fieldCompleteness.settleAmount, 96);
+    assert.equal(historicalForecastFeatures.rows[0].actualKwh, 20163);
+    assert.equal(historicalForecastFeatures.rows[0].settleAmount, 6579.17);
+    assert.equal(transactionForecastFeatures.rows.length, 96);
+    assert.equal(transactionForecastFeatures.summary.fieldCompleteness.actualKwh, 96);
+    assert.equal(transactionForecastFeatures.summary.fieldCompleteness.declarationPower, 96);
+    assert.equal(
+      transactionForecastFeatures.rows[0].sourceEndpoints.includes('transaction-calculation-standardized'),
+      true
+    );
     assert.ok(forecastModel.status);
     assert.ok(backtest.status);
     assert.ok(Array.isArray(costStrategy.policyTiers));

@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import re
 import zipfile
@@ -86,6 +87,7 @@ def summarize_sheet(name, worksheet, shared_strings):
     settlement_price_points = 0
     actual_load_mwh = 0.0
     settlement_amount_yuan = 0.0
+    point_values = []
 
     for values in worksheet_rows(worksheet, shared_strings):
         non_empty_rows += 1
@@ -107,6 +109,15 @@ def summarize_sheet(name, worksheet, shared_strings):
                 settlement_amount_yuan += settlement_value
             if price_value is not None:
                 settlement_price_points += 1
+            point_values.append(
+                {
+                    "pointIndex": point_rows,
+                    "timePoint": str(values[0]).strip(),
+                    "actualLoadMwh": load_value,
+                    "settlementAmountYuan": settlement_value,
+                    "settlementPrice": price_value,
+                }
+            )
 
     return {
         "name": name,
@@ -120,6 +131,7 @@ def summarize_sheet(name, worksheet, shared_strings):
         "actualLoadMwh": round(actual_load_mwh, 6),
         "settlementAmountYuan": round(settlement_amount_yuan, 6),
         "sampleRows": sample_rows,
+        "_pointValues": point_values,
     }
 
 
@@ -168,6 +180,16 @@ def infer_coverage(path):
     }
 
 
+def date_for_daily_sheet(coverage, sheet_name):
+    try:
+        year = int(coverage.get("year"))
+        month = int(coverage.get("month"))
+        day = int(sheet_name)
+        return datetime(year, month, day).date().isoformat()
+    except Exception:
+        return ""
+
+
 def classify_workbook(path, sheets):
     sheet_names = {sheet["name"] for sheet in sheets}
     if path.suffix.lower() == ".xls" and "交易计算表" in path.name:
@@ -214,6 +236,31 @@ def workbook_record(path):
     sheets = workbook_sheets(path)
     kind = classify_workbook(path, sheets)
     valid_daily = [sheet for sheet in sheets if valid_daily_sheet(sheet)]
+    coverage = infer_coverage(path)
+    feature_rows = []
+    for sheet in valid_daily:
+        date = date_for_daily_sheet(coverage, sheet["name"])
+        if not date:
+            continue
+        for point in sheet.get("_pointValues", []):
+            load_mwh = point.get("actualLoadMwh")
+            settlement_yuan = point.get("settlementAmountYuan")
+            if load_mwh is None or settlement_yuan is None:
+                continue
+            feature_rows.append(
+                {
+                    "date": date,
+                    "pointIndex": point.get("pointIndex"),
+                    "timePoint": point.get("timePoint", ""),
+                    "actualKwh": round(load_mwh * 1000, 6),
+                    "settleAmount": settlement_yuan,
+                    "settlementPrice": point.get("settlementPrice"),
+                    "sourceFile": path.name,
+                    "sourceSheet": sheet["name"],
+                }
+            )
+    for sheet in sheets:
+        sheet.pop("_pointValues", None)
     bad_daily = [
         {
             "name": sheet["name"],
@@ -234,14 +281,16 @@ def workbook_record(path):
         "kind": kind,
         "parseStatus": "parsed",
         "sheets": sheets,
-        "coverage": infer_coverage(path),
+        "coverage": coverage,
         "validDailySheetCount": len(valid_daily),
         "actualKwhRows": actual_rows,
         "settleAmountRows": settlement_rows,
+        "featureRowCount": len(feature_rows),
         "canFillActualKwh": actual_rows > 0,
         "canFillSettleAmount": settlement_rows > 0,
         "badDailySheets": bad_daily,
         "referenceStrength": workbook_reference_strength(kind, len(valid_daily)),
+        "featureRows": feature_rows,
     }
 
 
@@ -280,6 +329,103 @@ def read_manual_exports(project_root):
     return exports
 
 
+def read_csv_dicts(path):
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def normalize_bool(value):
+    return str(value).strip().lower() in {"true", "1", "yes", "y"}
+
+
+def normalize_point(value):
+    number = numeric(value)
+    if number is None:
+        return None
+    point = int(number)
+    return point if 1 <= point <= 96 else None
+
+
+def read_transaction_calculation_standardized(project_root):
+    base = project_root / "data" / "jspec" / "standardized" / "transaction_calculation"
+    usage_path = base / "customer_usage_96.csv"
+    submission_path = base / "submission_power_96.csv"
+    usage_rows = read_csv_dicts(usage_path)
+    submission_rows = read_csv_dicts(submission_path)
+    feature_rows = []
+
+    for row in usage_rows:
+        if not normalize_bool(row.get("is_total")):
+            continue
+        date = row.get("usage_date", "").strip()
+        point = normalize_point(row.get("point_index"))
+        value = numeric(row.get("energy_kwh"))
+        if not date or point is None or value is None:
+            continue
+        feature_rows.append(
+            {
+                "date": date,
+                "pointIndex": point,
+                "timePoint": row.get("time_point", "").strip(),
+                "actualKwh": value,
+                "sourceFile": usage_path.name,
+                "sourceEndpoint": "transaction-calculation-standardized",
+                "sourceRowKind": "customer_usage_total",
+                "sourceWorkbook": row.get("source_file", ""),
+            }
+        )
+
+    for row in submission_rows:
+        date = row.get("delivery_date", "").strip()
+        point = normalize_point(row.get("point_index"))
+        value = numeric(row.get("rounded_power_mw"))
+        if value is None:
+            value = numeric(row.get("power_mw"))
+        if not date or point is None or value is None:
+            continue
+        feature_rows.append(
+            {
+                "date": date,
+                "pointIndex": point,
+                "timePoint": row.get("time_point", "").strip(),
+                "declarationPower": value,
+                "sourceFile": submission_path.name,
+                "sourceEndpoint": "transaction-calculation-standardized",
+                "sourceRowKind": "submission_power",
+                "sourceWorkbook": row.get("source_file", ""),
+            }
+        )
+
+    dates = sorted({row["date"] for row in feature_rows if row.get("date")})
+    return {
+        "summary": {
+            "usageRows": len(usage_rows),
+            "usageTotalRows": sum(1 for row in usage_rows if normalize_bool(row.get("is_total"))),
+            "submissionRows": len(submission_rows),
+            "featureRowCount": len(feature_rows),
+            "featureDateCount": len(dates),
+            "featureDates": dates,
+        },
+        "files": [
+            {
+                "path": str(usage_path),
+                "fileName": usage_path.name,
+                "rowCount": len(usage_rows),
+                "status": "parsed" if usage_rows else "missing_or_empty",
+            },
+            {
+                "path": str(submission_path),
+                "fileName": submission_path.name,
+                "rowCount": len(submission_rows),
+                "status": "parsed" if submission_rows else "missing_or_empty",
+            },
+        ],
+        "featureRows": feature_rows,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=str(Path(__file__).resolve().parents[2]))
@@ -288,14 +434,18 @@ def main():
     project_root = Path(args.project_root).resolve()
     workbooks = read_workbooks(project_root)
     manual_exports = read_manual_exports(project_root)
+    transaction_standardized = read_transaction_calculation_standardized(project_root)
     actual_files = sum(item["fileCount"] for item in manual_exports if item["category"] == "actual_daily_96")
     settlement_files = sum(item["fileCount"] for item in manual_exports if item["category"] == "settlement_files")
     position_files = sum(item["fileCount"] for item in manual_exports if item["category"] == "position_curve")
     spot_count = sum(1 for item in workbooks if item["kind"] == "spot_reconciliation")
     monthly_count = sum(1 for item in workbooks if item["kind"] == "monthly_settlement_overview")
     transaction_count = sum(1 for item in workbooks if item["kind"] == "transaction_calculation")
-    actual_candidate_rows = sum(item.get("actualKwhRows", 0) for item in workbooks)
+    transaction_actual_rows = transaction_standardized["summary"]["usageTotalRows"]
+    transaction_feature_rows = transaction_standardized["featureRows"]
+    actual_candidate_rows = sum(item.get("actualKwhRows", 0) for item in workbooks) + transaction_actual_rows
     settlement_candidate_rows = sum(item.get("settleAmountRows", 0) for item in workbooks)
+    feature_rows = transaction_feature_rows + [row for item in workbooks for row in item.get("featureRows", [])]
 
     result = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -304,21 +454,29 @@ def main():
             "spotReconciliationWorkbookCount": spot_count,
             "monthlySettlementWorkbookCount": monthly_count,
             "transactionCalculationWorkbookCount": transaction_count,
+            "transactionCalculationUsageRows": transaction_standardized["summary"]["usageRows"],
+            "transactionCalculationUsageTotalRows": transaction_standardized["summary"]["usageTotalRows"],
+            "transactionCalculationSubmissionRows": transaction_standardized["summary"]["submissionRows"],
+            "transactionCalculationFeatureRowCount": transaction_standardized["summary"]["featureRowCount"],
             "manualManifestCount": len(manual_exports),
             "actualDaily96ExportFiles": actual_files,
             "settlementExportFiles": settlement_files,
             "positionExportFiles": position_files,
             "actualKwhCandidateRows": actual_candidate_rows,
             "settleAmountCandidateRows": settlement_candidate_rows,
+            "featureRowCount": len(feature_rows),
             "hasSettlementReference": spot_count + monthly_count > 0,
             "canFillActualKwh": actual_files > 0 or actual_candidate_rows > 0,
             "canFillSettleAmount": settlement_files > 0 or settlement_candidate_rows > 0,
         },
         "workbooks": workbooks,
+        "featureRows": feature_rows,
+        "transactionCalculationStandardized": transaction_standardized,
         "manualExports": manual_exports,
         "usageBoundaries": [
             "历史核对单可以补历史 96 点实际负荷和结算标签，但不能代表目标交易日已经有数据。",
             "Excel 核对单中的用电量单位为 MWh，进入 actualKwh 前必须乘以 1000。",
+            "交易计算表标准化 CSV 可以补部分月末历史实际用电和申报功率，但不能替代目标日持仓和交易限额。",
             "月度交易电量电价表只能做长期背景，不能当作日内点位结算标签。",
             "manual-export manifest 如果 files 为空，只表示已登记补采目标，不表示数据已经到位。",
         ],

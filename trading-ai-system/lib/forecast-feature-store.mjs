@@ -196,6 +196,30 @@ export function normalizeAssetRows(inventory = {}) {
   return rows.filter((row) => row.pointIndex !== null && row.pointIndex !== undefined);
 }
 
+export function normalizeSettlementReferenceRows(reference = {}) {
+  return (Array.isArray(reference.featureRows) ? reference.featureRows : [])
+    .map((row) => {
+      const pointIndex = numberOrNull(row.pointIndex);
+      return {
+        kind: 'settlementReference',
+        date: normalizeDate(row.date),
+        pointIndex,
+        timePoint: cleanString(row.timePoint) || timeFromPoint(pointIndex),
+        fields: {
+          actualKwh: numberOrNull(row.actualKwh),
+          settleAmount: numberOrNull(row.settleAmount),
+          declarationPower: numberOrNull(row.declarationPower),
+          defaultDeclarationPower: numberOrNull(row.defaultDeclarationPower),
+        },
+        source: {
+          sourceFile: row.sourceFile || row.fileName || 'settlement-reference',
+          endpoint: row.sourceEndpoint || 'settlement-reference',
+        },
+      };
+    })
+    .filter((row) => row.date && row.pointIndex !== null && row.pointIndex !== undefined);
+}
+
 function emptyFeature(date, pointIndex, timePoint = '') {
   const time = timePoint || timeFromPoint(pointIndex);
   const { weekday, hour, quarterIndex } = deriveTimeFeatures(date, pointIndex);
@@ -298,6 +322,7 @@ export function buildForecastFeatureStore(dataset = {}, options = {}) {
   const normalized = [
     ...normalizedDatasetRows(dataset),
     ...normalizeAssetRows(options.assets || {}),
+    ...normalizeSettlementReferenceRows(options.settlementReference || {}),
   ].filter((row) => row.pointIndex !== null && row.pointIndex !== undefined);
 
   const datedRows = normalized.filter((row) => row.date);

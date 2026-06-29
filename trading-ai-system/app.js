@@ -830,10 +830,20 @@ function renderSettlementReference() {
         ? '现货核对单'
         : item.kind === 'monthly_settlement_overview'
           ? '月度结算概览'
+          : item.kind === 'transaction_calculation'
+            ? '交易计算表'
           : '参考文件',
     sheetCount: asArray(item.sheets).length,
+    featureRowCount: item.featureRowCount || 0,
     numericRows: asArray(item.sheets).reduce((total, sheet) => total + Number(sheet.numericRows || 0), 0),
-    referenceStrength: item.referenceStrength === 'point_like' ? '点位参考' : '背景参考',
+    referenceStrength:
+      item.referenceStrength === 'historical_96_point_truth'
+        ? '历史真值'
+        : item.referenceStrength === 'transaction_calculation_reference'
+          ? '交易测算'
+          : item.referenceStrength === 'point_like_reference'
+            ? '点位参考'
+            : '背景参考',
   }));
   const sheetRows = workbooks.flatMap((workbook) =>
     asArray(workbook.sheets).map((sheet) => ({
@@ -856,9 +866,11 @@ function renderSettlementReference() {
     ${state.settlementReferenceError ? `<div class="notice warn">${escapeHtml(state.settlementReferenceError)}</div>` : ''}
     <section class="kpi-grid">
       ${kpi('参考文件', String(summary.workbookCount || 0), '根目录 Excel')}
-      ${kpi('现货核对单', String(summary.spotReconciliationWorkbookCount || 0), '含合约日清分/偏差回收')}
-      ${kpi('月度概览', String(summary.monthlySettlementWorkbookCount || 0), '长期背景参考')}
-      ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', 'actualKwh / settleAmount')}
+      ${kpi('历史标签点', String(summary.featureRowCount || 0), '可进入特征库')}
+      ${kpi('实际负荷候选', String(summary.actualKwhCandidateRows || 0), '核对单 + 交易计算表')}
+      ${kpi('结算金额候选', String(summary.settleAmountCandidateRows || 0), '核对单')}
+      ${kpi('交易计算表 CSV', String(summary.transactionCalculationFeatureRowCount || 0), '用电/申报候选')}
+      ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', '历史 actualKwh / settleAmount')}
     </section>
     <section class="grid two">
       <article class="card">
@@ -868,6 +880,7 @@ function renderSettlementReference() {
             { key: 'fileName', label: '文件' },
             { key: 'kind', label: '类型' },
             { key: 'sheetCount', label: 'sheet' },
+            { key: 'featureRowCount', label: '标签点' },
             { key: 'numericRows', label: '数值行' },
             { key: 'referenceStrength', label: '用途' },
           ],

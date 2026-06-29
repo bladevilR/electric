@@ -18,6 +18,9 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.ok(reference.summary.spotReconciliationWorkbookCount >= 8);
   assert.ok(reference.summary.actualKwhCandidateRows >= 17000);
   assert.ok(reference.summary.settleAmountCandidateRows >= 17000);
+  assert.ok(reference.summary.transactionCalculationUsageRows >= 6240);
+  assert.ok(reference.summary.transactionCalculationSubmissionRows >= 480);
+  assert.ok(reference.summary.transactionCalculationFeatureRowCount >= 960);
   assert.equal(reference.summary.actualDaily96ExportFiles, 0);
   assert.equal(reference.summary.settlementExportFiles, 0);
   assert.equal(reference.summary.positionExportFiles, 0);
@@ -45,6 +48,24 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.ok(monthly.sheets.some((sheet) => sheet.name === '2026年' && sheet.numericRows >= 10));
 
   assert.ok(reference.workbooks.filter((item) => item.kind === 'transaction_calculation').length >= 5);
+  assert.ok(
+    reference.featureRows.some(
+      (item) =>
+        item.date === '2026-03-31' &&
+        item.pointIndex === 1 &&
+        item.actualKwh !== undefined &&
+        item.sourceEndpoint === 'transaction-calculation-standardized'
+    )
+  );
+  assert.ok(
+    reference.featureRows.some(
+      (item) =>
+        item.date === '2026-03-31' &&
+        item.pointIndex === 1 &&
+        item.declarationPower !== undefined &&
+        item.sourceEndpoint === 'transaction-calculation-standardized'
+    )
+  );
   assert.ok(reference.upgradeHooks.some((item) => item.id === 'actual_load_96'));
   assert.ok(reference.usageBoundaries.some((item) => item.includes('历史核对单')));
 });

@@ -4,8 +4,8 @@
 
 ## Summary
 
-- 目标：用当前已经收集到的 JSPEC 数据先做一个可运行的“省钱策略 / 预测实验室 / 数据资产 / 定向补采”闭环；缺失的实际负荷、结算、连续历史以后补齐后，系统自动从 `heuristic_fallback` 升级到更强模型。
-- 当前不承诺训练模型已经最好，因为实际用户负荷、结算金额、连续同日历史、业务约束仍缺失；但要把数据管道、特征库、基线预测、回测、策略输出、UI 和报告一次性搭好。
+- 目标：用当前已经收集到的 JSPEC 数据和本地核对单/交易计算表先做一个可运行的“省钱策略 / 预测实验室 / 数据资产 / 定向补采”闭环；目标日实际负荷、目标日结算和业务约束以后补齐后，系统自动从 `heuristic_fallback` 升级到更强模型。
+- 当前不承诺训练模型已经最好，因为目标日实际用户负荷、目标日结算金额、连续同日价格历史、持仓和交易限额仍缺失；但历史核对单和交易计算表标准化 CSV 已经可以补一批历史 `actualKwh` / `settleAmount` / `declarationPower` 标签，要把数据管道、特征库、基线预测、回测、策略输出、UI 和报告一次性搭好。
 - 实现原则：先用 raw captures 修复标准化不足，现有 CDP 页面只慢速单目标补采，任何策略都只做人工决策支持，不自动提交 JSPEC。
 - 执行方式：先建分支，按任务逐步提交；每个任务都要先写测试、确认失败、实现、确认通过、提交。
 
@@ -28,11 +28,16 @@
   - 当前合同接口显示 `total: 176`，但本地只有第一页 10 行。
   - 历史合同接口显示 `total: 88`，但本地只有第一页 10 行。
   - 交易序列：421 行。
+- 本地历史参考已可用：
+  - 根目录 Excel 工作簿：14 个，其中现货核对单 8 个、交易计算表 `.xls` 5 个、月度结算概览 1 个。
+  - 历史现货核对单可解析 211 天 * 96 点 = 20256 行历史 `actualKwh` / `settleAmount` 标签。
+  - `data/jspec/standardized/transaction_calculation/customer_usage_96.csv` 有 6240 行，其中 480 行汇总实际用电可补历史 `actualKwh`。
+  - `data/jspec/standardized/transaction_calculation/submission_power_96.csv` 有 480 行，可补历史 `declarationPower`。
 - 当前缺失：
-  - 用户实际负荷 `actualKwh`：`queryDailyElectricity` 只有 96 点表头，`list.total = 0`。
-  - 结算金额/结算明细：`settle_day`、`settle_month`、`fileDown/queryFileList` 都是 0。
+  - 目标日用户实际负荷 `actualKwh`：`queryDailyElectricity` 只有 96 点表头，`list.total = 0`。
+  - 目标日结算金额/结算明细：`settle_day`、`settle_month`、`fileDown/queryFileList` 都是 0。
   - 业务约束：`forecast-load-96.csv`、`position-96.csv` 只有表头，`trade-limits.json` 关键字段为 null。
-  - 连续同日对齐历史不足，不足以声明训练模型优于规则。
+  - 连续目标日同口径价格历史和业务约束不足，不足以声明训练模型优于规则。
 
 ## Implementation Tasks
 
@@ -50,6 +55,7 @@
 - 导出 `buildForecastFeatureStore(dataset, options)`, `normalizeAssetRows(inventory)`, `buildPointKey(date, pointIndex)`。
 - 生成 96 点特征：日期、点位、时段、实时均价、日前公开价、用户日前价、实时节点价、主动/缺省申报、系统负荷预测、实际系统负荷、用户实际负荷、结算、价差、高价标签、来源、缺失字段。
 - raw 数据优先，现有标准化 dataset 作为补充。
+- 历史核对单和交易计算表标准化 CSV 作为历史标签补充；不能把历史标签当作目标日实测值。
 - `priceSpread = realTimeAvgPrice - dayAheadPublicPrice`；任一缺失时为 `null`。
 - 不能把系统实际负荷当作用户实际负荷。
 
@@ -67,14 +73,14 @@
 - 导出 `runForecastBacktest`, `computeRegressionMetrics`, `computeStrategyBacktest`。
 - 按日期 walk-forward；默认至少 5 个历史交易日。
 - 历史不足返回 `insufficient_history`。
-- 缺 `actualKwh` / `settleAmount` 时只做价格预测误差回测，不伪造真实节省金额。
+- 目标日缺 `actualKwh` / `settleAmount` 时只做价格预测误差和历史标签回测，不伪造当天真实节省金额。
 
 ### Task 5: 省钱策略优化器
 
 - 新增 `trading-ai-system/lib/cost-optimizer.mjs` 和 `trading-ai-system/test/cost-optimizer.test.mjs`。
 - 修改 `strategy-engine.mjs`，在 `buildStrategyAdvice()` 返回 `costStrategy`，保持现有字段稳定。
 - 输出低价窗口、高价暴露、数据置信度、`conservative` / `neutral` / `aggressive` 三档策略。
-- 当前缺实际负荷、结算和业务约束时，所有策略都必须 `executable: false`，且 aggressive disabled。
+- 当前缺目标日实际负荷、目标日结算和业务约束时，所有策略都必须 `executable: false`，且 aggressive disabled。
 
 ### Task 6: 定向补采计划
 
@@ -135,13 +141,13 @@
 - UI 展示数据资产、预测实验室、回测结果、省钱策略和补采队列。
 - 报告和执行提案包含省钱策略，但 `autoSubmit === false`。
 - 全量测试 `fail 0`。
-- 当前缺实际负荷/结算/业务约束时，系统不会输出具体可执行电量。
+- 当前缺目标日实际负荷/结算/业务约束时，系统不会输出具体可执行电量。
 
 ## Defaults And Assumptions
 
 - 新代码用正常 UTF-8 中文；不批量修复旧乱码。
 - 当前版本不下载开源仓库作为依赖；成熟项目经验写入文档即可。
 - 当前版本不训练深度学习；先做 baseline、回测和框架。
-- 用户以后补充实际负荷、结算、业务约束后，再进入训练模型升级阶段。
+- 用户以后补充目标日实际负荷、目标日结算、持仓和交易限额后，再进入训练模型升级阶段。
 - CDP 页面不做连续扫站；只按 backfill plan 慢速单目标采集。
 - 所有 JSPEC 操作都是只读；系统不读 cookie、不拦截网络、不自动提交交易。

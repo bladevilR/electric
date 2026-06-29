@@ -6,6 +6,7 @@ import {
   buildForecastFeatureStore,
   buildPointKey,
   normalizeAssetRows,
+  normalizeSettlementReferenceRows,
 } from '../lib/forecast-feature-store.mjs';
 
 const capture = (fileName, url, data) => ({
@@ -96,4 +97,71 @@ test('buildForecastFeatureStore filters output date without losing source histor
   assert.equal(normalized.length, 2);
   assert.deepEqual(store.rows.map((row) => row.date), ['2026-06-29']);
   assert.deepEqual(store.summary.sourceDates, ['2026-06-28', '2026-06-29']);
+});
+
+test('buildForecastFeatureStore merges historical reconciliation labels', () => {
+  const settlementReference = {
+    featureRows: [
+      {
+        date: '2026-01-01',
+        pointIndex: 1,
+        timePoint: '00:15',
+        actualKwh: 20163,
+        settleAmount: 6579.17,
+        settlementPrice: 326.299,
+        sourceFile: '4、2026年1月现货核对单 .xlsx',
+        sourceSheet: '1',
+      },
+    ],
+  };
+
+  const normalized = normalizeSettlementReferenceRows(settlementReference);
+  const store = buildForecastFeatureStore({ rows: [] }, { settlementReference });
+  const row = store.rows.find((item) => item.date === '2026-01-01' && item.pointIndex === 1);
+
+  assert.equal(normalized.length, 1);
+  assert.equal(row.actualKwh, 20163);
+  assert.equal(row.settleAmount, 6579.17);
+  assert.equal(row.sourceFiles.includes('4、2026年1月现货核对单 .xlsx'), true);
+  assert.equal(row.sourceEndpoints.includes('settlement-reference'), true);
+  assert.equal(row.missingFields.includes('actualKwh'), false);
+  assert.equal(row.missingFields.includes('settleAmount'), false);
+  assert.equal(store.summary.fieldCompleteness.actualKwh, 1);
+  assert.equal(store.summary.fieldCompleteness.settleAmount, 1);
+});
+
+test('buildForecastFeatureStore merges transaction calculation usage and submission labels', () => {
+  const settlementReference = {
+    featureRows: [
+      {
+        date: '2026-03-31',
+        pointIndex: 1,
+        timePoint: '00:15',
+        actualKwh: 17845,
+        sourceFile: 'customer_usage_96.csv',
+        sourceEndpoint: 'transaction-calculation-standardized',
+      },
+      {
+        date: '2026-03-31',
+        pointIndex: 1,
+        timePoint: '00:15',
+        declarationPower: 42.6,
+        sourceFile: 'submission_power_96.csv',
+        sourceEndpoint: 'transaction-calculation-standardized',
+      },
+    ],
+  };
+
+  const normalized = normalizeSettlementReferenceRows(settlementReference);
+  const store = buildForecastFeatureStore({ rows: [] }, { settlementReference });
+  const row = store.rows.find((item) => item.date === '2026-03-31' && item.pointIndex === 1);
+
+  assert.equal(normalized.length, 2);
+  assert.equal(row.actualKwh, 17845);
+  assert.equal(row.declarationPower, 42.6);
+  assert.equal(row.sourceFiles.includes('customer_usage_96.csv'), true);
+  assert.equal(row.sourceFiles.includes('submission_power_96.csv'), true);
+  assert.equal(row.sourceEndpoints.includes('transaction-calculation-standardized'), true);
+  assert.equal(store.summary.fieldCompleteness.actualKwh, 1);
+  assert.equal(store.summary.fieldCompleteness.declarationPower, 1);
 });

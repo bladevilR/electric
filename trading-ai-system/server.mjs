@@ -57,6 +57,7 @@ const visibleSnapshotPath = path.resolve(
 );
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
+let settlementReferenceCache = null;
 
 function getArgValue(name, defaultValue) {
   const index = process.argv.indexOf(name);
@@ -260,10 +261,16 @@ async function loadDataAssets() {
 }
 
 async function loadSettlementReference() {
-  return buildSettlementReference({
-    projectRoot,
-    pythonPath,
-  });
+  if (!settlementReferenceCache) {
+    settlementReferenceCache = buildSettlementReference({
+      projectRoot,
+      pythonPath,
+    }).catch((error) => {
+      settlementReferenceCache = null;
+      throw error;
+    });
+  }
+  return settlementReferenceCache;
 }
 
 function datasetFromFeatureStore(featureStore, generatedAt) {
@@ -281,13 +288,15 @@ function datasetFromFeatureStore(featureStore, generatedAt) {
 async function loadForecastContext(date = '') {
   const dataset = await loadDataset();
   const assets = await loadDataAssets();
-  const allFeatureStore = buildForecastFeatureStore(dataset, { assets });
-  const featureStore = buildForecastFeatureStore(dataset, { assets, date });
+  const settlementReference = await loadSettlementReference();
+  const allFeatureStore = buildForecastFeatureStore(dataset, { assets, settlementReference });
+  const featureStore = buildForecastFeatureStore(dataset, { assets, settlementReference, date });
   const modelReport = buildForecastModelReport(allFeatureStore, { targetDate: date });
   const backtestReport = runForecastBacktest(allFeatureStore);
   return {
     dataset,
     assets,
+    settlementReference,
     allFeatureStore,
     featureStore,
     strategyDataset: datasetFromFeatureStore(featureStore, dataset.generatedAt),
@@ -555,7 +564,6 @@ async function handleApi(request, response, url) {
   if (request.method === 'POST' && url.pathname === '/api/strategy-report') {
     const date = url.searchParams.get('date') || '';
     const context = await loadForecastContext(date);
-    const settlementReference = await loadSettlementReference();
     sendJson(
       response,
       buildStrategyReport(context.dataset, {
@@ -566,7 +574,7 @@ async function handleApi(request, response, url) {
         strategyDataset: context.strategyDataset,
         modelReport: context.modelReport,
         backtestReport: context.backtestReport,
-        settlementReference,
+        settlementReference: context.settlementReference,
       })
     );
     return;
@@ -575,7 +583,6 @@ async function handleApi(request, response, url) {
   if (request.method === 'GET' && url.pathname === '/api/strategy-report.md') {
     const date = url.searchParams.get('date') || '';
     const context = await loadForecastContext(date);
-    const settlementReference = await loadSettlementReference();
     const report = buildStrategyReport(context.dataset, {
       date,
       integrationClosure: await loadIntegrationClosure(),
@@ -584,13 +591,14 @@ async function handleApi(request, response, url) {
       strategyDataset: context.strategyDataset,
       modelReport: context.modelReport,
       backtestReport: context.backtestReport,
-      settlementReference,
+      settlementReference: context.settlementReference,
     });
     sendText(response, renderStrategyReportMarkdown(report), 'text/markdown; charset=utf-8');
     return;
   }
 
   if (request.method === 'POST' && url.pathname === '/api/refresh') {
+    settlementReferenceCache = null;
     const summary = await writeBrowserDataFile({
       sourcePath: standardPath,
       outputPath: browserDataPath,
@@ -625,7 +633,6 @@ async function handleApi(request, response, url) {
     const integrationClosure = await loadIntegrationClosure();
     const readiness = await loadProductionReadiness();
     const businessInputs = await loadBusinessInputs();
-    const settlementReference = await loadSettlementReference();
     const proposal = await createExecutionProposal({
       dataset: context.dataset,
       date,
@@ -637,7 +644,7 @@ async function handleApi(request, response, url) {
       strategyDataset: context.strategyDataset,
       modelReport: context.modelReport,
       backtestReport: context.backtestReport,
-      settlementReference,
+      settlementReference: context.settlementReference,
       auditPath: auditLogPath,
       actor: request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-operator',
     });
