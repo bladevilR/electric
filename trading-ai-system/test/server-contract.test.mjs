@@ -81,6 +81,12 @@ test('local server exposes the P0 system loop', async () => {
       businessInputs,
       ukeyAssistant,
       modelRuntime,
+      dataAssets,
+      forecastFeatures,
+      forecastModel,
+      backtest,
+      costStrategy,
+      backfillPlan,
       refresh,
     ] = await Promise.all([
       fetch(`${server.baseUrl}/`).then((response) => response.text()),
@@ -100,6 +106,20 @@ test('local server exposes the P0 system loop', async () => {
       fetch(`${server.baseUrl}/api/business-inputs`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/ukey-assistant`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/ai/model`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/data-assets`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/model?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/backtest`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/cost-strategy?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/backfill/plan?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
       fetch(`${server.baseUrl}/api/refresh`, { method: 'POST' }).then((response) =>
         response.json()
       ),
@@ -212,6 +232,13 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(modelRuntime.provider, 'openai_compatible');
     assert.equal(modelRuntime.configured, false);
     assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
+    assert.ok(dataAssets.summary);
+    assert.ok(Array.isArray(forecastFeatures.rows));
+    assert.ok(forecastModel.status);
+    assert.ok(backtest.status);
+    assert.ok(Array.isArray(costStrategy.policyTiers));
+    assert.ok(Array.isArray(backfillPlan.targets));
+    assert.equal(backfillPlan.targets.length <= 4, true);
 
     const browserStart = await fetch(`${server.baseUrl}/api/ukey-assistant/browser/start`, {
       method: 'POST',

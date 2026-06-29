@@ -28,8 +28,13 @@ import {
   mergeVisibleSnapshot,
   validateVisibleSnapshot,
 } from './lib/ukey-assistant.mjs';
-import { createUkeyBrowserCollector } from './lib/ukey-browser-collector.mjs';
+import { buildBackfillPlan, createUkeyBrowserCollector } from './lib/ukey-browser-collector.mjs';
 import { buildModelConfig, requestStrategyModelPrediction } from './lib/ai-model-client.mjs';
+import { buildInventoryFromDirectories } from './lib/data-assets.mjs';
+import { buildForecastFeatureStore } from './lib/forecast-feature-store.mjs';
+import { buildForecastModelReport } from './lib/forecast-models.mjs';
+import { runForecastBacktest } from './lib/backtest-engine.mjs';
+import { buildCostStrategy } from './lib/cost-optimizer.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultStandardPath = path.resolve(
@@ -41,6 +46,7 @@ const integrationSummaryPath = path.resolve(rootDir, 'data/integration-summary.j
 const integrationBuildScriptPath = path.resolve(rootDir, 'tools/build-integration-summary.py');
 const defaultAuditLogPath = path.resolve(rootDir, 'data/audit-log.ndjson');
 const businessInputsDir = path.resolve(rootDir, 'data/business-inputs');
+const defaultCaptureOutputPath = path.resolve(rootDir, '../jspec-capture/output');
 const visibleSnapshotPath = path.resolve(
   getArgValue(
     '--visible-snapshot',
@@ -247,6 +253,40 @@ async function loadBusinessInputs() {
   return readBusinessInputs(businessInputsDir);
 }
 
+async function loadDataAssets() {
+  return buildInventoryFromDirectories([defaultCaptureOutputPath]);
+}
+
+function datasetFromFeatureStore(featureStore, generatedAt) {
+  return {
+    generatedAt,
+    rows: featureStore.rows,
+    quality: {
+      dates: featureStore.summary?.dates || [],
+      gaps: [],
+      fieldCompleteness: featureStore.summary?.fieldCompleteness || {},
+    },
+  };
+}
+
+async function loadForecastContext(date = '') {
+  const dataset = await loadDataset();
+  const assets = await loadDataAssets();
+  const allFeatureStore = buildForecastFeatureStore(dataset, { assets });
+  const featureStore = buildForecastFeatureStore(dataset, { assets, date });
+  const modelReport = buildForecastModelReport(allFeatureStore, { targetDate: date });
+  const backtestReport = runForecastBacktest(allFeatureStore);
+  return {
+    dataset,
+    assets,
+    allFeatureStore,
+    featureStore,
+    strategyDataset: datasetFromFeatureStore(featureStore, dataset.generatedAt),
+    modelReport,
+    backtestReport,
+  };
+}
+
 async function loadProductionReadiness() {
   const dataset = await loadDataset();
   const summary = summarizeDataset(dataset);
@@ -327,6 +367,55 @@ async function handleApi(request, response, url) {
       templates: inputs.templates,
       summary: summarizeBusinessInputs(inputs),
     });
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/data-assets') {
+    sendJson(response, await loadDataAssets());
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/features') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.featureStore);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/model') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.modelReport);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/backtest') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.backtestReport);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/cost-strategy') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(
+      response,
+      buildCostStrategy(context.strategyDataset, {
+        date: url.searchParams.get('date') || '',
+        assets: context.assets,
+        modelReport: context.modelReport,
+        backtestReport: context.backtestReport,
+      })
+    );
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/backfill/plan') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(
+      response,
+      buildBackfillPlan(context.strategyDataset, {
+        date: url.searchParams.get('date') || '',
+        assets: context.assets,
+      })
+    );
     return;
   }
 
