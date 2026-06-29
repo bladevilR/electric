@@ -87,6 +87,15 @@ test('collector defaults to a moderate sweep pace instead of the earlier fast sc
   assert.equal(collector.status().sweep.defaultDelayMs, 20000);
 });
 
+test('buildAutoSweepTargets can limit a run to the core low-frequency pages', () => {
+  const targets = buildAutoSweepTargets({ mode: 'core' });
+
+  assert.deepEqual(
+    targets.map((target) => target.id),
+    ['dashboard', 'realtime_average_price', 'actual_load_96', 'settle_day']
+  );
+});
+
 test('detectSweepRateLimitWarning catches JSPEC frequency alarms', () => {
   assert.equal(
     detectSweepRateLimitWarning({

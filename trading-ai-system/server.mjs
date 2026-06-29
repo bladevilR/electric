@@ -374,6 +374,8 @@ async function handleApi(request, response, url) {
         request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-auto-sweep',
         {
           delayMs: body.delayMs,
+          mode: body.mode,
+          targetIds: Array.isArray(body.targetIds) ? body.targetIds : undefined,
           targets: Array.isArray(body.targets) ? body.targets : undefined,
         }
       )

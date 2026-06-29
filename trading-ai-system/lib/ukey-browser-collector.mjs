@@ -17,6 +17,7 @@ const FORBIDDEN_SWEEP_ROUTE_PATTERN = /tradeDemo|rollMatchTrade|submit|commit|sa
 const RATE_LIMIT_WARNING_PATTERN =
   /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
 const RATE_LIMIT_SWEEP_STOP_MESSAGE = 'JSPEC reported high API access frequency; sweep stopped before remaining targets.';
+const CORE_SWEEP_TARGET_IDS = ['dashboard', 'realtime_average_price', 'actual_load_96', 'settle_day'];
 
 const DEFAULT_SWEEP_TARGETS = [
   {
@@ -412,9 +413,16 @@ export function detectSweepRateLimitWarning(pageSnapshot = {}) {
 export function buildAutoSweepTargets(options = {}) {
   const baseUrl = options.baseUrl || options.jspecUrl || DEFAULT_JSPEC_URL;
   const sourceTargets = Array.isArray(options.targets) && options.targets.length ? options.targets : DEFAULT_SWEEP_TARGETS;
-  return sourceTargets
+  let targets = sourceTargets
     .map((target, index) => normalizeSweepTarget(target, index, baseUrl))
     .filter(Boolean);
+  const targetIds = Array.isArray(options.targetIds) ? uniqueStrings(options.targetIds) : [];
+  if (targetIds.length) {
+    targets = targets.filter((target) => targetIds.includes(target.id));
+  } else if (options.mode === 'core') {
+    targets = targets.filter((target) => CORE_SWEEP_TARGET_IDS.includes(target.id));
+  }
+  return targets;
 }
 
 export function buildAutoSweepSummary(pageResults = [], options = {}) {
@@ -861,6 +869,8 @@ export function createUkeyBrowserCollector(options = {}) {
     const targets = buildAutoSweepTargets({
       baseUrl: refreshLaunch().launchUrl,
       targets: sweepOptions.targets,
+      targetIds: sweepOptions.targetIds,
+      mode: sweepOptions.mode,
     });
     const delayMs = resolveSweepDelayMs(sweepOptions.delayMs || env.JSPEC_SWEEP_DELAY_MS);
     const pageResults = [];

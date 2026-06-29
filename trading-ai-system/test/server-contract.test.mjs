@@ -112,6 +112,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /\/api\/ukey-assistant\/sweep\/run/);
     assert.match(appScript, /ukeyStartBrowserButton/);
     assert.match(appScript, /ukeySweepButton/);
+    assert.match(appScript, /mode: 'core'/);
+    assert.match(appScript, /自动扫核心页/);
     assert.match(appScript, /ukeySampleButton/);
     assert.match(appScript, /renderUkeyAssistant/);
     assert.match(appScript, /data-review-decision/);
