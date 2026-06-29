@@ -51,7 +51,12 @@ const modules = [
   { id: 'publicData', group: '数据', label: '市场数据', icon: '市' },
   { id: 'privateData', group: '数据', label: '我的数据', icon: '私' },
   { id: 'dataQuality', group: '数据', label: '数据准备情况', icon: '数' },
+  { id: 'dataAssets', group: '数据', label: '数据资产', icon: 'D' },
+  { id: 'settlementReference', group: '数据', label: '结算参考', icon: 'R' },
   { id: 'ukey', group: '实时', label: '实时数据助手', icon: '实' },
+  { id: 'forecastLab', group: '模型', label: '预测实验室', icon: 'F' },
+  { id: 'backtestReport', group: '模型', label: '回测结果', icon: 'B' },
+  { id: 'costStrategy', group: '策略', label: '省钱策略', icon: '¥' },
   { id: 'strategy', group: '策略', label: 'AI策略建议', icon: 'AI' },
   { id: 'production', group: '策略', label: '交易草稿复核', icon: '稿' },
 ];
@@ -77,6 +82,18 @@ let state = {
   executionError: '',
   ukeyAssistant: null,
   ukeyError: '',
+  costStrategy: null,
+  dataAssets: null,
+  settlementReference: null,
+  forecastLab: null,
+  backtestReport: null,
+  backfillPlan: null,
+  costStrategyError: '',
+  dataAssetsError: '',
+  settlementReferenceError: '',
+  forecastLabError: '',
+  backtestError: '',
+  backfillError: '',
 };
 
 const formatNumber = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 3 });
@@ -201,8 +218,31 @@ function statusText(value) {
       observation_ready: '可以先看建议',
       waiting_for_realtime_price: '等待实时价格',
       trial_only: '只作参考，不会自动提交',
+      heuristic_fallback: '规则兜底',
+      insufficient_history: '历史不足',
+      baseline_ready: '基线可用',
+      unavailable: '暂不可用',
+      savings_unavailable: '不能声明节省金额',
+      targeted: '定向补采',
+      conservative: '保守',
+      neutral: '中性',
+      aggressive: '激进',
     }[value] || value || '-'
   );
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function compactText(items, fallback = '-') {
+  const clean = asArray(items).filter(Boolean);
+  return clean.length ? clean.join('、') : fallback;
+}
+
+function percent(value) {
+  const numeric = n(value);
+  return numeric === null ? '-' : `${Math.round(numeric)}%`;
 }
 
 function pageTitle(title, desc, action = '') {
@@ -254,7 +294,7 @@ function table(columns, rows) {
     return '<div class="empty">现在还没有可展示的数据。</div>';
   }
   return `
-    <table>
+    <table class="model-table">
       <thead><tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr></thead>
       <tbody>
         ${rows
@@ -612,6 +652,513 @@ function renderDataQuality() {
   `;
 }
 
+function reasonText(value) {
+  return (
+    {
+      actual_load_missing: '缺用户实际负荷，不能验证移峰影响',
+      settlement_missing: '缺结算金额，不能核算真实节省',
+      contract_missing: '合同资产缺失',
+      contract_partial: '合同接口还有分页未抓取',
+      trade_sequence_missing: '交易序列缺失',
+      system_load_forecast_missing: '系统负荷预测缺失',
+      realtime_points_low: '实时均价点数不足',
+      forecast_history_insufficient: '预测历史不足',
+      backtest_unavailable: '回测不可用',
+      historical_dates_below_minimum: '历史交易日不足 5 天',
+      historical_dates_below_5: '历史交易日不足 5 天',
+      comparable_points_missing: '缺少同点位可比历史',
+      target_date_rows_missing: '目标日没有特征行',
+      target_date_missing: '目标日为空',
+      insufficient_actuals: '缺实际负荷或结算，不能做节省金额回测',
+    }[value] || value || '-'
+  );
+}
+
+function targetLabel(value) {
+  return (
+    {
+      realtime_average_price: '实时均价',
+      actual_load_96: '用户实际负荷',
+      settle_day: '日结算',
+      dayahead_public_clearing: '日前公开出清',
+      dayahead_user_clearing: '用户日前出清',
+      user_default_bid_96: '缺省申报',
+      short_system_load_forecast: '短期系统负荷预测',
+      current_contract: '当前合同',
+      history_contract: '历史合同',
+      trade_sequence: '交易序列',
+      historical_price_samples: '连续历史样本',
+      actual_daily_96: '实际负荷导出',
+      settlement_files: '结算文件导出',
+      position_curve: '持仓曲线导出',
+    }[value] || value || '-'
+  );
+}
+
+function forecastTargetLabel(value) {
+  return (
+    {
+      realTimeAvgPrice: '实时均价',
+      priceSpread: '实时-日前价差',
+      highPriceRiskLabel: '高价风险',
+    }[value] || value || '-'
+  );
+}
+
+function riskBadge(text, className = '') {
+  return `<span class="risk-badge ${className}">${escapeHtml(text)}</span>`;
+}
+
+function renderConfidence(score = 0) {
+  const width = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  return `
+    <div class="confidence-meter">
+      <div class="confidence-bar" style="width:${width}%"></div>
+      <strong>${width}/100</strong>
+    </div>
+  `;
+}
+
+function renderBackfillQueue(plan = state.backfillPlan) {
+  const targets = asArray(plan?.targets);
+  return `
+    <article class="card">
+      <h2>补采队列</h2>
+      <div class="target-queue">
+        ${
+          targets.length
+            ? targets
+                .map(
+                  (target) => `
+                    <div>
+                      <b>${escapeHtml(targetLabel(target.id))}</b>
+                      <span>${escapeHtml(target.reason || '')}</span>
+                      ${riskBadge(`${Math.round((target.delayMs || 0) / 1000)} 秒间隔`, 'soft')}
+                    </div>
+                  `
+                )
+                .join('')
+            : '<div class="empty">当前没有定向补采目标。</div>'
+        }
+      </div>
+      <p class="muted-text">模式：${escapeHtml(statusText(plan?.mode || 'targeted'))}；预计 ${escapeHtml(String(plan?.estimatedSeconds || 0))} 秒。${
+        plan?.rateLimited ? ' 已检测到频率风险，建议等待后再采。' : ''
+      }</p>
+    </article>
+  `;
+}
+
+function renderDataAssets() {
+  const inventory = state.dataAssets || {};
+  const summary = inventory.summary || {};
+  const evidence = inventory.evidence || {};
+  const assetRows = [
+    { name: '实时均价', rows: summary.realtimeAveragePriceRows || 0 },
+    { name: '日前公开出清', rows: summary.dayAheadPublicClearingRows || 0 },
+    { name: '用户日前出清', rows: summary.dayAheadUserClearingRows || 0 },
+    { name: '实时公开出清', rows: summary.realtimePublicClearingRows || 0 },
+    { name: '主动申报', rows: summary.userBidRows || 0 },
+    { name: '缺省申报', rows: summary.userDefaultBidRows || 0 },
+    { name: '系统负荷预测', rows: summary.systemLoadForecastRows || 0 },
+    { name: '系统实际负荷', rows: summary.actualSystemLoadRows || 0 },
+    { name: '交易序列', rows: summary.tradeSequenceRows || 0 },
+  ];
+  return `
+    ${pageTitle('数据资产', '把本地 raw captures 里能用的数据、分页缺口和空接口证据放在一起看。')}
+    ${state.dataAssetsError ? `<div class="notice warn">${escapeHtml(state.dataAssetsError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('实时均价行数', String(summary.realtimeAveragePriceRows || 0), 'raw capture 标准化后')}
+      ${kpi('日前公开行数', String(summary.dayAheadPublicClearingRows || 0), '出清价格基础')}
+      ${kpi('当前合同', `${summary.contractCurrentCapturedRows || 0}/${summary.contractCurrentTotal || 0}`, 'captured / total')}
+      ${kpi('历史合同', `${summary.contractHistoryCapturedRows || 0}/${summary.contractHistoryTotal || 0}`, 'captured / total')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>raw 数据类别</h2>
+        ${table(
+          [
+            { key: 'name', label: '类别' },
+            { key: 'rows', label: '行数' },
+          ],
+          assetRows
+        )}
+      </article>
+      <article class="card">
+        <h2>缺失证据</h2>
+        ${simpleList([
+          { title: '空实际负荷接口', note: `${summary.emptyActualLoadEndpoints || 0} 个 endpoint 返回空列表` },
+          { title: '空结算接口', note: `${summary.emptySettlementEndpoints || 0} 个 endpoint 返回空列表` },
+          { title: '合同分页缺口', note: `${asArray(evidence.partialSources).length} 个接口 total 大于已抓取行数` },
+        ])}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>空接口样本</h2>
+        ${simpleList(
+          asArray(evidence.emptySources)
+            .slice(0, 8)
+            .map((item) => ({
+              title: item.kind === 'settlement' ? '结算为空' : '实际负荷为空',
+              note: item.endpoint || item.sourceFile || '',
+            }))
+        )}
+      </article>
+      <article class="card">
+        <h2>分页缺口</h2>
+        ${simpleList(
+          asArray(evidence.partialSources)
+            .slice(0, 8)
+            .map((item) => ({
+              title: targetLabel(item.targetId),
+              note: `total ${item.total || 0}，已抓 ${item.capturedRows || 0}`,
+            }))
+        )}
+      </article>
+    </section>
+  `;
+}
+
+function renderSettlementReference() {
+  const reference = state.settlementReference || {};
+  const summary = reference.summary || {};
+  const workbooks = asArray(reference.workbooks);
+  const manualExports = asArray(reference.manualExports);
+  const monthlyRows = asArray(reference.monthlyOverviewRows).map((item) => ({
+    monthKey: item.monthKey,
+    energy: fmt(item.actualSettlementEnergyWanKwh),
+    settlementPrice: fmt(item.settlementPriceYuanPerKwh),
+    gridPrice: fmt(item.gridProxyPriceYuanPerKwh),
+    spotShare: item.spotShare === null || item.spotShare === undefined ? '--' : `${fmt(Number(item.spotShare) * 100)}%`,
+    savingMarket: fmt(item.savingVsMarketTotalWanYuan),
+    savingGrid: fmt(item.savingVsGridWanYuan),
+  }));
+  const longTermRows = asArray(reference.longTermOverviewRows).map((item) => ({
+    periodLabel: item.periodLabel,
+    rowKind: item.rowKind === 'year_summary' ? '年度概览' : '年度成交',
+    energy:
+      item.rowKind === 'year_summary'
+        ? fmt(item.totalTradeEnergyWanKwh)
+        : fmt(item.dealEnergy),
+    price:
+      item.rowKind === 'year_summary'
+        ? fmt(item.overallTradePriceYuanPerKwh)
+        : fmt(item.dealPrice),
+    share:
+      item.bilateralShare === null || item.bilateralShare === undefined
+        ? item.share === null || item.share === undefined
+          ? '--'
+          : `${fmt(Number(item.share) * 100)}%`
+        : `${fmt(Number(item.bilateralShare) * 100)}%`,
+  }));
+  const workbookRows = workbooks.map((item) => ({
+    fileName: item.fileName,
+    kind:
+      item.kind === 'spot_reconciliation'
+        ? '现货核对单'
+        : item.kind === 'monthly_settlement_overview'
+          ? '月度结算概览'
+          : item.kind === 'transaction_calculation'
+            ? '交易计算表'
+          : '参考文件',
+    sheetCount: asArray(item.sheets).length,
+    featureRowCount: item.featureRowCount || 0,
+    numericRows: asArray(item.sheets).reduce((total, sheet) => total + Number(sheet.numericRows || 0), 0),
+    referenceStrength:
+      item.referenceStrength === 'historical_96_point_truth'
+        ? '历史真值'
+        : item.referenceStrength === 'transaction_calculation_reference'
+          ? '交易测算'
+          : item.referenceStrength === 'point_like_reference'
+            ? '点位参考'
+            : '背景参考',
+  }));
+  const sheetRows = workbooks.flatMap((workbook) =>
+    asArray(workbook.sheets).map((sheet) => ({
+      workbook: workbook.fileName,
+      sheet: sheet.name,
+      dimension: sheet.dimension,
+      nonEmptyRows: sheet.nonEmptyRows,
+      numericRows: sheet.numericRows,
+    }))
+  );
+  const exportRows = manualExports.map((item) => ({
+    category: targetLabel(item.category),
+    exportDate: item.exportDate,
+    fileCount: item.fileCount,
+    status: item.status === 'files_available' ? '已有文件' : '空清单',
+  }));
+
+  return `
+    ${pageTitle('结算参考', '登记本地 Excel 核对单和手工导出清单，作为复核证据和后续升级入口，不替代缺失的业务真值。')}
+    ${state.settlementReferenceError ? `<div class="notice warn">${escapeHtml(state.settlementReferenceError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('参考文件', String(summary.workbookCount || 0), '根目录 Excel')}
+      ${kpi('历史标签点', String(summary.featureRowCount || 0), '可进入特征库')}
+      ${kpi('实际负荷候选', String(summary.actualKwhCandidateRows || 0), '核对单 + 交易计算表')}
+      ${kpi('结算金额候选', String(summary.settleAmountCandidateRows || 0), '核对单')}
+      ${kpi('交易计算表 CSV', String(summary.transactionCalculationFeatureRowCount || 0), '用电/申报候选')}
+      ${kpi('小时持仓参考', String(summary.transactionCalculationPositionHourlyRows || 0), '历史约束参考')}
+      ${kpi('操作量参考', String(summary.transactionCalculationOperationHourlyRows || 0), '历史买卖测算')}
+      ${kpi('月度概览', String(summary.monthlyOverviewRows || 0), '交易电量/电价/结算')}
+      ${kpi('长期背景', String(summary.longTermOverviewRows || 0), '近三年/年度成交')}
+      ${kpi('额外复盘点', String(summary.extraPointMetricRows || 0), '日前预估/节约费用')}
+      ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', '历史 actualKwh / settleAmount')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>月度结算概览</h2>
+        ${table(
+          [
+            { key: 'monthKey', label: '月份' },
+            { key: 'energy', label: '结算电量(万度)' },
+            { key: 'settlementPrice', label: '结算价(元/度)' },
+            { key: 'gridPrice', label: '国网价(元/度)' },
+            { key: 'spotShare', label: '现货占比' },
+            { key: 'savingMarket', label: '较市场节约(万元)' },
+            { key: 'savingGrid', label: '较国网节约(万元)' },
+          ],
+          monthlyRows
+        )}
+      </article>
+      <article class="card">
+        <h2>长期交易背景</h2>
+        ${table(
+          [
+            { key: 'periodLabel', label: '期间' },
+            { key: 'rowKind', label: '类型' },
+            { key: 'energy', label: '电量' },
+            { key: 'price', label: '价格' },
+            { key: 'share', label: '占比' },
+          ],
+          longTermRows
+        )}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>Excel 参考文件</h2>
+        ${table(
+          [
+            { key: 'fileName', label: '文件' },
+            { key: 'kind', label: '类型' },
+            { key: 'sheetCount', label: 'sheet' },
+            { key: 'featureRowCount', label: '标签点' },
+            { key: 'numericRows', label: '数值行' },
+            { key: 'referenceStrength', label: '用途' },
+          ],
+          workbookRows
+        )}
+      </article>
+      <article class="card">
+        <h2>使用边界</h2>
+        ${simpleList(asArray(reference.usageBoundaries).map((item) => ({ title: '边界', note: item })))}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>sheet 覆盖</h2>
+        ${table(
+          [
+            { key: 'workbook', label: '文件' },
+            { key: 'sheet', label: 'sheet' },
+            { key: 'dimension', label: '范围' },
+            { key: 'nonEmptyRows', label: '非空行' },
+            { key: 'numericRows', label: '数值行' },
+          ],
+          sheetRows.slice(0, 16)
+        )}
+      </article>
+      <article class="card">
+        <h2>手工导出清单</h2>
+        ${table(
+          [
+            { key: 'category', label: '目标' },
+            { key: 'exportDate', label: '日期' },
+            { key: 'fileCount', label: '文件数' },
+            { key: 'status', label: '状态' },
+          ],
+          exportRows
+        )}
+      </article>
+    </section>
+    <article class="card">
+      <h2>升级钩子</h2>
+      ${simpleList(asArray(reference.upgradeHooks).map((item) => ({ title: targetLabel(item.id), note: item.reason })))}
+    </article>
+  `;
+}
+
+function renderForecastLab() {
+  const report = state.forecastLab || {};
+  const readiness = report.readiness || {};
+  const forecasts = asArray(report.forecasts);
+  return `
+    ${pageTitle('预测实验室', '只展示当前可验证的基线预测；历史不足时明确给出原因，不声称训练模型更好。')}
+    ${state.forecastLabError ? `<div class="notice warn">${escapeHtml(state.forecastLabError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('模型状态', statusText(report.status || 'unavailable'), '当前不训练深度学习')}
+      ${kpi('历史天数', String(readiness.historicalDateCount || 0), '目标日前可用历史')}
+      ${kpi('可比点位', String(readiness.comparablePointCount || 0), '同点位历史覆盖')}
+      ${kpi('预测点数', String(forecasts.length), 'same-slot baseline 输出')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>模型清单</h2>
+        ${table(
+          [
+            { key: 'label', label: '模型' },
+            { label: '状态', render: (row) => (row.enabled ? '启用' : '未启用') },
+          ],
+          asArray(report.models)
+        )}
+      </article>
+      <article class="card">
+        <h2>缺失原因</h2>
+        ${simpleList(asArray(readiness.missingReasons).map((item) => ({ title: reasonText(item), note: item })))}
+      </article>
+    </section>
+    <article class="card">
+      <h2>基线预测摘要</h2>
+      ${table(
+        [
+          { label: '目标', render: (row) => forecastTargetLabel(row.target) },
+          { key: 'pointIndex', label: '点位' },
+          { label: '预测', render: (row) => fmt(row.pointForecast) },
+          { label: 'p90', render: (row) => fmt(row.p90) },
+          { key: 'evidenceRows', label: '证据行' },
+        ],
+        forecasts.slice(0, 18)
+      )}
+    </article>
+  `;
+}
+
+function renderBacktestReport() {
+  const report = state.backtestReport || {};
+  const metrics = report.metrics || {};
+  const metricRows = ['realTimeAvgPrice', 'priceSpread'].map((field) => ({
+    field,
+    label: forecastTargetLabel(field),
+    ...(metrics[field] || {}),
+  }));
+  const strategy = report.strategyComparison || {};
+  return `
+    ${pageTitle('回测结果', 'walk-forward 按日期评估，只用评估日前的数据；没有实际负荷/结算时不伪造节省金额。')}
+    ${state.backtestError ? `<div class="notice warn">${escapeHtml(state.backtestError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('评估状态', statusText(report.status || 'unavailable'), 'walk-forward')}
+      ${kpi('评估日期', String(asArray(report.evaluationDates).length), '满足历史门槛的日期')}
+      ${kpi('实时价样本', String(metrics.realTimeAvgPrice?.sampleCount || 0), '价格误差样本')}
+      ${kpi('策略回测', statusText(strategy.status || 'unavailable'), strategy.estimatedSavings === null ? '不声明节省金额' : '可对比 no_action')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>价格预测误差</h2>
+        ${table(
+          [
+            { key: 'label', label: '目标' },
+            { key: 'sampleCount', label: '样本' },
+            { label: 'MAE', render: (row) => fmt(row.mae) },
+            { label: 'RMSE', render: (row) => fmt(row.rmse) },
+            { label: 'Bias', render: (row) => fmt(row.bias) },
+          ],
+          metricRows
+        )}
+      </article>
+      <article class="card">
+        <h2>为什么还不能声明节省金额</h2>
+        ${simpleList(
+          asArray(report.warnings).length
+            ? asArray(report.warnings).map((item) => ({ title: reasonText(item), note: item }))
+            : [{ title: '仍需人工复核', note: '策略收益需要和 no_action 基线、实际负荷、结算共同验证。' }]
+        )}
+      </article>
+    </section>
+  `;
+}
+
+function renderCostStrategy() {
+  const strategy = state.costStrategy || {};
+  const confidence = strategy.dataConfidence || {};
+  const signals = strategy.signals || {};
+  const lowWindows = asArray(signals.lowPriceWindows);
+  const highWindows = asArray(signals.highPriceExposureWindows);
+  const tiers = asArray(strategy.policyTiers);
+  return `
+    ${pageTitle('省钱策略', '把价格窗口、基线预测、回测状态和数据缺口合成三档人工决策建议。')}
+    ${state.costStrategyError ? `<div class="notice warn">${escapeHtml(state.costStrategyError)}</div>` : ''}
+    ${state.backfillError ? `<div class="notice warn">${escapeHtml(state.backfillError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('模型模式', statusText(strategy.modelMode || 'heuristic_fallback'), '缺数据时只做规则兜底')}
+      ${kpi('置信度', `${confidence.score ?? 0}/100`, '按缺口扣分')}
+      ${kpi('低价窗口', String(lowWindows.length), '可观察补采或移峰机会')}
+      ${kpi('高价暴露', String(highWindows.length), '需要人工复核偏差风险')}
+    </section>
+    <article class="card">
+      <h2>置信度</h2>
+      ${renderConfidence(confidence.score || 0)}
+      <div class="tag-list">
+        ${asArray(confidence.penalties)
+          .map((item) => riskBadge(`-${item.points} ${reasonText(item.id)}`, 'warn'))
+          .join('')}
+      </div>
+    </article>
+    <section class="grid three">
+      ${tiers
+        .map(
+          (tier) => `
+            <article class="card policy-tier ${tier.enabled ? '' : 'disabled'}">
+              <h2>${escapeHtml(tier.title || statusText(tier.id))}</h2>
+              <div class="tag-list">
+                ${riskBadge(tier.enabled ? '可展示' : '未启用', tier.enabled ? 'good' : 'warn')}
+                ${riskBadge(tier.executable ? '可执行' : '不可执行', tier.executable ? 'good' : 'warn')}
+              </div>
+              <p>${escapeHtml(tier.action || '')}</p>
+              <small>${escapeHtml(compactText(tier.blockers, '无阻断项'))}</small>
+            </article>
+          `
+        )
+        .join('')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>低价窗口</h2>
+        ${table(
+          [
+            { key: 'pointIndex', label: '点位' },
+            { key: 'timePoint', label: '时间' },
+            { label: '实时价', render: (row) => fmt(row.realTimeAvgPrice) },
+            { label: '价差', render: (row) => fmt(row.priceSpread) },
+            { key: 'reason', label: '原因' },
+          ],
+          lowWindows
+        )}
+      </article>
+      <article class="card">
+        <h2>高价暴露</h2>
+        ${table(
+          [
+            { key: 'pointIndex', label: '点位' },
+            { key: 'timePoint', label: '时间' },
+            { label: '实时价', render: (row) => fmt(row.realTimeAvgPrice) },
+            { label: '价差', render: (row) => fmt(row.priceSpread) },
+            { key: 'reason', label: '原因' },
+          ],
+          highWindows
+        )}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>下一批关键数据</h2>
+        ${simpleList(asArray(strategy.nextBestData).map((item) => ({ title: targetLabel(item.id), note: item.reason || item.id })))}
+      </article>
+      ${renderBackfillQueue()}
+    </section>
+  `;
+}
+
 function renderUkeyAssistant() {
   const status = state.ukeyAssistant || {};
   const browser = status.browserWindow || {};
@@ -789,7 +1336,12 @@ const renderers = {
   publicData: renderPublicData,
   privateData: renderPrivateData,
   dataQuality: renderDataQuality,
+  dataAssets: renderDataAssets,
+  settlementReference: renderSettlementReference,
   ukey: renderUkeyAssistant,
+  forecastLab: renderForecastLab,
+  backtestReport: renderBacktestReport,
+  costStrategy: renderCostStrategy,
   strategy: renderStrategy,
   production: renderProduction,
 };
@@ -912,6 +1464,89 @@ async function loadStrategySuggestions() {
   }
 }
 
+async function loadDataAssets() {
+  try {
+    const response = await fetch('/api/data-assets', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.dataAssets = await response.json();
+    state.dataAssetsError = '';
+  } catch (error) {
+    state.dataAssets = null;
+    state.dataAssetsError = `数据资产没有读到：${error.message}`;
+  }
+}
+
+async function loadSettlementReference() {
+  try {
+    const response = await fetch('/api/settlement/reference', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.settlementReference = await response.json();
+    state.settlementReferenceError = '';
+  } catch (error) {
+    state.settlementReference = null;
+    state.settlementReferenceError = `结算参考没有读到：${error.message}`;
+  }
+}
+
+async function loadForecastLab() {
+  try {
+    const response = await fetch(`/api/forecast/model?date=${encodeURIComponent(state.date)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.forecastLab = await response.json();
+    state.forecastLabError = '';
+  } catch (error) {
+    state.forecastLab = null;
+    state.forecastLabError = `预测实验室没有读到：${error.message}`;
+  }
+}
+
+async function loadBacktestReport() {
+  try {
+    const response = await fetch('/api/backtest', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.backtestReport = await response.json();
+    state.backtestError = '';
+  } catch (error) {
+    state.backtestReport = null;
+    state.backtestError = `回测结果没有读到：${error.message}`;
+  }
+}
+
+async function loadCostStrategy() {
+  try {
+    const response = await fetch(`/api/cost-strategy?date=${encodeURIComponent(state.date)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.costStrategy = await response.json();
+    state.costStrategyError = '';
+  } catch (error) {
+    state.costStrategy = null;
+    state.costStrategyError = `省钱策略没有读到：${error.message}`;
+  }
+}
+
+async function loadBackfillPlan() {
+  try {
+    const response = await fetch(`/api/backfill/plan?date=${encodeURIComponent(state.date)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.backfillPlan = await response.json();
+    state.backfillError = '';
+  } catch (error) {
+    state.backfillPlan = null;
+    state.backfillError = `补采队列没有读到：${error.message}`;
+  }
+}
+
+async function loadCostStrategyContext() {
+  await Promise.all([
+    loadDataAssets(),
+    loadSettlementReference(),
+    loadForecastLab(),
+    loadBacktestReport(),
+    loadCostStrategy(),
+    loadBackfillPlan(),
+  ]);
+}
+
 async function loadSystemData() {
   try {
     const [datasetResponse, integrationsResponse] = await Promise.all([
@@ -927,7 +1562,7 @@ async function loadSystemData() {
     state.loadError = `数据没读到，请重新启动软件或检查文件是否完整：${error.message}`;
     state.integrationClosure = null;
   }
-  await Promise.all([loadProductionState(), loadUkeyAssistant(), loadStrategySuggestions()]);
+  await Promise.all([loadProductionState(), loadUkeyAssistant(), loadStrategySuggestions(), loadCostStrategyContext()]);
   render();
 }
 
@@ -991,6 +1626,7 @@ async function postUkeyAssistantAction(endpoint, options = {}) {
   }
   await loadUkeyAssistant();
   await loadStrategySuggestions();
+  await loadCostStrategyContext();
   render();
 }
 
@@ -1045,7 +1681,7 @@ document.querySelector('#sideNav')?.addEventListener('click', (event) => {
 
 document.querySelector('#dateSelect')?.addEventListener('change', async (event) => {
   state.date = event.target.value;
-  await loadStrategySuggestions();
+  await Promise.all([loadStrategySuggestions(), loadCostStrategyContext()]);
   render();
 });
 

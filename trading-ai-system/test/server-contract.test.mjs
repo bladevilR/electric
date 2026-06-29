@@ -81,6 +81,15 @@ test('local server exposes the P0 system loop', async () => {
       businessInputs,
       ukeyAssistant,
       modelRuntime,
+      dataAssets,
+      settlementReference,
+      forecastFeatures,
+      historicalForecastFeatures,
+      transactionForecastFeatures,
+      forecastModel,
+      backtest,
+      costStrategy,
+      backfillPlan,
       refresh,
     ] = await Promise.all([
       fetch(`${server.baseUrl}/`).then((response) => response.text()),
@@ -100,6 +109,27 @@ test('local server exposes the P0 system loop', async () => {
       fetch(`${server.baseUrl}/api/business-inputs`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/ukey-assistant`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/ai/model`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/data-assets`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/settlement/reference`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-01-01`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/features?date=2026-03-31`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/forecast/model?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/backtest`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/cost-strategy?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
+      fetch(`${server.baseUrl}/api/backfill/plan?date=2026-05-07`).then((response) =>
+        response.json()
+      ),
       fetch(`${server.baseUrl}/api/refresh`, { method: 'POST' }).then((response) =>
         response.json()
       ),
@@ -140,6 +170,30 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /strategyReport/);
     assert.match(appScript, /productionReadiness/);
     assert.match(appScript, /businessInputs/);
+    assert.match(appScript, /costStrategy/);
+    assert.match(appScript, /dataAssets/);
+    assert.match(appScript, /settlementReference/);
+    assert.match(appScript, /结算参考/);
+    assert.match(appScript, /历史标签点/);
+    assert.match(appScript, /交易计算表 CSV/);
+    assert.match(appScript, /小时持仓参考/);
+    assert.match(appScript, /月度结算概览/);
+    assert.match(appScript, /长期交易背景/);
+    assert.match(appScript, /额外复盘点/);
+    assert.match(appScript, /forecastLab/);
+    assert.match(appScript, /backtestReport/);
+    assert.match(appScript, /backfillPlan/);
+    assert.match(appScript, /\/api\/data-assets/);
+    assert.match(appScript, /\/api\/settlement\/reference/);
+    assert.match(appScript, /\/api\/forecast\/model/);
+    assert.match(appScript, /\/api\/backtest/);
+    assert.match(appScript, /\/api\/cost-strategy/);
+    assert.match(appScript, /\/api\/backfill\/plan/);
+    assert.match(appScript, /省钱策略/);
+    assert.match(appScript, /数据资产/);
+    assert.match(appScript, /结算参考/);
+    assert.match(appScript, /预测实验室/);
+    assert.match(appScript, /回测结果/);
     assert.match(appScript, /报告已生成/);
     assert.doesNotMatch(appScript, /待接入/);
     assert.doesNotMatch(appScript, /72,783|218 ~ 728|协鑫能科|GCL-ET|10:30-14:30|17:30-20:30|21:00-22:00|\+2\.8 万kWh|\+1\.2 ~ \+2\.6|2026-03/);
@@ -172,6 +226,11 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(strategyReport.title, '苏州地铁电力交易 AI 辅助策略报告');
     assert.equal(strategyReport.status, 'trial_only');
     assert.equal(strategyReport.statusText, '可试算，不可执行');
+    assert.ok(strategyReport.forecastSummary);
+    assert.ok(strategyReport.backtestSummary);
+    assert.ok(strategyReport.costStrategy);
+    assert.ok(strategyReport.savingsFocus);
+    assert.ok(strategyReport.nextActions.some((item) => item.id === 'targeted_backfill'));
     assert.ok(strategyReport.closureItems.some((item) => item.id === 'actual_load_96'));
     assert.ok(strategyReport.blockingReasons.some((item) => item.includes('日结算')));
     assert.doesNotMatch(JSON.stringify(strategyReport), /待接入/);
@@ -212,6 +271,41 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(modelRuntime.provider, 'openai_compatible');
     assert.equal(modelRuntime.configured, false);
     assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
+    assert.ok(dataAssets.summary);
+    assert.ok(settlementReference.summary);
+    assert.equal(settlementReference.summary.canFillActualKwh, true);
+    assert.equal(settlementReference.summary.canFillSettleAmount, true);
+    assert.ok(settlementReference.summary.actualKwhCandidateRows >= 17000);
+    assert.ok(settlementReference.summary.settleAmountCandidateRows >= 17000);
+    assert.ok(settlementReference.summary.transactionCalculationHourlySummaryRows >= 720);
+    assert.ok(settlementReference.summary.transactionCalculationPositionHourlyRows >= 240);
+    assert.ok(settlementReference.summary.monthlyOverviewRows >= 2);
+    assert.ok(settlementReference.summary.longTermOverviewRows >= 6);
+    assert.ok(Array.isArray(settlementReference.monthlyOverviewRows));
+    assert.ok(Array.isArray(settlementReference.longTermOverviewRows));
+    assert.ok(settlementReference.monthlyOverviewRows.some((item) => item.monthKey === '2026-01'));
+    assert.ok(settlementReference.longTermOverviewRows.some((item) => item.periodLabel === '2024'));
+    assert.equal(settlementReference.summary.hasSettlementReference, true);
+    assert.ok(Array.isArray(forecastFeatures.rows));
+    assert.equal(historicalForecastFeatures.rows.length, 96);
+    assert.equal(historicalForecastFeatures.summary.fieldCompleteness.actualKwh, 96);
+    assert.equal(historicalForecastFeatures.summary.fieldCompleteness.settleAmount, 96);
+    assert.equal(historicalForecastFeatures.rows[0].actualKwh, 20163);
+    assert.equal(historicalForecastFeatures.rows[0].settleAmount, 6579.17);
+    assert.equal(historicalForecastFeatures.rows[0].dayAheadForecastMwh, 9.275);
+    assert.equal(historicalForecastFeatures.rows[0].totalTradeSavingYuan, 111.296);
+    assert.equal(transactionForecastFeatures.rows.length, 96);
+    assert.equal(transactionForecastFeatures.summary.fieldCompleteness.actualKwh, 96);
+    assert.equal(transactionForecastFeatures.summary.fieldCompleteness.declarationPower, 96);
+    assert.equal(
+      transactionForecastFeatures.rows[0].sourceEndpoints.includes('transaction-calculation-standardized'),
+      true
+    );
+    assert.ok(forecastModel.status);
+    assert.ok(backtest.status);
+    assert.ok(Array.isArray(costStrategy.policyTiers));
+    assert.ok(Array.isArray(backfillPlan.targets));
+    assert.equal(backfillPlan.targets.length <= 4, true);
 
     const browserStart = await fetch(`${server.baseUrl}/api/ukey-assistant/browser/start`, {
       method: 'POST',
@@ -266,6 +360,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(executionProposal.autoSubmit, false);
     assert.equal(executionProposal.humanDecisionRequired, true);
     assert.deepEqual(executionProposal.orderLines, []);
+    assert.ok(executionProposal.costStrategy);
+    assert.ok(executionProposal.reviewWarnings.some((item) => item.includes('省钱策略置信度')));
     assert.ok(executionProposal.proposalLines.length > 0);
     assert.ok(executionProposal.proposalLines.every((item) => item.editable));
     assert.equal(executionProposal.blockers.some((item) => item.includes('CA/UKey')), false);

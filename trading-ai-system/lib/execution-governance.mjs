@@ -137,10 +137,14 @@ export function buildExecutionProposal({
   businessInputs,
 } = {}) {
   const suggestions = Array.isArray(report?.suggestions) ? report.suggestions : [];
+  const costStrategy = report?.costStrategy || null;
+  const settlementReferenceSummary = report?.settlementReferenceSummary || null;
+  const confidenceScore = Number(costStrategy?.dataConfidence?.score || 0);
   const blockers = uniqueText(readinessBlockers(readiness));
   const reviewWarnings = uniqueText([
     ...readinessWarnings(readiness),
     ...(Array.isArray(report?.blockingReasons) ? report.blockingReasons : []),
+    `省钱策略置信度 ${confidenceScore}/100；当前为人工决策支持，不会自动提交。`,
   ]);
   const proposalLines = proposalLinesFromSuggestions(suggestions, {
     date: report?.date,
@@ -160,6 +164,8 @@ export function buildExecutionProposal({
     autoSubmit: false,
     orderLines: [],
     proposalLines,
+    costStrategy,
+    settlementReferenceSummary,
     reportStatus: report?.status || 'trial_only',
     blockers,
     reviewWarnings,
@@ -174,6 +180,14 @@ export async function createExecutionProposal(options = {}) {
   const report = buildStrategyReport(options.dataset, {
     date: options.date,
     integrationClosure: options.integrationClosure,
+    assets: options.assets,
+    featureStore: options.featureStore,
+    strategyDataset: options.strategyDataset,
+    modelReport: options.modelReport,
+    forecastReport: options.forecastReport,
+    backtestReport: options.backtestReport,
+    costStrategy: options.costStrategy,
+    settlementReference: options.settlementReference,
   });
   const proposal = buildExecutionProposal({
     report,

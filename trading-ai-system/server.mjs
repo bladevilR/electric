@@ -28,10 +28,17 @@ import {
   mergeVisibleSnapshot,
   validateVisibleSnapshot,
 } from './lib/ukey-assistant.mjs';
-import { createUkeyBrowserCollector } from './lib/ukey-browser-collector.mjs';
+import { buildBackfillPlan, createUkeyBrowserCollector } from './lib/ukey-browser-collector.mjs';
 import { buildModelConfig, requestStrategyModelPrediction } from './lib/ai-model-client.mjs';
+import { buildInventoryFromDirectories } from './lib/data-assets.mjs';
+import { buildForecastFeatureStore } from './lib/forecast-feature-store.mjs';
+import { buildForecastModelReport } from './lib/forecast-models.mjs';
+import { runForecastBacktest } from './lib/backtest-engine.mjs';
+import { buildCostStrategy } from './lib/cost-optimizer.mjs';
+import { buildSettlementReference } from './lib/settlement-reference.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(rootDir, '..');
 const defaultStandardPath = path.resolve(
   rootDir,
   '../jspec-capture/output/session-20260507-101645/standard/standard-96.json'
@@ -41,6 +48,7 @@ const integrationSummaryPath = path.resolve(rootDir, 'data/integration-summary.j
 const integrationBuildScriptPath = path.resolve(rootDir, 'tools/build-integration-summary.py');
 const defaultAuditLogPath = path.resolve(rootDir, 'data/audit-log.ndjson');
 const businessInputsDir = path.resolve(rootDir, 'data/business-inputs');
+const defaultCaptureOutputPath = path.resolve(rootDir, '../jspec-capture/output');
 const visibleSnapshotPath = path.resolve(
   getArgValue(
     '--visible-snapshot',
@@ -49,6 +57,7 @@ const visibleSnapshotPath = path.resolve(
 );
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
+let settlementReferenceCache = null;
 
 function getArgValue(name, defaultValue) {
   const index = process.argv.indexOf(name);
@@ -247,6 +256,55 @@ async function loadBusinessInputs() {
   return readBusinessInputs(businessInputsDir);
 }
 
+async function loadDataAssets() {
+  return buildInventoryFromDirectories([defaultCaptureOutputPath]);
+}
+
+async function loadSettlementReference() {
+  if (!settlementReferenceCache) {
+    settlementReferenceCache = buildSettlementReference({
+      projectRoot,
+      pythonPath,
+    }).catch((error) => {
+      settlementReferenceCache = null;
+      throw error;
+    });
+  }
+  return settlementReferenceCache;
+}
+
+function datasetFromFeatureStore(featureStore, generatedAt) {
+  return {
+    generatedAt,
+    rows: featureStore.rows,
+    quality: {
+      dates: featureStore.summary?.dates || [],
+      gaps: [],
+      fieldCompleteness: featureStore.summary?.fieldCompleteness || {},
+    },
+  };
+}
+
+async function loadForecastContext(date = '') {
+  const dataset = await loadDataset();
+  const assets = await loadDataAssets();
+  const settlementReference = await loadSettlementReference();
+  const allFeatureStore = buildForecastFeatureStore(dataset, { assets, settlementReference });
+  const featureStore = buildForecastFeatureStore(dataset, { assets, settlementReference, date });
+  const modelReport = buildForecastModelReport(allFeatureStore, { targetDate: date });
+  const backtestReport = runForecastBacktest(allFeatureStore);
+  return {
+    dataset,
+    assets,
+    settlementReference,
+    allFeatureStore,
+    featureStore,
+    strategyDataset: datasetFromFeatureStore(featureStore, dataset.generatedAt),
+    modelReport,
+    backtestReport,
+  };
+}
+
 async function loadProductionReadiness() {
   const dataset = await loadDataset();
   const summary = summarizeDataset(dataset);
@@ -327,6 +385,60 @@ async function handleApi(request, response, url) {
       templates: inputs.templates,
       summary: summarizeBusinessInputs(inputs),
     });
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/data-assets') {
+    sendJson(response, await loadDataAssets());
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/settlement/reference') {
+    sendJson(response, await loadSettlementReference());
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/features') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.featureStore);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/model') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.modelReport);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/backtest') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(response, context.backtestReport);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/cost-strategy') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(
+      response,
+      buildCostStrategy(context.strategyDataset, {
+        date: url.searchParams.get('date') || '',
+        assets: context.assets,
+        modelReport: context.modelReport,
+        backtestReport: context.backtestReport,
+      })
+    );
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/backfill/plan') {
+    const context = await loadForecastContext(url.searchParams.get('date') || '');
+    sendJson(
+      response,
+      buildBackfillPlan(context.strategyDataset, {
+        date: url.searchParams.get('date') || '',
+        assets: context.assets,
+      })
+    );
     return;
   }
 
@@ -450,28 +562,43 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/strategy-report') {
-    const dataset = await loadDataset();
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
     sendJson(
       response,
-      buildStrategyReport(dataset, {
-        date: url.searchParams.get('date'),
+      buildStrategyReport(context.dataset, {
+        date,
         integrationClosure: await loadIntegrationClosure(),
+        assets: context.assets,
+        featureStore: context.allFeatureStore,
+        strategyDataset: context.strategyDataset,
+        modelReport: context.modelReport,
+        backtestReport: context.backtestReport,
+        settlementReference: context.settlementReference,
       })
     );
     return;
   }
 
   if (request.method === 'GET' && url.pathname === '/api/strategy-report.md') {
-    const dataset = await loadDataset();
-    const report = buildStrategyReport(dataset, {
-      date: url.searchParams.get('date'),
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
+    const report = buildStrategyReport(context.dataset, {
+      date,
       integrationClosure: await loadIntegrationClosure(),
+      assets: context.assets,
+      featureStore: context.allFeatureStore,
+      strategyDataset: context.strategyDataset,
+      modelReport: context.modelReport,
+      backtestReport: context.backtestReport,
+      settlementReference: context.settlementReference,
     });
     sendText(response, renderStrategyReportMarkdown(report), 'text/markdown; charset=utf-8');
     return;
   }
 
   if (request.method === 'POST' && url.pathname === '/api/refresh') {
+    settlementReferenceCache = null;
     const summary = await writeBrowserDataFile({
       sourcePath: standardPath,
       outputPath: browserDataPath,
@@ -501,16 +628,23 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'POST' && url.pathname === '/api/execution/proposal') {
-    const dataset = await loadDataset();
+    const date = url.searchParams.get('date') || '';
+    const context = await loadForecastContext(date);
     const integrationClosure = await loadIntegrationClosure();
     const readiness = await loadProductionReadiness();
     const businessInputs = await loadBusinessInputs();
     const proposal = await createExecutionProposal({
-      dataset,
-      date: url.searchParams.get('date'),
+      dataset: context.dataset,
+      date,
       integrationClosure,
       readiness,
       businessInputs,
+      assets: context.assets,
+      featureStore: context.allFeatureStore,
+      strategyDataset: context.strategyDataset,
+      modelReport: context.modelReport,
+      backtestReport: context.backtestReport,
+      settlementReference: context.settlementReference,
       auditPath: auditLogPath,
       actor: request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-operator',
     });
