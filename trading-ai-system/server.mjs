@@ -204,6 +204,36 @@ async function sampleManagedVisibleSnapshot(actor = 'local-collector') {
   }
 }
 
+async function sweepManagedVisibleSnapshot(actor = 'local-auto-sweep', options = {}) {
+  try {
+    const sweep = await ukeyBrowserCollector.autoSweepVisiblePages(options);
+    const snapshot = await persistVisibleSnapshotPayload(sweep, actor);
+    ukeyBrowserCollector.recordIngestResult(snapshot);
+    return {
+      ok: snapshot.accepted,
+      snapshot,
+      sweepResult: {
+        source: sweep.source,
+        generatedAt: sweep.generatedAt,
+        targetCount: sweep.targetCount,
+        pageCount: sweep.pageCount,
+        acceptedPageCount: sweep.acceptedPageCount,
+        rowCount: sweep.rowCount,
+        pages: sweep.pages,
+        errors: sweep.errors,
+      },
+      ...ukeyBrowserCollector.status(),
+    };
+  } catch (error) {
+    ukeyBrowserCollector.recordCollectorError(error);
+    return {
+      ok: false,
+      error: error?.message ?? String(error),
+      ...ukeyBrowserCollector.status(),
+    };
+  }
+}
+
 async function loadIntegrationClosure() {
   return buildIntegrationClosure(await readIntegrationSummary(integrationSummaryPath));
 }
@@ -331,6 +361,21 @@ async function handleApi(request, response, url) {
       response,
       await sampleManagedVisibleSnapshot(
         request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-collector'
+      )
+    );
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/ukey-assistant/sweep/run') {
+    const body = await readJsonBody(request);
+    sendJson(
+      response,
+      await sweepManagedVisibleSnapshot(
+        request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-auto-sweep',
+        {
+          delayMs: body.delayMs,
+          targets: Array.isArray(body.targets) ? body.targets : undefined,
+        }
       )
     );
     return;

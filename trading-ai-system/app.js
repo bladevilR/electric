@@ -189,6 +189,8 @@ function statusText(value) {
       data_blocked: '数据还不够',
       running: '正在采集',
       stopped: '未自动采集',
+      idle: '待命',
+      failed: '上次失败',
       not_started: '未打开',
       started: '已打开',
       ready_for_local_user: '可以使用',
@@ -614,9 +616,10 @@ function renderUkeyAssistant() {
   const status = state.ukeyAssistant || {};
   const browser = status.browserWindow || {};
   const collector = status.collector || {};
+  const sweep = status.sweep || {};
   const snapshot = status.lastSnapshot || status.visibleSnapshot || {};
   const realtime = status.realtimeData || {};
-  const lastError = collector.lastError || browser.lastError || state.ukeyError || '';
+  const lastError = sweep.lastError || collector.lastError || browser.lastError || state.ukeyError || '';
   return `
     ${pageTitle(
       '实时数据助手',
@@ -626,6 +629,7 @@ function renderUkeyAssistant() {
     <section class="kpi-grid">
       ${kpi('数据窗口', statusText(browser.state || browser.status || 'not_started'), '点击按钮后会打开专用浏览器')}
       ${kpi('自动采集', statusText(collector.state || 'stopped'), collector.intervalSeconds ? `约 ${collector.intervalSeconds} 秒一次` : '默认约 30 秒一次')}
+      ${kpi('全页巡扫', statusText(sweep.state || 'idle'), sweep.lastRunAt ? `${sweep.lastAcceptedPageCount || 0}/${sweep.targetCount || 0} 页，${sweep.lastRowCount || 0} 行` : `${sweep.targetCount || 0} 个页面目标`)}
       ${kpi('最近采集', snapshot.generatedAt ? timeText(snapshot.generatedAt) : '-', snapshot.rowCount ? `${snapshot.rowCount} 行` : '还没有采集到表格')}
       ${kpi('实时价格', realtime.pointCount ? `${realtime.pointCount} 点` : '等待页面', statusText(realtime.status))}
     </section>
@@ -635,14 +639,15 @@ function renderUkeyAssistant() {
         <h2>一键操作</h2>
         <div class="action-row">
           <button class="primary-button" id="ukeyStartBrowserButton">打开数据窗口</button>
+          <button class="primary-button" id="ukeySweepButton">自动扫全页</button>
           <button class="ghost-button" id="ukeySampleButton">采集一次</button>
           <button class="ghost-button" id="ukeyStartCollectorButton">开始自动采集</button>
           <button class="ghost-button" id="ukeyStopCollectorButton">停止自动采集</button>
         </div>
         ${simpleList([
           { title: '第一步', note: '插上 UKey，点击“打开数据窗口”。' },
-          { title: '第二步', note: '在打开的浏览器里手动登录，并进入实时价格或申报页面。' },
-          { title: '第三步', note: '回到本软件点击“采集一次”，确认有行数后再开启自动采集。' },
+          { title: '第二步', note: '在打开的浏览器里完成登录，停在任意 JSPEC 页面即可。' },
+          { title: '第三步', note: '点击“自动扫全页”，系统会按已配置业务页巡扫并合并表格。' },
         ])}
       </article>
       <article class="card">
@@ -656,6 +661,7 @@ function renderUkeyAssistant() {
             { item: '页面', value: browser.currentUrl || '还没打开实时页面' },
             { item: '登录', value: browser.currentUrl ? '以页面实际显示为准' : '等待打开数据窗口' },
             { item: '采集结果', value: snapshot.accepted ? `已读取 ${snapshot.rowCount || 0} 行` : '还没有读到可用表格' },
+            { item: '巡扫结果', value: sweep.lastRunAt ? `已扫 ${sweep.lastPageCount || 0} 页，命中 ${sweep.lastAcceptedPageCount || 0} 页` : `${sweep.targetCount || 0} 个页面目标待扫` },
           ]
         )}
       </article>
@@ -838,6 +844,7 @@ function bindDynamicActions() {
     button.addEventListener('click', () => recordProposalReview(button.dataset.decision));
   });
   wireUkeyActionButton('ukeyStartBrowserButton', '/api/ukey-assistant/browser/start', { label: '打开中...' });
+  wireUkeyActionButton('ukeySweepButton', '/api/ukey-assistant/sweep/run', { label: '巡扫中...' });
   wireUkeyActionButton('ukeySampleButton', '/api/ukey-assistant/collector/sample', { label: '采集中...' });
   wireUkeyActionButton('ukeyStartCollectorButton', '/api/ukey-assistant/collector/start', { label: '启动中...' });
   wireUkeyActionButton('ukeyStopCollectorButton', '/api/ukey-assistant/collector/stop', { label: '停止中...' });

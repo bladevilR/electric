@@ -109,7 +109,9 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /\/api\/ukey-assistant/);
     assert.match(appScript, /\/api\/ukey-assistant\/browser\/start/);
     assert.match(appScript, /\/api\/ukey-assistant\/collector\/sample/);
+    assert.match(appScript, /\/api\/ukey-assistant\/sweep\/run/);
     assert.match(appScript, /ukeyStartBrowserButton/);
+    assert.match(appScript, /ukeySweepButton/);
     assert.match(appScript, /ukeySampleButton/);
     assert.match(appScript, /renderUkeyAssistant/);
     assert.match(appScript, /data-review-decision/);
@@ -181,6 +183,9 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(ukeyAssistant.browserWindow.profileDir.endsWith('.browser\\jspec-managed-profile') || ukeyAssistant.browserWindow.profileDir.endsWith('.browser/jspec-managed-profile'), true);
     assert.equal(ukeyAssistant.collector.intervalSeconds, 30);
     assert.equal(ukeyAssistant.collector.state, 'stopped');
+    assert.equal(ukeyAssistant.sweep.state, 'idle');
+    assert.ok(ukeyAssistant.sweep.targetCount >= 10);
+    assert.ok(ukeyAssistant.sweep.targetIds.includes('energy_block_trades'));
     assert.equal(modelRuntime.provider, 'openai_compatible');
     assert.equal(modelRuntime.configured, false);
     assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
@@ -196,6 +201,13 @@ test('local server exposes the P0 system loop', async () => {
     }).then((response) => response.json());
     assert.equal(typeof collectorSample.ok, 'boolean');
     assert.ok(collectorSample.collector);
+
+    const sweepRun = await fetch(`${server.baseUrl}/api/ukey-assistant/sweep/run`, {
+      method: 'POST',
+    }).then((response) => response.json());
+    assert.equal(typeof sweepRun.ok, 'boolean');
+    assert.ok(sweepRun.sweep);
+    assert.ok(sweepRun.sweep.targetCount >= 10);
 
     const collectorStart = await fetch(`${server.baseUrl}/api/ukey-assistant/collector/start`, {
       method: 'POST',

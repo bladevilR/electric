@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
+  buildAutoSweepSummary,
+  buildAutoSweepTargets,
   buildManagedBrowserLaunch,
   parseVisibleBusinessSnapshot,
 } from '../lib/ukey-browser-collector.mjs';
@@ -41,6 +43,88 @@ test('collector source avoids credential and network interception APIs', async (
   assert.doesNotMatch(source, /sessionStorage/i);
   assert.doesNotMatch(source, /Network\.enable/i);
   assert.doesNotMatch(source, /Fetch\.enable/i);
+});
+
+test('buildAutoSweepTargets creates a read-only JSPEC route sweep without menu clicking', () => {
+  const targets = buildAutoSweepTargets({
+    baseUrl: 'https://www.jspec.com.cn/#/dashboard',
+  });
+  const ids = targets.map((target) => target.id);
+
+  assert.ok(ids.includes('dashboard'));
+  assert.ok(ids.includes('user_bid_96'));
+  assert.ok(ids.includes('user_default_bid_96'));
+  assert.ok(ids.includes('dayahead_user_clearing'));
+  assert.ok(ids.includes('realtime_average_price'));
+  assert.ok(ids.includes('actual_load_96'));
+  assert.ok(ids.includes('settle_day'));
+  assert.ok(ids.includes('energy_block_trades'));
+  assert.ok(ids.includes('energy_block_limits'));
+  assert.ok(ids.includes('position_query'));
+  assert.equal(targets.every((target) => target.url.startsWith('https://www.jspec.com.cn/')), true);
+  assert.equal(
+    targets.find((target) => target.id === 'dashboard')?.url,
+    'https://www.jspec.com.cn/#/dashboard'
+  );
+  assert.equal(
+    targets.find((target) => target.id === 'actual_load_96')?.url,
+    'https://www.jspec.com.cn/pxf-js-outer-deferrableload/#/pxf-js-outer-deferrableload/dayElectricity'
+  );
+  assert.equal(
+    targets.some((target) => /tradeDemo|rollMatchTrade|submit|commit/i.test(target.routeFragment)),
+    false
+  );
+});
+
+test('buildAutoSweepSummary merges accepted rows from multiple scanned pages', () => {
+  const realtimeSnapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/realtime',
+    title: '实时均价',
+    bodyText: '交易日期：2026-05-09',
+    tables: [
+      {
+        headers: ['交易日期', '时段', '实时加权均价'],
+        rows: [['2026-05-09', '00:15', '301.5']],
+      },
+    ],
+  });
+  const loadSnapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/load',
+    title: '实际负荷',
+    bodyText: '交易日期：2026-05-09',
+    tables: [
+      {
+        headers: ['交易日期', '时段', '实际负荷'],
+        rows: [['2026-05-09', '00:30', '42.1']],
+      },
+    ],
+  });
+
+  const summary = buildAutoSweepSummary(
+    [
+      { target: { id: 'realtime_average_price', name: '实时均价' }, snapshot: realtimeSnapshot },
+      { target: { id: 'actual_load_96', name: '实际负荷' }, snapshot: loadSnapshot },
+      {
+        target: { id: 'settle_day', name: '日结算' },
+        error: 'No visible JSPEC business rows were detected.',
+      },
+    ],
+    {
+      startedAt: '2026-05-09T00:00:00.000Z',
+      finishedAt: '2026-05-09T00:01:00.000Z',
+    }
+  );
+
+  assert.equal(summary.source, 'jspec_managed_browser_auto_sweep');
+  assert.equal(summary.targetCount, 3);
+  assert.equal(summary.pageCount, 3);
+  assert.equal(summary.acceptedPageCount, 2);
+  assert.equal(summary.rowCount, 2);
+  assert.deepEqual(summary.rows.map((row) => row.pointIndex), [1, 2]);
+  assert.deepEqual(summary.rows[0].sourceTargets, ['realtime_average_price', 'visible_page_snapshot']);
+  assert.deepEqual(summary.rows[1].sourceTargets, ['actual_load_96', 'visible_page_snapshot']);
+  assert.equal(summary.pages.find((page) => page.targetId === 'settle_day')?.ok, false);
+  assert.match(summary.errors.join('\n'), /settle_day/);
 });
 
 test('parseVisibleBusinessSnapshot maps visible JSPEC table text into allowed business rows', () => {

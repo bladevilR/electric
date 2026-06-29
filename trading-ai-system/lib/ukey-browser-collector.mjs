@@ -7,9 +7,133 @@ const DEFAULT_JSPEC_URL = 'https://www.jspec.com.cn/';
 const DEFAULT_DEBUG_ADDRESS = '127.0.0.1';
 const DEFAULT_DEBUG_PORT = 9224;
 const DEFAULT_INTERVAL_SECONDS = 30;
+const DEFAULT_SWEEP_DELAY_MS = 8000;
 const SNAPSHOT_SOURCE = 'jspec_managed_browser_visible_page';
+const SWEEP_SOURCE = 'jspec_managed_browser_auto_sweep';
 const SENSITIVE_FIELD_PATTERN =
   /cookie|token|ticket|authorization|password|passwd|secret|credential|cert|private.?key|pin/i;
+const FORBIDDEN_SWEEP_ROUTE_PATTERN = /tradeDemo|rollMatchTrade|submit|commit|save|delete|cancel/i;
+
+const DEFAULT_SWEEP_TARGETS = [
+  {
+    id: 'dashboard',
+    name: 'JSPEC 首页',
+    category: 'login_context',
+    priority: 'P0',
+    required: false,
+    routeFragment: '/dashboard',
+    outputHint: '登录后的平台首页状态',
+  },
+  {
+    id: 'user_bid_96',
+    name: '用户侧96点主动申报',
+    category: 'dayahead_declaration',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-spotgoods-province-extranet/userBid96/index',
+    expectedFields: ['declarationPower'],
+    outputHint: '96点日前主动申报曲线',
+  },
+  {
+    id: 'user_default_bid_96',
+    name: '用户侧96点缺省申报',
+    category: 'dayahead_declaration',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-spotgoods-province-extranet/userDefaultBid96/index',
+    expectedFields: ['defaultDeclarationPower'],
+    outputHint: '96点缺省申报曲线',
+  },
+  {
+    id: 'dayahead_user_clearing',
+    name: '用户侧日前出清',
+    category: 'dayahead_price',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-spotgoods-province-extranet/Dd2jyUserClearingResult/Dd2jyRqClearing',
+    expectedFields: ['dayAheadUserPrice'],
+    outputHint: '96点日前用户侧出清结果',
+  },
+  {
+    id: 'dayahead_public_clearing',
+    name: '日前公开出清',
+    category: 'dayahead_price',
+    priority: 'P0',
+    required: true,
+    routeFragment:
+      '/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/DayClearingResult',
+    expectedFields: ['dayAheadPublicPrice'],
+    outputHint: '96点日前公开出清价格',
+  },
+  {
+    id: 'realtime_public_clearing',
+    name: '实时公开出清',
+    category: 'realtime_price',
+    priority: 'P0',
+    required: true,
+    routeFragment:
+      '/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/CurClearingResult',
+    expectedFields: ['realTimePointPriceCurrent'],
+    outputHint: '96点实时公开出清结果',
+  },
+  {
+    id: 'realtime_average_price',
+    name: '实时加权均价公开',
+    category: 'realtime_price',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-spotgoods-province-extranet/realTimeClearingRelease/RealTimeMarAvePricePublic',
+    expectedFields: ['realTimeAvgPrice'],
+    outputHint: '96点实时加权均价',
+  },
+  {
+    id: 'actual_load_96',
+    name: '96点日电量查询',
+    category: 'actual_load',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-js-outer-deferrableload/dayElectricity',
+    expectedFields: ['actualKwh'],
+    outputHint: '96点实际电量/负荷',
+  },
+  {
+    id: 'settle_day',
+    name: '日结算查询',
+    category: 'settlement',
+    priority: 'P0',
+    required: true,
+    routeFragment: '/pxf-js-outer-deferrableload/settleDay',
+    expectedFields: ['settleAmount'],
+    outputHint: '日结算明细',
+  },
+  {
+    id: 'energy_block_trades',
+    name: '能量块成交结果',
+    category: 'energy_block',
+    priority: 'P1',
+    required: false,
+    routeFragment: '/pxf-trade-auction-extranet/myTransaction/TradeResult',
+    outputHint: '能量块成交结果',
+  },
+  {
+    id: 'energy_block_limits',
+    name: '能量块可买可卖量/限额',
+    category: 'energy_block',
+    priority: 'P1',
+    required: false,
+    routeFragment: '/pxf-trade-auction-extranet/myTransaction/QuotaQuery',
+    outputHint: '能量块可买可卖量和限额',
+  },
+  {
+    id: 'position_query',
+    name: '持仓量查询',
+    category: 'contract_position',
+    priority: 'P1',
+    required: false,
+    routeFragment: '/pxf-js-outer-planmod/fsjyccl',
+    outputHint: '当前持仓量',
+  },
+];
 
 const FIELD_RULES = [
   { field: 'date', patterns: [/交易日期|业务日期|日期|date/i] },
@@ -208,6 +332,133 @@ function findBrowserExecutable(options = {}) {
   return standardBrowserCandidates(options.env).find((candidate) => existsSync(candidate)) || '';
 }
 
+function jspecOrigin(baseUrl = DEFAULT_JSPEC_URL) {
+  try {
+    return new URL(baseUrl).origin;
+  } catch {
+    return new URL(DEFAULT_JSPEC_URL).origin;
+  }
+}
+
+function buildJspecSweepUrl(routeFragment, baseUrl = DEFAULT_JSPEC_URL) {
+  const route = cleanString(routeFragment);
+  const origin = jspecOrigin(baseUrl);
+  if (route === '/dashboard') {
+    return `${origin}/#/dashboard`;
+  }
+  if (!route.startsWith('/')) {
+    throw new Error(`JSPEC sweep route must start with "/": ${routeFragment}`);
+  }
+  const appName = route.split('/').filter(Boolean)[0];
+  if (!appName) {
+    throw new Error(`Could not infer JSPEC app name from route: ${routeFragment}`);
+  }
+  return `${origin}/${appName}/#${route}`;
+}
+
+function uniqueStrings(values) {
+  return [...new Set(values.map(cleanString).filter(Boolean))];
+}
+
+function normalizeSweepTarget(target = {}, index = 0, baseUrl = DEFAULT_JSPEC_URL) {
+  const routeFragment = cleanString(target.routeFragment || target.route || target.path);
+  if (routeFragment && FORBIDDEN_SWEEP_ROUTE_PATTERN.test(routeFragment)) {
+    return null;
+  }
+  const url = cleanString(target.url) || buildJspecSweepUrl(routeFragment, baseUrl);
+  return {
+    id: cleanString(target.id) || `sweep_target_${index + 1}`,
+    name: cleanString(target.name || target.title) || `JSPEC 巡扫目标 ${index + 1}`,
+    category: cleanString(target.category) || 'business',
+    priority: cleanString(target.priority) || 'P1',
+    required: Boolean(target.required),
+    routeFragment,
+    url,
+    expectedFields: Array.isArray(target.expectedFields) ? uniqueStrings(target.expectedFields) : [],
+    outputHint: cleanString(target.outputHint),
+    order: index + 1,
+  };
+}
+
+function resolveSweepDelayMs(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return DEFAULT_SWEEP_DELAY_MS;
+  }
+  return Math.min(Math.max(Math.round(numeric), 1000), 120000);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function buildAutoSweepTargets(options = {}) {
+  const baseUrl = options.baseUrl || options.jspecUrl || DEFAULT_JSPEC_URL;
+  const sourceTargets = Array.isArray(options.targets) && options.targets.length ? options.targets : DEFAULT_SWEEP_TARGETS;
+  return sourceTargets
+    .map((target, index) => normalizeSweepTarget(target, index, baseUrl))
+    .filter(Boolean);
+}
+
+export function buildAutoSweepSummary(pageResults = [], options = {}) {
+  const startedAt = options.startedAt || new Date().toISOString();
+  const finishedAt = options.finishedAt || new Date().toISOString();
+  const rows = [];
+  const errors = [];
+  const pages = pageResults.map((result = {}, index) => {
+    const target = result.target || {};
+    const snapshot = result.snapshot || {};
+    const targetId = cleanString(target.id) || `sweep_target_${index + 1}`;
+    const snapshotRows = Array.isArray(snapshot.rows) ? snapshot.rows : [];
+    const rowCount = Number(snapshot.rowCount ?? snapshotRows.length ?? 0);
+    const pageErrors = [
+      ...(Array.isArray(snapshot.errors) ? snapshot.errors.map(cleanString).filter(Boolean) : []),
+      cleanString(result.error),
+    ].filter(Boolean);
+
+    snapshotRows.forEach((row) => {
+      rows.push({
+        ...row,
+        sourceTargets: uniqueStrings([targetId, ...(Array.isArray(row.sourceTargets) ? row.sourceTargets : [])]),
+      });
+    });
+
+    pageErrors.forEach((error) => errors.push(`${targetId}: ${error}`));
+
+    return {
+      targetId,
+      name: cleanString(target.name),
+      category: cleanString(target.category),
+      priority: cleanString(target.priority),
+      required: Boolean(target.required),
+      routeFragment: cleanString(target.routeFragment),
+      url: cleanString(target.url || snapshot.pageUrl),
+      ok: rowCount > 0,
+      rowCount,
+      tableCount: Number(snapshot.tableCount || 0),
+      matchedTableCount: Number(snapshot.matchedTableCount || 0),
+      pageUrl: cleanString(snapshot.pageUrl),
+      pageTitle: cleanString(snapshot.pageTitle),
+      error: pageErrors.join('; ') || null,
+    };
+  });
+
+  return {
+    source: SWEEP_SOURCE,
+    generatedAt: finishedAt,
+    startedAt,
+    finishedAt,
+    targetCount: Number(options.targetCount || pages.length),
+    targetIds: pages.map((page) => page.targetId),
+    pageCount: pages.length,
+    acceptedPageCount: pages.filter((page) => page.rowCount > 0).length,
+    rowCount: rows.length,
+    rows,
+    pages,
+    errors,
+  };
+}
+
 export function buildManagedBrowserLaunch(options = {}) {
   const env = options.env || process.env;
   const rootDir = path.resolve(options.rootDir || process.cwd());
@@ -347,7 +598,7 @@ async function fetchJson(url) {
   return response.json();
 }
 
-function cdpEvaluate(webSocketDebuggerUrl, expression) {
+function cdpCommand(webSocketDebuggerUrl, method, params = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(webSocketDebuggerUrl);
     const id = 1;
@@ -355,18 +606,15 @@ function cdpEvaluate(webSocketDebuggerUrl, expression) {
       try {
         ws.close();
       } catch {}
-      reject(new Error('CDP evaluation timed out'));
-    }, 8000);
+      reject(new Error(`${method} timed out`));
+    }, timeoutMs);
 
     ws.addEventListener('open', () => {
       ws.send(
         JSON.stringify({
           id,
-          method: 'Runtime.evaluate',
-          params: {
-            expression,
-            returnByValue: true,
-          },
+          method,
+          params,
         })
       );
     });
@@ -381,14 +629,10 @@ function cdpEvaluate(webSocketDebuggerUrl, expression) {
         ws.close();
       } catch {}
       if (message.error) {
-        reject(new Error(message.error.message || 'CDP evaluation failed'));
+        reject(new Error(message.error.message || `${method} failed`));
         return;
       }
-      if (message.result?.exceptionDetails) {
-        reject(new Error('Visible page evaluation failed'));
-        return;
-      }
-      resolve(message.result?.result?.value || {});
+      resolve(message.result || {});
     });
 
     ws.addEventListener('error', () => {
@@ -396,6 +640,22 @@ function cdpEvaluate(webSocketDebuggerUrl, expression) {
       reject(new Error('CDP websocket connection failed'));
     });
   });
+}
+
+async function cdpEvaluate(webSocketDebuggerUrl, expression) {
+  const result = await cdpCommand(
+    webSocketDebuggerUrl,
+    'Runtime.evaluate',
+    {
+      expression,
+      returnByValue: true,
+    },
+    8000
+  );
+  if (result.exceptionDetails) {
+    throw new Error('Visible page evaluation failed');
+  }
+  return result.result?.value || {};
 }
 
 export function createUkeyBrowserCollector(options = {}) {
@@ -414,6 +674,12 @@ export function createUkeyBrowserCollector(options = {}) {
   let lastPageUrl = '';
   let lastPageTitle = '';
   let collectorLastError = '';
+  let sweepState = 'idle';
+  let lastSweepAt = null;
+  let lastSweepRowCount = 0;
+  let lastSweepAcceptedPageCount = 0;
+  let lastSweepPageCount = 0;
+  let lastSweepError = '';
 
   function refreshLaunch() {
     launch = buildManagedBrowserLaunch({ rootDir, env, debugPort: options.debugPort });
@@ -451,6 +717,22 @@ export function createUkeyBrowserCollector(options = {}) {
     };
   }
 
+  function sweepStatus() {
+    const current = refreshLaunch();
+    const targets = buildAutoSweepTargets({ baseUrl: current.launchUrl });
+    return {
+      state: sweepState,
+      defaultDelayMs: resolveSweepDelayMs(env.JSPEC_SWEEP_DELAY_MS),
+      targetCount: targets.length,
+      targetIds: targets.map((target) => target.id),
+      lastRunAt: lastSweepAt,
+      lastRowCount: lastSweepRowCount,
+      lastAcceptedPageCount: lastSweepAcceptedPageCount,
+      lastPageCount: lastSweepPageCount,
+      lastError: lastSweepError || null,
+    };
+  }
+
   async function startBrowser() {
     const current = refreshLaunch();
     if (!current.available) {
@@ -458,10 +740,10 @@ export function createUkeyBrowserCollector(options = {}) {
       browserLastError = current.disabled
         ? 'Managed browser launch is disabled for this process.'
         : 'Chrome or Edge was not found on this computer.';
-      return { ok: false, error: browserLastError, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+      return { ok: false, error: browserLastError, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
     }
     if (browserProcess && !browserProcess.killed) {
-      return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+      return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
     }
 
     await mkdir(current.profileDir, { recursive: true });
@@ -481,7 +763,7 @@ export function createUkeyBrowserCollector(options = {}) {
       }
     });
     browserProcess.unref?.();
-    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
   }
 
   function stopBrowser() {
@@ -491,10 +773,10 @@ export function createUkeyBrowserCollector(options = {}) {
     }
     browserProcess = null;
     browserState = 'stopped';
-    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
   }
 
-  async function captureVisiblePage() {
+  async function findManagedPageTarget() {
     const current = refreshLaunch();
     const targets = await fetchJson(`http://${current.debugAddress}:${current.debugPort}/json`);
     const pages = Array.isArray(targets) ? targets.filter((target) => target.type === 'page') : [];
@@ -505,7 +787,23 @@ export function createUkeyBrowserCollector(options = {}) {
     if (!target?.webSocketDebuggerUrl) {
       throw new Error('No visible managed browser page is available.');
     }
+    return target;
+  }
+
+  async function captureVisiblePage() {
+    const target = await findManagedPageTarget();
     return cdpEvaluate(target.webSocketDebuggerUrl, VISIBLE_TABLE_EXPRESSION);
+  }
+
+  async function captureSweepTarget(browserTarget, sweepTarget, delayMs) {
+    await cdpCommand(
+      browserTarget.webSocketDebuggerUrl,
+      'Page.navigate',
+      { url: sweepTarget.url },
+      20000
+    );
+    await sleep(delayMs);
+    return cdpEvaluate(browserTarget.webSocketDebuggerUrl, VISIBLE_TABLE_EXPRESSION);
   }
 
   async function sampleVisiblePage() {
@@ -541,6 +839,61 @@ export function createUkeyBrowserCollector(options = {}) {
     lastSampleAt = new Date().toISOString();
   }
 
+  async function autoSweepVisiblePages(sweepOptions = {}) {
+    const startedAt = new Date().toISOString();
+    const targets = buildAutoSweepTargets({
+      baseUrl: refreshLaunch().launchUrl,
+      targets: sweepOptions.targets,
+    });
+    const delayMs = resolveSweepDelayMs(sweepOptions.delayMs || env.JSPEC_SWEEP_DELAY_MS);
+    const pageResults = [];
+    sweepState = 'running';
+    lastSweepError = '';
+
+    try {
+      if (sweepOptions.startBrowser !== false && (!browserProcess || browserProcess.killed)) {
+        const browserStart = await startBrowser();
+        if (!browserStart.ok) {
+          throw new Error(browserStart.error || 'Managed browser could not be started.');
+        }
+        await sleep(1500);
+      }
+
+      const browserTarget = await findManagedPageTarget();
+      for (const target of targets) {
+        try {
+          const pageSnapshot = await captureSweepTarget(browserTarget, target, delayMs);
+          const snapshot = parseVisibleBusinessSnapshot(pageSnapshot);
+          pageResults.push({ target, snapshot });
+        } catch (error) {
+          pageResults.push({ target, error: error?.message || String(error) });
+        }
+      }
+
+      const summary = buildAutoSweepSummary(pageResults, {
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        targetCount: targets.length,
+      });
+      lastSweepAt = summary.generatedAt;
+      lastSweepRowCount = summary.rowCount;
+      lastSweepAcceptedPageCount = summary.acceptedPageCount;
+      lastSweepPageCount = summary.pageCount;
+      lastSweepError = summary.rowCount ? '' : summary.errors.join('; ') || 'No visible JSPEC business rows were detected.';
+      lastSampleAt = summary.generatedAt;
+      lastRowCount = summary.rowCount;
+      collectorLastError = lastSweepError;
+      return summary;
+    } catch (error) {
+      lastSweepAt = new Date().toISOString();
+      lastSweepError = error?.message || String(error);
+      collectorLastError = lastSweepError;
+      throw error;
+    } finally {
+      sweepState = 'idle';
+    }
+  }
+
   function startCollector(onSample, intervalSeconds = DEFAULT_INTERVAL_SECONDS) {
     stopCollector();
     const seconds = Number(intervalSeconds) > 0 ? Number(intervalSeconds) : DEFAULT_INTERVAL_SECONDS;
@@ -555,7 +908,7 @@ export function createUkeyBrowserCollector(options = {}) {
     Promise.resolve()
       .then(onSample)
       .catch((error) => recordCollectorError(error));
-    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
   }
 
   function stopCollector() {
@@ -564,13 +917,14 @@ export function createUkeyBrowserCollector(options = {}) {
       collectorTimer = null;
     }
     collectorState = 'stopped';
-    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus() };
+    return { ok: true, browserWindow: browserWindowStatus(), collector: collectorStatus(), sweep: sweepStatus() };
   }
 
   function status() {
     return {
       browserWindow: browserWindowStatus(),
       collector: collectorStatus(),
+      sweep: sweepStatus(),
     };
   }
 
@@ -578,6 +932,7 @@ export function createUkeyBrowserCollector(options = {}) {
     startBrowser,
     stopBrowser,
     sampleVisiblePage,
+    autoSweepVisiblePages,
     recordIngestResult,
     recordCollectorError,
     startCollector,
