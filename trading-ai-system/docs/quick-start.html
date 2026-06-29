@@ -172,6 +172,17 @@
       <p>进入 <strong>交易草稿复核</strong>，点击 <strong>生成交易草稿</strong>。系统会把建议整理出来，但电量、限价和是否采纳都需要人工确认。</p>
     </section>
 
+    <section>
+      <h2>省钱策略闭环怎么看？</h2>
+      <ol>
+        <li>先看 <strong>数据资产</strong>：确认 raw captures 里已有多少实时均价、出清价、申报、合同和交易序列。</li>
+        <li>再看 <strong>预测实验室</strong>：如果显示 <code>insufficient_history</code> 或 <code>heuristic_fallback</code>，说明当前只能用基线和规则。</li>
+        <li>查看 <strong>回测结果</strong>：历史不足时不会声称模型有效；缺实际负荷和结算时不会声称节省金额。</li>
+        <li>最后看 <strong>省钱策略</strong>：保守、中性、激进三档都只是人工决策支持，不会自动提交 JSPEC。</li>
+        <li>需要补数据时，只按 <strong>补采队列</strong> 慢速补采，最多 4 个目标，每个目标至少间隔 20 秒。</li>
+      </ol>
+    </section>
+
     <section class="note">
       <h2>注意</h2>
       <ul>
