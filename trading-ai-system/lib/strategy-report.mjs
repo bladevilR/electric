@@ -3,6 +3,7 @@ import { summarizeDataset } from './system-data.mjs';
 import { buildForecastModelReport } from './forecast-models.mjs';
 import { runForecastBacktest } from './backtest-engine.mjs';
 import { buildCostStrategy } from './cost-optimizer.mjs';
+import { summarizeSettlementReference } from './settlement-reference.mjs';
 
 function rowsForDate(dataset, date) {
   const rows = Array.isArray(dataset?.rows) ? dataset.rows : [];
@@ -82,6 +83,7 @@ export function buildStrategyReport(dataset, options = {}) {
     });
   const forecastSummary = summarizeForecastReport(forecastReport);
   const backtestSummary = summarizeBacktestReport(backtestReport);
+  const settlementReferenceSummary = summarizeSettlementReference(options.settlementReference);
   const dataNeeds = Array.isArray(costStrategy.nextBestData) ? costStrategy.nextBestData : [];
   const pendingIntegrations = uniqueById(suggestions.flatMap((item) => item.requiredData || []));
   const closureItems = Array.isArray(options.integrationClosure?.items)
@@ -115,6 +117,7 @@ export function buildStrategyReport(dataset, options = {}) {
       suggestions,
     forecastSummary,
     backtestSummary,
+    settlementReferenceSummary,
     costStrategy,
     savingsFocus: {
       modelMode: costStrategy.modelMode || forecastSummary.status || 'heuristic_fallback',
@@ -139,6 +142,14 @@ export function buildStrategyReport(dataset, options = {}) {
           : '按补采计划慢速核对缺口，不连续扫站。',
         status: 'registered',
       },
+      {
+        id: 'settlement_reference_review',
+        title: '结算参考复核',
+        note: settlementReferenceSummary.hasSettlementReference
+          ? `已找到 ${settlementReferenceSummary.referenceWorkbookCount} 个 Excel 参考文件，但不能替代 actualKwh/settleAmount。`
+          : '尚未找到可用 Excel 参考文件。',
+        status: settlementReferenceSummary.hasSettlementReference ? 'registered' : 'source_empty',
+      },
     ],
   };
 }
@@ -152,6 +163,7 @@ export function renderStrategyReportMarkdown(report) {
   const savingsFocus = report.savingsFocus || {};
   const forecastSummary = report.forecastSummary || {};
   const backtestSummary = report.backtestSummary || {};
+  const settlementReferenceSummary = report.settlementReferenceSummary || {};
 
   return [
     `# ${report.title}`,
@@ -174,6 +186,11 @@ export function renderStrategyReportMarkdown(report) {
     `- 首要动作：${savingsFocus.primaryAction || '人工观察'}`,
     `- 预测状态：${forecastSummary.status || 'unavailable'}，历史天数 ${forecastSummary.historicalDateCount ?? 0}`,
     `- 回测状态：${backtestSummary.status || 'unavailable'}，评估日期 ${backtestSummary.evaluationDateCount ?? 0}`,
+    `- 结算参考：${
+      settlementReferenceSummary.hasSettlementReference
+        ? `已登记 ${settlementReferenceSummary.referenceWorkbookCount || 0} 个文件；不能替代 actualKwh/settleAmount`
+        : '未登记可用参考文件'
+    }`,
     '',
     '## 策略建议',
     '',

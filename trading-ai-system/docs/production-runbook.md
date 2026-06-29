@@ -37,7 +37,7 @@ EXECUTION_MODE=human_decision_only
 
 1. 启动本地服务。
 2. 打开 UKey 登录态浏览器。
-3. 先看“数据资产”和“预测实验室”，确认 raw captures、模型状态和缺口。
+3. 先看“数据资产”“结算参考”和“预测实验室”，确认 raw captures、Excel 参考文件、模型状态和缺口。
 4. 如果有缺口，只按 `/api/backfill/plan?date=YYYY-MM-DD` 或 UI 的“补采队列”慢速补采，默认最多 4 个目标。
 5. 查看“省钱策略”三档建议，确认 `modelMode`、置信度、低价窗口、高价暴露和不可执行原因。
 6. 调用 `POST /api/strategy-report?date=YYYY-MM-DD` 生成报告，人工复核。
@@ -69,3 +69,4 @@ EXECUTION_MODE=human_decision_only
 - 系统不绕过 CA/UKey，不保存生产密码，不自动下单。
 - 源返回空会作为真实阻塞项记录，不会用推测值补齐。
 - 缺实际负荷或结算时，系统只能做价格预测误差回测，不能声明真实节省金额。
+- `/api/settlement/reference` 和“结算参考”面板只登记 Excel/manifest 证据；在实际负荷、结算明细和持仓曲线导出文件为空时，不能用这些参考文件预填可执行电量或结算金额。

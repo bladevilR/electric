@@ -138,6 +138,7 @@ export function buildExecutionProposal({
 } = {}) {
   const suggestions = Array.isArray(report?.suggestions) ? report.suggestions : [];
   const costStrategy = report?.costStrategy || null;
+  const settlementReferenceSummary = report?.settlementReferenceSummary || null;
   const confidenceScore = Number(costStrategy?.dataConfidence?.score || 0);
   const blockers = uniqueText(readinessBlockers(readiness));
   const reviewWarnings = uniqueText([
@@ -164,6 +165,7 @@ export function buildExecutionProposal({
     orderLines: [],
     proposalLines,
     costStrategy,
+    settlementReferenceSummary,
     reportStatus: report?.status || 'trial_only',
     blockers,
     reviewWarnings,
@@ -185,6 +187,7 @@ export async function createExecutionProposal(options = {}) {
     forecastReport: options.forecastReport,
     backtestReport: options.backtestReport,
     costStrategy: options.costStrategy,
+    settlementReference: options.settlementReference,
   });
   const proposal = buildExecutionProposal({
     report,

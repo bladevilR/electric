@@ -52,6 +52,7 @@ const modules = [
   { id: 'privateData', group: '数据', label: '我的数据', icon: '私' },
   { id: 'dataQuality', group: '数据', label: '数据准备情况', icon: '数' },
   { id: 'dataAssets', group: '数据', label: '数据资产', icon: 'D' },
+  { id: 'settlementReference', group: '数据', label: '结算参考', icon: 'R' },
   { id: 'ukey', group: '实时', label: '实时数据助手', icon: '实' },
   { id: 'forecastLab', group: '模型', label: '预测实验室', icon: 'F' },
   { id: 'backtestReport', group: '模型', label: '回测结果', icon: 'B' },
@@ -83,11 +84,13 @@ let state = {
   ukeyError: '',
   costStrategy: null,
   dataAssets: null,
+  settlementReference: null,
   forecastLab: null,
   backtestReport: null,
   backfillPlan: null,
   costStrategyError: '',
   dataAssetsError: '',
+  settlementReferenceError: '',
   forecastLabError: '',
   backtestError: '',
   backfillError: '',
@@ -684,6 +687,9 @@ function targetLabel(value) {
       history_contract: '历史合同',
       trade_sequence: '交易序列',
       historical_price_samples: '连续历史样本',
+      actual_daily_96: '实际负荷导出',
+      settlement_files: '结算文件导出',
+      position_curve: '持仓曲线导出',
     }[value] || value || '-'
   );
 }
@@ -809,6 +815,101 @@ function renderDataAssets() {
         )}
       </article>
     </section>
+  `;
+}
+
+function renderSettlementReference() {
+  const reference = state.settlementReference || {};
+  const summary = reference.summary || {};
+  const workbooks = asArray(reference.workbooks);
+  const manualExports = asArray(reference.manualExports);
+  const workbookRows = workbooks.map((item) => ({
+    fileName: item.fileName,
+    kind:
+      item.kind === 'spot_reconciliation'
+        ? '现货核对单'
+        : item.kind === 'monthly_settlement_overview'
+          ? '月度结算概览'
+          : '参考文件',
+    sheetCount: asArray(item.sheets).length,
+    numericRows: asArray(item.sheets).reduce((total, sheet) => total + Number(sheet.numericRows || 0), 0),
+    referenceStrength: item.referenceStrength === 'point_like' ? '点位参考' : '背景参考',
+  }));
+  const sheetRows = workbooks.flatMap((workbook) =>
+    asArray(workbook.sheets).map((sheet) => ({
+      workbook: workbook.fileName,
+      sheet: sheet.name,
+      dimension: sheet.dimension,
+      nonEmptyRows: sheet.nonEmptyRows,
+      numericRows: sheet.numericRows,
+    }))
+  );
+  const exportRows = manualExports.map((item) => ({
+    category: targetLabel(item.category),
+    exportDate: item.exportDate,
+    fileCount: item.fileCount,
+    status: item.status === 'files_available' ? '已有文件' : '空清单',
+  }));
+
+  return `
+    ${pageTitle('结算参考', '登记本地 Excel 核对单和手工导出清单，作为复核证据和后续升级入口，不替代缺失的业务真值。')}
+    ${state.settlementReferenceError ? `<div class="notice warn">${escapeHtml(state.settlementReferenceError)}</div>` : ''}
+    <section class="kpi-grid">
+      ${kpi('参考文件', String(summary.workbookCount || 0), '根目录 Excel')}
+      ${kpi('现货核对单', String(summary.spotReconciliationWorkbookCount || 0), '含合约日清分/偏差回收')}
+      ${kpi('月度概览', String(summary.monthlySettlementWorkbookCount || 0), '长期背景参考')}
+      ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', 'actualKwh / settleAmount')}
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>Excel 参考文件</h2>
+        ${table(
+          [
+            { key: 'fileName', label: '文件' },
+            { key: 'kind', label: '类型' },
+            { key: 'sheetCount', label: 'sheet' },
+            { key: 'numericRows', label: '数值行' },
+            { key: 'referenceStrength', label: '用途' },
+          ],
+          workbookRows
+        )}
+      </article>
+      <article class="card">
+        <h2>使用边界</h2>
+        ${simpleList(asArray(reference.usageBoundaries).map((item) => ({ title: '边界', note: item })))}
+      </article>
+    </section>
+    <section class="grid two">
+      <article class="card">
+        <h2>sheet 覆盖</h2>
+        ${table(
+          [
+            { key: 'workbook', label: '文件' },
+            { key: 'sheet', label: 'sheet' },
+            { key: 'dimension', label: '范围' },
+            { key: 'nonEmptyRows', label: '非空行' },
+            { key: 'numericRows', label: '数值行' },
+          ],
+          sheetRows.slice(0, 16)
+        )}
+      </article>
+      <article class="card">
+        <h2>手工导出清单</h2>
+        ${table(
+          [
+            { key: 'category', label: '目标' },
+            { key: 'exportDate', label: '日期' },
+            { key: 'fileCount', label: '文件数' },
+            { key: 'status', label: '状态' },
+          ],
+          exportRows
+        )}
+      </article>
+    </section>
+    <article class="card">
+      <h2>升级钩子</h2>
+      ${simpleList(asArray(reference.upgradeHooks).map((item) => ({ title: targetLabel(item.id), note: item.reason })))}
+    </article>
   `;
 }
 
@@ -1160,6 +1261,7 @@ const renderers = {
   privateData: renderPrivateData,
   dataQuality: renderDataQuality,
   dataAssets: renderDataAssets,
+  settlementReference: renderSettlementReference,
   ukey: renderUkeyAssistant,
   forecastLab: renderForecastLab,
   backtestReport: renderBacktestReport,
@@ -1298,6 +1400,18 @@ async function loadDataAssets() {
   }
 }
 
+async function loadSettlementReference() {
+  try {
+    const response = await fetch('/api/settlement/reference', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`服务返回 ${response.status}`);
+    state.settlementReference = await response.json();
+    state.settlementReferenceError = '';
+  } catch (error) {
+    state.settlementReference = null;
+    state.settlementReferenceError = `结算参考没有读到：${error.message}`;
+  }
+}
+
 async function loadForecastLab() {
   try {
     const response = await fetch(`/api/forecast/model?date=${encodeURIComponent(state.date)}`, { cache: 'no-store' });
@@ -1349,6 +1463,7 @@ async function loadBackfillPlan() {
 async function loadCostStrategyContext() {
   await Promise.all([
     loadDataAssets(),
+    loadSettlementReference(),
     loadForecastLab(),
     loadBacktestReport(),
     loadCostStrategy(),

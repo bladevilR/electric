@@ -35,8 +35,10 @@ import { buildForecastFeatureStore } from './lib/forecast-feature-store.mjs';
 import { buildForecastModelReport } from './lib/forecast-models.mjs';
 import { runForecastBacktest } from './lib/backtest-engine.mjs';
 import { buildCostStrategy } from './lib/cost-optimizer.mjs';
+import { buildSettlementReference } from './lib/settlement-reference.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(rootDir, '..');
 const defaultStandardPath = path.resolve(
   rootDir,
   '../jspec-capture/output/session-20260507-101645/standard/standard-96.json'
@@ -257,6 +259,13 @@ async function loadDataAssets() {
   return buildInventoryFromDirectories([defaultCaptureOutputPath]);
 }
 
+async function loadSettlementReference() {
+  return buildSettlementReference({
+    projectRoot,
+    pythonPath,
+  });
+}
+
 function datasetFromFeatureStore(featureStore, generatedAt) {
   return {
     generatedAt,
@@ -372,6 +381,11 @@ async function handleApi(request, response, url) {
 
   if (request.method === 'GET' && url.pathname === '/api/data-assets') {
     sendJson(response, await loadDataAssets());
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/settlement/reference') {
+    sendJson(response, await loadSettlementReference());
     return;
   }
 
@@ -541,6 +555,7 @@ async function handleApi(request, response, url) {
   if (request.method === 'POST' && url.pathname === '/api/strategy-report') {
     const date = url.searchParams.get('date') || '';
     const context = await loadForecastContext(date);
+    const settlementReference = await loadSettlementReference();
     sendJson(
       response,
       buildStrategyReport(context.dataset, {
@@ -551,6 +566,7 @@ async function handleApi(request, response, url) {
         strategyDataset: context.strategyDataset,
         modelReport: context.modelReport,
         backtestReport: context.backtestReport,
+        settlementReference,
       })
     );
     return;
@@ -559,6 +575,7 @@ async function handleApi(request, response, url) {
   if (request.method === 'GET' && url.pathname === '/api/strategy-report.md') {
     const date = url.searchParams.get('date') || '';
     const context = await loadForecastContext(date);
+    const settlementReference = await loadSettlementReference();
     const report = buildStrategyReport(context.dataset, {
       date,
       integrationClosure: await loadIntegrationClosure(),
@@ -567,6 +584,7 @@ async function handleApi(request, response, url) {
       strategyDataset: context.strategyDataset,
       modelReport: context.modelReport,
       backtestReport: context.backtestReport,
+      settlementReference,
     });
     sendText(response, renderStrategyReportMarkdown(report), 'text/markdown; charset=utf-8');
     return;
@@ -607,6 +625,7 @@ async function handleApi(request, response, url) {
     const integrationClosure = await loadIntegrationClosure();
     const readiness = await loadProductionReadiness();
     const businessInputs = await loadBusinessInputs();
+    const settlementReference = await loadSettlementReference();
     const proposal = await createExecutionProposal({
       dataset: context.dataset,
       date,
@@ -618,6 +637,7 @@ async function handleApi(request, response, url) {
       strategyDataset: context.strategyDataset,
       modelReport: context.modelReport,
       backtestReport: context.backtestReport,
+      settlementReference,
       auditPath: auditLogPath,
       actor: request.headers['x-operator-id'] || process.env.TRADING_OPERATOR_ID || 'local-operator',
     });

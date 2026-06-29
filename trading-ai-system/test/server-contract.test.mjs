@@ -82,6 +82,7 @@ test('local server exposes the P0 system loop', async () => {
       ukeyAssistant,
       modelRuntime,
       dataAssets,
+      settlementReference,
       forecastFeatures,
       forecastModel,
       backtest,
@@ -107,6 +108,7 @@ test('local server exposes the P0 system loop', async () => {
       fetch(`${server.baseUrl}/api/ukey-assistant`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/ai/model`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/data-assets`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/settlement/reference`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/forecast/features?date=2026-05-07`).then((response) =>
         response.json()
       ),
@@ -162,16 +164,19 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /businessInputs/);
     assert.match(appScript, /costStrategy/);
     assert.match(appScript, /dataAssets/);
+    assert.match(appScript, /settlementReference/);
     assert.match(appScript, /forecastLab/);
     assert.match(appScript, /backtestReport/);
     assert.match(appScript, /backfillPlan/);
     assert.match(appScript, /\/api\/data-assets/);
+    assert.match(appScript, /\/api\/settlement\/reference/);
     assert.match(appScript, /\/api\/forecast\/model/);
     assert.match(appScript, /\/api\/backtest/);
     assert.match(appScript, /\/api\/cost-strategy/);
     assert.match(appScript, /\/api\/backfill\/plan/);
     assert.match(appScript, /省钱策略/);
     assert.match(appScript, /数据资产/);
+    assert.match(appScript, /结算参考/);
     assert.match(appScript, /预测实验室/);
     assert.match(appScript, /回测结果/);
     assert.match(appScript, /报告已生成/);
@@ -252,6 +257,10 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(modelRuntime.configured, false);
     assert.doesNotMatch(JSON.stringify(modelRuntime), /sk-/);
     assert.ok(dataAssets.summary);
+    assert.ok(settlementReference.summary);
+    assert.equal(settlementReference.summary.canFillActualKwh, false);
+    assert.equal(settlementReference.summary.canFillSettleAmount, false);
+    assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
     assert.ok(forecastModel.status);
     assert.ok(backtest.status);

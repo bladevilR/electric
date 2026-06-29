@@ -78,6 +78,19 @@ test('createExecutionProposal generates editable draft lines without auto submit
           },
         },
       },
+      settlementReference: {
+        summary: {
+          hasSettlementReference: true,
+          workbookCount: 2,
+          spotReconciliationWorkbookCount: 1,
+          monthlySettlementWorkbookCount: 1,
+          actualDaily96ExportFiles: 0,
+          settlementExportFiles: 0,
+          positionExportFiles: 0,
+          canFillActualKwh: false,
+          canFillSettleAmount: false,
+        },
+      },
       auditPath,
       actor: 'operator-a',
     });
@@ -87,6 +100,9 @@ test('createExecutionProposal generates editable draft lines without auto submit
     assert.equal(proposal.humanDecisionRequired, true);
     assert.deepEqual(proposal.orderLines, []);
     assert.ok(proposal.costStrategy);
+    assert.equal(proposal.settlementReferenceSummary.hasSettlementReference, true);
+    assert.equal(proposal.settlementReferenceSummary.canFillActualKwh, false);
+    assert.equal(proposal.settlementReferenceSummary.canFillSettleAmount, false);
     assert.equal(
       proposal.costStrategy.policyTiers.some((item) => item.id === 'aggressive' && item.executable === false),
       true

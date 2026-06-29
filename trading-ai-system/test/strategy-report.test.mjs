@@ -37,6 +37,8 @@ test('buildStrategyReport creates a trial-only report from real dataset fields',
   assert.ok(report.forecastSummary);
   assert.ok(report.backtestSummary);
   assert.ok(report.costStrategy);
+  assert.ok(report.settlementReferenceSummary);
+  assert.equal(report.settlementReferenceSummary.hasSettlementReference, false);
   assert.equal(report.savingsFocus.modelMode, report.costStrategy.modelMode);
   assert.equal(typeof report.savingsFocus.confidenceScore, 'number');
   assert.ok(report.savingsFocus.dataNeeds.length > 0);
@@ -45,13 +47,28 @@ test('buildStrategyReport creates a trial-only report from real dataset fields',
 });
 
 test('buildStrategyReport deduplicates blockers and closure items', () => {
-  const report = buildStrategyReport(dataset, { date: '2026-05-07' });
+  const report = buildStrategyReport(dataset, {
+    date: '2026-05-07',
+    settlementReference: {
+      summary: {
+        hasSettlementReference: true,
+        workbookCount: 2,
+        spotReconciliationWorkbookCount: 1,
+        monthlySettlementWorkbookCount: 1,
+        actualDaily96ExportFiles: 0,
+        settlementExportFiles: 0,
+        positionExportFiles: 0,
+      },
+    },
+  });
 
   assert.ok(report.blockingReasons.includes('预测负荷未接入，无法计算建议电量'));
   assert.ok(report.blockingReasons.includes('实际负荷未接入，不能校验策略对负荷偏差的影响'));
   assert.ok(report.closureItems.some((item) => item.id === 'forecast_load_96'));
   assert.ok(report.closureItems.some((item) => item.id === 'actual_load_96'));
   assert.ok(report.nextActions.some((item) => item.id === 'targeted_backfill'));
+  assert.equal(report.settlementReferenceSummary.hasSettlementReference, true);
+  assert.equal(report.settlementReferenceSummary.referenceWorkbookCount, 2);
   assert.equal(
     report.closureItems.filter((item) => item.id === 'forecast_load_96').length,
     1
