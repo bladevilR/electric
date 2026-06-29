@@ -205,6 +205,32 @@ test('parseVisibleBusinessSnapshot maps visible JSPEC table text into allowed bu
   ]);
 });
 
+test('parseVisibleBusinessSnapshot handles JSPEC split header and body tables', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/realTimeClearingRelease/RealTimeMarAvePricePublic',
+    title: '实时市场加权均价（公开） - 新一代电力交易平台',
+    bodyText: '2026-6-29 14:55:30 实时市场加权均价（公开）',
+    tables: [
+      {
+        headers: ['时间', '实时市场加权均价 （元/MWh）', ''],
+        rows: [['时间', '实时市场加权均价 （元/MWh）', '']],
+      },
+      {
+        headers: [],
+        rows: [
+          ['00:15', '342.3'],
+          ['00:30', '341.5'],
+        ],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rowCount, 2);
+  assert.deepEqual(snapshot.rows.map((row) => row.realTimeAvgPrice), [342.3, 341.5]);
+  assert.deepEqual(snapshot.rows.map((row) => row.pointIndex), [1, 2]);
+  assert.equal(snapshot.rows[0].date, '2026-06-29');
+});
+
 test('parseVisibleBusinessSnapshot rejects sensitive visible-table headers', () => {
   const snapshot = parseVisibleBusinessSnapshot({
     url: 'https://www.jspec.com.cn/realtime',

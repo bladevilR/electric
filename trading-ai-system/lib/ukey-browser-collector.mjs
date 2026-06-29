@@ -525,9 +525,11 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
   const errors = [];
   const rows = [];
   let matchedTableCount = 0;
+  let carryForwardHeaders = [];
 
   tables.forEach((table, tableIndex) => {
-    const headers = Array.isArray(table.headers) ? table.headers.map(cleanString) : [];
+    const rawHeaders = Array.isArray(table.headers) ? table.headers.map(cleanString) : [];
+    const headers = rawHeaders.length ? rawHeaders : carryForwardHeaders;
     const sensitiveHeaders = headers.filter((header) => SENSITIVE_FIELD_PATTERN.test(header));
     if (sensitiveHeaders.length) {
       errors.push(`Table ${tableIndex + 1} contains sensitive headers: ${sensitiveHeaders.join(', ')}`);
@@ -537,6 +539,9 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
     const fieldByIndex = headers.map(mapHeaderToField);
     if (!fieldByIndex.some(Boolean)) {
       return;
+    }
+    if (rawHeaders.length) {
+      carryForwardHeaders = headers;
     }
 
     let tableMatched = false;
