@@ -28,6 +28,7 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.ok(reference.summary.monthlyOverviewRows >= 2);
   assert.ok(reference.summary.monthlyOverviewMonths.includes('2026-01'));
   assert.ok(reference.summary.monthlyOverviewMonths.includes('2026-02'));
+  assert.ok(reference.summary.longTermOverviewRows >= 6);
   assert.equal(reference.summary.actualDaily96ExportFiles, 0);
   assert.equal(reference.summary.settlementExportFiles, 0);
   assert.equal(reference.summary.positionExportFiles, 0);
@@ -70,6 +71,19 @@ test('buildSettlementReference inventories local Excel and manual export referen
         item.monthKey === '2026-01' &&
         item.actualSettlementEnergyWanKwh === 5341.5655 &&
         item.settlementPriceYuanPerKwh === 0.641901
+    )
+  );
+  assert.ok(
+    reference.longTermOverviewRows.some(
+      (item) =>
+        item.rowKind === 'year_summary' &&
+        item.periodLabel === '2024' &&
+        item.totalTradeEnergyWanKwh === 60985.5984
+    )
+  );
+  assert.ok(
+    reference.longTermOverviewRows.some(
+      (item) => item.rowKind === 'annual_deal' && item.periodLabel === '双边' && item.dealEnergy === 509000
     )
   );
 

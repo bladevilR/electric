@@ -29,6 +29,7 @@ export function summarizeSettlementReference(reference = {}) {
     transactionCalculationHourlyBusinessRowCount: Number(summary.transactionCalculationHourlyBusinessRowCount || 0),
     monthlyOverviewRows: Number(summary.monthlyOverviewRows || 0),
     monthlyOverviewMonths: Array.isArray(summary.monthlyOverviewMonths) ? summary.monthlyOverviewMonths : [],
+    longTermOverviewRows: Number(summary.longTermOverviewRows || 0),
     extraPointMetricRows: Number(summary.extraPointMetricRows || 0),
     actualDaily96ExportFiles: Number(summary.actualDaily96ExportFiles || 0),
     settlementExportFiles: Number(summary.settlementExportFiles || 0),

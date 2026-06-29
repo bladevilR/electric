@@ -261,6 +261,66 @@ def monthly_overview_rows(workbook_path):
     return rows
 
 
+def long_term_overview_rows(workbook_path):
+    if workbook_path.suffix.lower() != ".xlsx":
+        return []
+    rows = []
+    try:
+        with zipfile.ZipFile(workbook_path) as archive:
+            workbook = ET.fromstring(archive.read("xl/workbook.xml"))
+            rels = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+            rid_to_target = {rel.attrib["Id"]: rel.attrib["Target"] for rel in rels}
+            shared_strings = read_shared_strings(archive)
+            for sheet in workbook.find("a:sheets", NS):
+                sheet_name = sheet.attrib.get("name", "")
+                if sheet_name != "近三年情况":
+                    continue
+                rid = sheet.attrib.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id")
+                target = rid_to_target[rid].lstrip("/")
+                if not target.startswith("xl/"):
+                    target = "xl/" + target
+                worksheet = ET.fromstring(archive.read(target))
+                for values in worksheet_rows(worksheet, shared_strings):
+                    label = str(values[0] if values else "").strip()
+                    if re.fullmatch(r"20\d{2}", label) or re.fullmatch(r"20\d{2}预计", label):
+                        total_energy = row_number(values, 1)
+                        if total_energy is None:
+                            continue
+                        rows.append(
+                            {
+                                "rowKind": "year_summary",
+                                "periodLabel": label,
+                                "totalTradeEnergyWanKwh": round_number(total_energy, 4),
+                                "bilateralEnergyWanKwh": round_number(row_number(values, 2), 4),
+                                "bilateralShare": round_number(row_number(values, 3), 6),
+                                "dealPriceYuanPerKwh": round_number(row_number(values, 4), 6),
+                                "overallTradePriceYuanPerKwh": round_number(row_number(values, 5), 6),
+                                "sourceFile": workbook_path.name,
+                                "sourceSheet": sheet_name,
+                            }
+                        )
+                    elif label in {"双边", "共计", "挂牌", "月竞"}:
+                        deal_energy = row_number(values, 1)
+                        if deal_energy is None:
+                            continue
+                        rows.append(
+                            {
+                                "rowKind": "annual_deal",
+                                "periodLabel": label,
+                                "dealEnergy": round_number(deal_energy, 4),
+                                "dealPrice": round_number(row_number(values, 2), 6),
+                                "dealFee": round_number(row_number(values, 3), 2),
+                                "annualEstimate": round_number(row_number(values, 4), 4),
+                                "share": round_number(row_number(values, 5), 6),
+                                "sourceFile": workbook_path.name,
+                                "sourceSheet": sheet_name,
+                            }
+                        )
+    except Exception:
+        return []
+    return rows
+
+
 def is_daily_sheet(sheet):
     return bool(re.fullmatch(r"\d{1,2}", sheet.get("name", "")))
 
@@ -337,11 +397,13 @@ def workbook_record(path):
             "extraPointMetricRows": 0,
             "monthlyOverviewRowCount": 0,
             "monthlyOverviewMonths": [],
+            "longTermOverviewRowCount": 0,
             "canFillActualKwh": False,
             "canFillSettleAmount": False,
             "badDailySheets": [],
             "referenceStrength": workbook_reference_strength(kind, 0),
             "monthlyOverviewRows": [],
+            "longTermOverviewRows": [],
         }
 
     sheets = workbook_sheets(path)
@@ -349,6 +411,7 @@ def workbook_record(path):
     valid_daily = [sheet for sheet in sheets if valid_daily_sheet(sheet)]
     coverage = infer_coverage(path)
     monthly_rows = monthly_overview_rows(path) if kind == "monthly_settlement_overview" else []
+    long_term_rows = long_term_overview_rows(path) if kind == "monthly_settlement_overview" else []
     feature_rows = []
     for sheet in valid_daily:
         date = date_for_daily_sheet(coverage, sheet["name"])
@@ -425,6 +488,7 @@ def workbook_record(path):
         "extraPointMetricRows": extra_point_metric_rows,
         "monthlyOverviewRowCount": len(monthly_rows),
         "monthlyOverviewMonths": [row["monthKey"] for row in monthly_rows],
+        "longTermOverviewRowCount": len(long_term_rows),
         "featureRowCount": len(feature_rows),
         "canFillActualKwh": actual_rows > 0,
         "canFillSettleAmount": settlement_rows > 0,
@@ -432,6 +496,7 @@ def workbook_record(path):
         "referenceStrength": workbook_reference_strength(kind, len(valid_daily)),
         "featureRows": feature_rows,
         "monthlyOverviewRows": monthly_rows,
+        "longTermOverviewRows": long_term_rows,
     }
 
 
@@ -663,6 +728,7 @@ def main():
     settlement_candidate_rows = sum(item.get("settleAmountRows", 0) for item in workbooks)
     extra_point_metric_rows = sum(item.get("extraPointMetricRows", 0) for item in workbooks)
     monthly_overview_rows = [row for item in workbooks for row in item.get("monthlyOverviewRows", [])]
+    long_term_overview_rows = [row for item in workbooks for row in item.get("longTermOverviewRows", [])]
     feature_rows = transaction_feature_rows + [row for item in workbooks for row in item.get("featureRows", [])]
 
     result = {
@@ -685,6 +751,7 @@ def main():
             "transactionCalculationHourlyBusinessRowCount": transaction_standardized["summary"]["hourlyBusinessRowCount"],
             "monthlyOverviewRows": len(monthly_overview_rows),
             "monthlyOverviewMonths": [row["monthKey"] for row in monthly_overview_rows],
+            "longTermOverviewRows": len(long_term_overview_rows),
             "extraPointMetricRows": extra_point_metric_rows,
             "manualManifestCount": len(manual_exports),
             "actualDaily96ExportFiles": actual_files,
@@ -700,6 +767,7 @@ def main():
         "workbooks": workbooks,
         "featureRows": feature_rows,
         "monthlyOverviewRows": monthly_overview_rows,
+        "longTermOverviewRows": long_term_overview_rows,
         "transactionCalculationStandardized": transaction_standardized,
         "manualExports": manual_exports,
         "usageBoundaries": [

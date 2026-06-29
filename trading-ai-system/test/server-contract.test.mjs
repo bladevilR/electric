@@ -178,6 +178,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /交易计算表 CSV/);
     assert.match(appScript, /小时持仓参考/);
     assert.match(appScript, /月度结算概览/);
+    assert.match(appScript, /长期交易背景/);
     assert.match(appScript, /额外复盘点/);
     assert.match(appScript, /forecastLab/);
     assert.match(appScript, /backtestReport/);
@@ -279,8 +280,11 @@ test('local server exposes the P0 system loop', async () => {
     assert.ok(settlementReference.summary.transactionCalculationHourlySummaryRows >= 720);
     assert.ok(settlementReference.summary.transactionCalculationPositionHourlyRows >= 240);
     assert.ok(settlementReference.summary.monthlyOverviewRows >= 2);
+    assert.ok(settlementReference.summary.longTermOverviewRows >= 6);
     assert.ok(Array.isArray(settlementReference.monthlyOverviewRows));
+    assert.ok(Array.isArray(settlementReference.longTermOverviewRows));
     assert.ok(settlementReference.monthlyOverviewRows.some((item) => item.monthKey === '2026-01'));
+    assert.ok(settlementReference.longTermOverviewRows.some((item) => item.periodLabel === '2024'));
     assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
     assert.equal(historicalForecastFeatures.rows.length, 96);

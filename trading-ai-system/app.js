@@ -833,6 +833,24 @@ function renderSettlementReference() {
     savingMarket: fmt(item.savingVsMarketTotalWanYuan),
     savingGrid: fmt(item.savingVsGridWanYuan),
   }));
+  const longTermRows = asArray(reference.longTermOverviewRows).map((item) => ({
+    periodLabel: item.periodLabel,
+    rowKind: item.rowKind === 'year_summary' ? '年度概览' : '年度成交',
+    energy:
+      item.rowKind === 'year_summary'
+        ? fmt(item.totalTradeEnergyWanKwh)
+        : fmt(item.dealEnergy),
+    price:
+      item.rowKind === 'year_summary'
+        ? fmt(item.overallTradePriceYuanPerKwh)
+        : fmt(item.dealPrice),
+    share:
+      item.bilateralShare === null || item.bilateralShare === undefined
+        ? item.share === null || item.share === undefined
+          ? '--'
+          : `${fmt(Number(item.share) * 100)}%`
+        : `${fmt(Number(item.bilateralShare) * 100)}%`,
+  }));
   const workbookRows = workbooks.map((item) => ({
     fileName: item.fileName,
     kind:
@@ -883,24 +901,40 @@ function renderSettlementReference() {
       ${kpi('小时持仓参考', String(summary.transactionCalculationPositionHourlyRows || 0), '历史约束参考')}
       ${kpi('操作量参考', String(summary.transactionCalculationOperationHourlyRows || 0), '历史买卖测算')}
       ${kpi('月度概览', String(summary.monthlyOverviewRows || 0), '交易电量/电价/结算')}
+      ${kpi('长期背景', String(summary.longTermOverviewRows || 0), '近三年/年度成交')}
       ${kpi('额外复盘点', String(summary.extraPointMetricRows || 0), '日前预估/节约费用')}
       ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', '历史 actualKwh / settleAmount')}
     </section>
-    <article class="card">
-      <h2>月度结算概览</h2>
-      ${table(
-        [
-          { key: 'monthKey', label: '月份' },
-          { key: 'energy', label: '结算电量(万度)' },
-          { key: 'settlementPrice', label: '结算价(元/度)' },
-          { key: 'gridPrice', label: '国网价(元/度)' },
-          { key: 'spotShare', label: '现货占比' },
-          { key: 'savingMarket', label: '较市场节约(万元)' },
-          { key: 'savingGrid', label: '较国网节约(万元)' },
-        ],
-        monthlyRows
-      )}
-    </article>
+    <section class="grid two">
+      <article class="card">
+        <h2>月度结算概览</h2>
+        ${table(
+          [
+            { key: 'monthKey', label: '月份' },
+            { key: 'energy', label: '结算电量(万度)' },
+            { key: 'settlementPrice', label: '结算价(元/度)' },
+            { key: 'gridPrice', label: '国网价(元/度)' },
+            { key: 'spotShare', label: '现货占比' },
+            { key: 'savingMarket', label: '较市场节约(万元)' },
+            { key: 'savingGrid', label: '较国网节约(万元)' },
+          ],
+          monthlyRows
+        )}
+      </article>
+      <article class="card">
+        <h2>长期交易背景</h2>
+        ${table(
+          [
+            { key: 'periodLabel', label: '期间' },
+            { key: 'rowKind', label: '类型' },
+            { key: 'energy', label: '电量' },
+            { key: 'price', label: '价格' },
+            { key: 'share', label: '占比' },
+          ],
+          longTermRows
+        )}
+      </article>
+    </section>
     <section class="grid two">
       <article class="card">
         <h2>Excel 参考文件</h2>
