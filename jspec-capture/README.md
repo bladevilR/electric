@@ -1,27 +1,31 @@
 # JSPEC Offline Data Tools
 
-This folder now treats the 2026-05-12 JSPEC capture as a frozen local dataset. The active workflow is offline inventory, schema, quality reporting, and manual-export ingest. Do not use these tools to automate JSPEC login, batch-open JSPEC routes, probe endpoints, replay requests, or trigger trading actions.
+This folder contains the JSPEC data engineering tools for the electric trading assistant. The current useful work is inventory, schema, quality reporting, standard 96-point dataset generation, and manual-export ingest.
 
-Allowed work:
+Active work:
 
 1. Read local files already saved under an ignored `jspec-capture/output/session-*` directory.
 2. Build offline inventory and quality reports.
-3. Parse user-provided manual exports that do not contain credentials.
-4. Produce read-only decision-support inputs.
+3. Parse operator-provided business exports into standardized fact tables.
+4. Produce decision-support inputs for the local trading assistant.
 
-Disallowed work:
+Open build items:
 
-- Automatic JSPEC login or CA/PIN handling.
-- CDP-driven route exploration or background page probing.
-- Saving Cookie, x-ticket, Authorization, private keys, certificates, or temporary tickets.
-- Clicking submit/save/declaration/cancel/confirm/sign actions.
-- Calling JSPEC endpoints from scripts.
+- Add manual-export ingest for `energy_block_trades`.
+- Add manual-export ingest for `energy_block_limits`.
+- Add manual-export ingest for `position_curve`.
+- Feed those fact tables into `decision_input_v0`.
+- Surface data gaps and trade boundaries in `trading-ai-system`.
 
-Historical capture scripts remain in this directory for auditability, but the current project plan freezes automated JSPEC access. See `../docs/jspec-ca-capture-status-2026-05-12.md`, `../docs/jspec-ca-next-work-plan-2026-05-12-v2.md`, and `../docs/jspec-safe-manual-export-protocol.md`.
+Related planning docs:
+
+- `../docs/jspec-ca-capture-status-2026-05-12.md`
+- `../docs/jspec-ca-next-work-plan-2026-05-12-v2.md`
+- `../docs/superpowers/plans/2026-06-29-jspec-pending-work.md`
 
 ## Offline Session Inventory
 
-Generate a safe index from an existing local session:
+Generate an index from an existing local session:
 
 ```powershell
 .\index-session.ps1 -CaptureDir .\output\session-20260512-101623 -OutputDir ..\data\jspec\inventory\session-20260512-101623
@@ -34,11 +38,11 @@ This creates:
 - `source-endpoint-summary.md`
 - `standard-output-check.md` when `standard/dataset-summary.json` exists
 
-The index strips URL query strings and only records endpoint paths. Redacted sensitive headers such as `[REDACTED]` are treated as safe; unredacted sensitive header values are flagged.
+The index records endpoint paths, business category, response shape, record-count guesses, and standardized-table links.
 
-## Archived Capture Scripts
+## Legacy Capture Scripts
 
-The older Playwright/CDP scripts are retained only so prior work can be audited. Do not use them for new JSPEC access unless the project safety policy is explicitly revised. In the current plan, new data must come from user-performed manual exports, then be parsed offline.
+The older Playwright/CDP scripts remain in this directory because they explain how the current local datasets were produced. Keep them available for inspection while the next implementation work focuses on parsers, fact tables, and reports.
 
 ## Inspect Response Fields
 
@@ -71,7 +75,7 @@ This creates a `standard` folder inside the capture directory:
 - `quality-report.md`: source coverage, field completeness, and data gaps.
 - `system-dashboard.html`: self-contained local cockpit with no network dependencies.
 
-The builder does not call JSPEC. It only reads local captured response JSON files.
+The builder reads a capture folder and writes a normalized `standard` folder.
 
 ## Coverage Summary
 
@@ -88,7 +92,7 @@ This creates:
 
 ## Manual Export Targets
 
-The current P0 data gaps are filled only by user-performed exports:
+The current P0 data gaps map to these standard tables:
 
 | Data | Standard table |
 | --- | --- |
@@ -96,4 +100,4 @@ The current P0 data gaps are filled only by user-performed exports:
 | 能量块可买可卖量/限额 | `energy_block_limits` |
 | 持仓量查询 | `position_curve` |
 
-Place exported files under `data/jspec/manual-exports/` with a manifest as described in `../docs/jspec-safe-manual-export-protocol.md`.
+Place source files under `data/jspec/manual-exports/` and write parser outputs under `data/jspec/standardized/`.

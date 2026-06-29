@@ -11,11 +11,11 @@
     "sequence_id": ""
   },
   "files": [],
-  "safety_notes": [
+  "run_notes": [
     "普通 Chrome + CA/UKey 手工登录",
-    "未自动输入 PIN",
-    "未保存 Cookie/x-ticket/Authorization",
-    "未点击提交/保存/申报/撤销/确认/签章"
+    "页面查询后导出",
+    "导出文件已放入 files 目录",
+    "manifest 已登记查询条件"
   ],
   "contains_credentials": false,
   "notes": ""
