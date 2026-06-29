@@ -41,7 +41,12 @@ const integrationSummaryPath = path.resolve(rootDir, 'data/integration-summary.j
 const integrationBuildScriptPath = path.resolve(rootDir, 'tools/build-integration-summary.py');
 const defaultAuditLogPath = path.resolve(rootDir, 'data/audit-log.ndjson');
 const businessInputsDir = path.resolve(rootDir, 'data/business-inputs');
-const visibleSnapshotPath = path.resolve(rootDir, 'data/ukey-visible-snapshot.json');
+const visibleSnapshotPath = path.resolve(
+  getArgValue(
+    '--visible-snapshot',
+    process.env.TRADING_VISIBLE_SNAPSHOT_PATH || path.resolve(rootDir, 'data/ukey-visible-snapshot.json')
+  )
+);
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 

@@ -529,14 +529,20 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
 
   tables.forEach((table, tableIndex) => {
     const rawHeaders = Array.isArray(table.headers) ? table.headers.map(cleanString) : [];
-    const headers = rawHeaders.length ? rawHeaders : carryForwardHeaders;
+    let headers = rawHeaders.length ? rawHeaders : carryForwardHeaders;
+    let prependDataRow = [];
     const sensitiveHeaders = headers.filter((header) => SENSITIVE_FIELD_PATTERN.test(header));
     if (sensitiveHeaders.length) {
       errors.push(`Table ${tableIndex + 1} contains sensitive headers: ${sensitiveHeaders.join(', ')}`);
       return;
     }
 
-    const fieldByIndex = headers.map(mapHeaderToField);
+    let fieldByIndex = headers.map(mapHeaderToField);
+    if (!fieldByIndex.some(Boolean) && rawHeaders.length && carryForwardHeaders.length) {
+      headers = carryForwardHeaders;
+      fieldByIndex = headers.map(mapHeaderToField);
+      prependDataRow = rawHeaders;
+    }
     if (!fieldByIndex.some(Boolean)) {
       return;
     }
@@ -545,7 +551,10 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
     }
 
     let tableMatched = false;
-    const tableRows = Array.isArray(table.rows) ? table.rows : [];
+    const tableRows = [
+      ...(prependDataRow.length ? [prependDataRow] : []),
+      ...(Array.isArray(table.rows) ? table.rows : []),
+    ];
     tableRows.forEach((rawCells) => {
       const cells = Array.isArray(rawCells) ? rawCells.map(cleanString) : [];
       const row = {};

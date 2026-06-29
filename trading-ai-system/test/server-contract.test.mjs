@@ -2,19 +2,38 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+const systemRoot = fileURLToPath(new URL('..', import.meta.url));
+const defaultStandardPath = path.resolve(
+  systemRoot,
+  '../jspec-capture/output/session-20260507-101645/standard/standard-96.json'
+);
+
+async function readExpectedStandardSummary() {
+  const dataset = JSON.parse(await readFile(defaultStandardPath, 'utf8'));
+  return {
+    rowCount: Array.isArray(dataset.rows) ? dataset.rows.length : 0,
+  };
+}
 
 async function startServer() {
   const port = 7200 + Math.floor(Math.random() * 1000);
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-server-'));
   const auditPath = path.join(temp, 'audit-log.ndjson');
-  const server = spawn(process.execPath, ['server.mjs', '--port', String(port), '--audit', auditPath], {
-    cwd: new URL('..', import.meta.url),
-    env: { ...process.env, JSPEC_MANAGED_BROWSER_DISABLED: '1' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const visibleSnapshotPath = path.join(temp, 'ukey-visible-snapshot.json');
+  const server = spawn(
+    process.execPath,
+    ['server.mjs', '--port', String(port), '--audit', auditPath, '--visible-snapshot', visibleSnapshotPath],
+    {
+      cwd: systemRoot,
+      env: { ...process.env, JSPEC_MANAGED_BROWSER_DISABLED: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
 
   const ready = new Promise((resolve, reject) => {
     let stderr = '';
@@ -44,6 +63,7 @@ async function startServer() {
 }
 
 test('local server exposes the P0 system loop', async () => {
+  const expectedStandardSummary = await readExpectedStandardSummary();
   const server = await startServer();
 
   try {
@@ -129,7 +149,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(health.modelRuntime.provider, 'openai_compatible');
     assert.equal(health.modelRuntime.configured, false);
 
-    assert.equal(summary.rowCount, 192);
+    assert.equal(summary.rowCount, expectedStandardSummary.rowCount);
     assert.equal(summary.p0SourceCoverage.present, 8);
     assert.equal(summary.p0SourceCoverage.total, 8);
     assert.ok(summary.gapCount >= 1);
