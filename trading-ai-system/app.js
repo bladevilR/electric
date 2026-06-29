@@ -222,6 +222,7 @@ function statusText(value) {
       insufficient_history: '历史不足',
       baseline_ready: '基线可用',
       unavailable: '暂不可用',
+      savings_unavailable: '不能声明节省金额',
       targeted: '定向补采',
       conservative: '保守',
       neutral: '中性',
@@ -870,6 +871,8 @@ function renderSettlementReference() {
       ${kpi('实际负荷候选', String(summary.actualKwhCandidateRows || 0), '核对单 + 交易计算表')}
       ${kpi('结算金额候选', String(summary.settleAmountCandidateRows || 0), '核对单')}
       ${kpi('交易计算表 CSV', String(summary.transactionCalculationFeatureRowCount || 0), '用电/申报候选')}
+      ${kpi('小时持仓参考', String(summary.transactionCalculationPositionHourlyRows || 0), '历史约束参考')}
+      ${kpi('操作量参考', String(summary.transactionCalculationOperationHourlyRows || 0), '历史买卖测算')}
       ${kpi('可填业务真值', summary.canFillActualKwh || summary.canFillSettleAmount ? '部分可填' : '不可填', '历史 actualKwh / settleAmount')}
     </section>
     <section class="grid two">

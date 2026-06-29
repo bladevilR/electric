@@ -21,6 +21,10 @@ test('buildSettlementReference inventories local Excel and manual export referen
   assert.ok(reference.summary.transactionCalculationUsageRows >= 6240);
   assert.ok(reference.summary.transactionCalculationSubmissionRows >= 480);
   assert.ok(reference.summary.transactionCalculationFeatureRowCount >= 960);
+  assert.ok(reference.summary.transactionCalculationHourlySummaryRows >= 720);
+  assert.ok(reference.summary.transactionCalculationHourlyTransactionRows >= 3000);
+  assert.ok(reference.summary.transactionCalculationPositionHourlyRows >= 240);
+  assert.ok(reference.summary.transactionCalculationOperationHourlyRows >= 240);
   assert.equal(reference.summary.actualDaily96ExportFiles, 0);
   assert.equal(reference.summary.settlementExportFiles, 0);
   assert.equal(reference.summary.positionExportFiles, 0);
@@ -66,6 +70,26 @@ test('buildSettlementReference inventories local Excel and manual export referen
         item.sourceEndpoint === 'transaction-calculation-standardized'
     )
   );
+  assert.ok(reference.transactionCalculationStandardized.hourlyBusinessRows.length >= 720);
+  assert.ok(
+    reference.transactionCalculationStandardized.hourlyBusinessRows.some(
+      (item) =>
+        item.exportMonth === '2026-03' &&
+        item.hourIndex === 1 &&
+        item.metricId === 'position_mwh' &&
+        item.valueMwh !== null
+    )
+  );
+  assert.ok(
+    reference.transactionCalculationStandardized.hourlyBusinessRows.some(
+      (item) =>
+        item.exportMonth === '2026-03' &&
+        item.hourIndex === 1 &&
+        item.metricId === 'operation_1_mwh' &&
+        item.valueMwh !== null
+    )
+  );
   assert.ok(reference.upgradeHooks.some((item) => item.id === 'actual_load_96'));
   assert.ok(reference.usageBoundaries.some((item) => item.includes('历史核对单')));
+  assert.ok(reference.usageBoundaries.some((item) => item.includes('小时持仓')));
 });

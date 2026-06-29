@@ -176,6 +176,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /结算参考/);
     assert.match(appScript, /历史标签点/);
     assert.match(appScript, /交易计算表 CSV/);
+    assert.match(appScript, /小时持仓参考/);
     assert.match(appScript, /forecastLab/);
     assert.match(appScript, /backtestReport/);
     assert.match(appScript, /backfillPlan/);
@@ -273,6 +274,8 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(settlementReference.summary.canFillSettleAmount, true);
     assert.ok(settlementReference.summary.actualKwhCandidateRows >= 17000);
     assert.ok(settlementReference.summary.settleAmountCandidateRows >= 17000);
+    assert.ok(settlementReference.summary.transactionCalculationHourlySummaryRows >= 720);
+    assert.ok(settlementReference.summary.transactionCalculationPositionHourlyRows >= 240);
     assert.equal(settlementReference.summary.hasSettlementReference, true);
     assert.ok(Array.isArray(forecastFeatures.rows));
     assert.equal(historicalForecastFeatures.rows.length, 96);

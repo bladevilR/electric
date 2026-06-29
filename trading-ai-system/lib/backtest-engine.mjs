@@ -79,6 +79,18 @@ export function computeStrategyBacktest(featureStore = {}, modelReport = {}, opt
   const rows = Array.isArray(featureStore.rows) ? featureStore.rows : [];
   const hasActualLoad = rows.some((row) => numeric(row.actualKwh) !== null);
   const hasSettlement = rows.some((row) => numeric(row.settleAmount) !== null);
+  const hasAlignedActualSettlement = rows.some(
+    (row) => numeric(row.actualKwh) !== null && numeric(row.settleAmount) !== null
+  );
+  const strategyActions = Array.isArray(options.strategyActions)
+    ? options.strategyActions
+    : rows.filter(
+        (row) =>
+          numeric(row.strategyMwh) !== null ||
+          numeric(row.proposedMwh) !== null ||
+          numeric(row.executedMwh) !== null
+      );
+  const hasStrategyActions = strategyActions.length > 0;
   const warnings = [];
 
   if (!hasActualLoad) {
@@ -87,10 +99,26 @@ export function computeStrategyBacktest(featureStore = {}, modelReport = {}, opt
   if (!hasSettlement) {
     warnings.push('settlement_missing');
   }
+  if (hasActualLoad && hasSettlement && !hasAlignedActualSettlement) {
+    warnings.push('aligned_actual_settlement_missing');
+  }
+  if (!hasStrategyActions) {
+    warnings.push('strategy_action_missing');
+  }
 
-  if (warnings.length) {
+  if (!hasActualLoad || !hasSettlement || !hasAlignedActualSettlement) {
     return {
       status: 'insufficient_actuals',
+      baseline: 'no_action',
+      estimatedSavings: null,
+      modelStatus: modelReport.status || 'unknown',
+      warnings,
+    };
+  }
+
+  if (!hasStrategyActions) {
+    return {
+      status: 'savings_unavailable',
       baseline: 'no_action',
       estimatedSavings: null,
       modelStatus: modelReport.status || 'unknown',

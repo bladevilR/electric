@@ -33,6 +33,8 @@
   - 历史现货核对单可解析 211 天 * 96 点 = 20256 行历史 `actualKwh` / `settleAmount` 标签。
   - `data/jspec/standardized/transaction_calculation/customer_usage_96.csv` 有 6240 行，其中 480 行汇总实际用电可补历史 `actualKwh`。
   - `data/jspec/standardized/transaction_calculation/submission_power_96.csv` 有 480 行，可补历史 `declarationPower`。
+  - `data/jspec/standardized/transaction_calculation/hourly_summary_rows.csv` 有 720 行，其中小时持仓参考 240 行、操作量参考 240 行。
+  - `data/jspec/standardized/transaction_calculation/hourly_transaction.csv` 有 3000 行小时交易测算参考。
 - 当前缺失：
   - 目标日用户实际负荷 `actualKwh`：`queryDailyElectricity` 只有 96 点表头，`list.total = 0`。
   - 目标日结算金额/结算明细：`settle_day`、`settle_month`、`fileDown/queryFileList` 都是 0。
@@ -55,7 +57,7 @@
 - 导出 `buildForecastFeatureStore(dataset, options)`, `normalizeAssetRows(inventory)`, `buildPointKey(date, pointIndex)`。
 - 生成 96 点特征：日期、点位、时段、实时均价、日前公开价、用户日前价、实时节点价、主动/缺省申报、系统负荷预测、实际系统负荷、用户实际负荷、结算、价差、高价标签、来源、缺失字段。
 - raw 数据优先，现有标准化 dataset 作为补充。
-- 历史核对单和交易计算表标准化 CSV 作为历史标签补充；不能把历史标签当作目标日实测值。
+- 历史核对单和交易计算表标准化 CSV 作为历史标签/历史业务约束参考补充；不能把历史标签、小时持仓或操作量当作目标日实测值或可执行限额。
 - `priceSpread = realTimeAvgPrice - dayAheadPublicPrice`；任一缺失时为 `null`。
 - 不能把系统实际负荷当作用户实际负荷。
 

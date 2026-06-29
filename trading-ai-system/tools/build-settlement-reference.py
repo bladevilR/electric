@@ -348,13 +348,41 @@ def normalize_point(value):
     return point if 1 <= point <= 96 else None
 
 
+def metric_id(metric):
+    text = str(metric or "")
+    if "持仓量" in text:
+        return "position_mwh"
+    if "操作量1" in text:
+        return "operation_1_mwh"
+    if "操作量2" in text:
+        return "operation_2_mwh"
+    if "近三天用电量均值" in text:
+        return "three_day_average_mwh"
+    if "96点电力值" in text:
+        return "power_mw"
+    return "other"
+
+
+def normalize_hour_index(value):
+    number = numeric(value)
+    if number is None:
+        return None
+    hour = int(number)
+    return hour if 1 <= hour <= 24 else None
+
+
 def read_transaction_calculation_standardized(project_root):
     base = project_root / "data" / "jspec" / "standardized" / "transaction_calculation"
     usage_path = base / "customer_usage_96.csv"
     submission_path = base / "submission_power_96.csv"
+    hourly_summary_path = base / "hourly_summary_rows.csv"
+    hourly_transaction_path = base / "hourly_transaction.csv"
     usage_rows = read_csv_dicts(usage_path)
     submission_rows = read_csv_dicts(submission_path)
+    hourly_summary_rows = read_csv_dicts(hourly_summary_path)
+    hourly_transaction_rows = read_csv_dicts(hourly_transaction_path)
     feature_rows = []
+    hourly_business_rows = []
 
     for row in usage_rows:
         if not normalize_bool(row.get("is_total")):
@@ -398,13 +426,47 @@ def read_transaction_calculation_standardized(project_root):
             }
         )
 
+    for row in hourly_summary_rows:
+        hour_index = normalize_hour_index(row.get("hour_index"))
+        value = numeric(row.get("value"))
+        if hour_index is None or value is None:
+            continue
+        hourly_business_rows.append(
+            {
+                "exportMonth": row.get("export_month", "").strip(),
+                "hourIndex": hour_index,
+                "hourWindow": row.get("hour_window", "").strip(),
+                "metric": row.get("metric", "").strip(),
+                "metricId": metric_id(row.get("metric")),
+                "valueMwh": value,
+                "sourceFile": hourly_summary_path.name,
+                "sourceWorkbook": row.get("source_file", ""),
+                "sourceEndpoint": "transaction-calculation-standardized",
+            }
+        )
+
     dates = sorted({row["date"] for row in feature_rows if row.get("date")})
+    position_rows = [row for row in hourly_business_rows if row["metricId"] == "position_mwh"]
+    operation_rows = [
+        row
+        for row in hourly_business_rows
+        if row["metricId"] in {"operation_1_mwh", "operation_2_mwh"}
+    ]
+    three_day_rows = [row for row in hourly_business_rows if row["metricId"] == "three_day_average_mwh"]
+    power_rows = [row for row in hourly_business_rows if row["metricId"] == "power_mw"]
     return {
         "summary": {
             "usageRows": len(usage_rows),
             "usageTotalRows": sum(1 for row in usage_rows if normalize_bool(row.get("is_total"))),
             "submissionRows": len(submission_rows),
+            "hourlySummaryRows": len(hourly_summary_rows),
+            "hourlyTransactionRows": len(hourly_transaction_rows),
+            "positionHourlyRows": len(position_rows),
+            "operationHourlyRows": len(operation_rows),
+            "threeDayAverageHourlyRows": len(three_day_rows),
+            "powerHourlyRows": len(power_rows),
             "featureRowCount": len(feature_rows),
+            "hourlyBusinessRowCount": len(hourly_business_rows),
             "featureDateCount": len(dates),
             "featureDates": dates,
         },
@@ -421,8 +483,21 @@ def read_transaction_calculation_standardized(project_root):
                 "rowCount": len(submission_rows),
                 "status": "parsed" if submission_rows else "missing_or_empty",
             },
+            {
+                "path": str(hourly_summary_path),
+                "fileName": hourly_summary_path.name,
+                "rowCount": len(hourly_summary_rows),
+                "status": "parsed" if hourly_summary_rows else "missing_or_empty",
+            },
+            {
+                "path": str(hourly_transaction_path),
+                "fileName": hourly_transaction_path.name,
+                "rowCount": len(hourly_transaction_rows),
+                "status": "parsed" if hourly_transaction_rows else "missing_or_empty",
+            },
         ],
         "featureRows": feature_rows,
+        "hourlyBusinessRows": hourly_business_rows,
     }
 
 
@@ -457,7 +532,14 @@ def main():
             "transactionCalculationUsageRows": transaction_standardized["summary"]["usageRows"],
             "transactionCalculationUsageTotalRows": transaction_standardized["summary"]["usageTotalRows"],
             "transactionCalculationSubmissionRows": transaction_standardized["summary"]["submissionRows"],
+            "transactionCalculationHourlySummaryRows": transaction_standardized["summary"]["hourlySummaryRows"],
+            "transactionCalculationHourlyTransactionRows": transaction_standardized["summary"]["hourlyTransactionRows"],
+            "transactionCalculationPositionHourlyRows": transaction_standardized["summary"]["positionHourlyRows"],
+            "transactionCalculationOperationHourlyRows": transaction_standardized["summary"]["operationHourlyRows"],
+            "transactionCalculationThreeDayAverageHourlyRows": transaction_standardized["summary"]["threeDayAverageHourlyRows"],
+            "transactionCalculationPowerHourlyRows": transaction_standardized["summary"]["powerHourlyRows"],
             "transactionCalculationFeatureRowCount": transaction_standardized["summary"]["featureRowCount"],
+            "transactionCalculationHourlyBusinessRowCount": transaction_standardized["summary"]["hourlyBusinessRowCount"],
             "manualManifestCount": len(manual_exports),
             "actualDaily96ExportFiles": actual_files,
             "settlementExportFiles": settlement_files,
@@ -477,6 +559,7 @@ def main():
             "历史核对单可以补历史 96 点实际负荷和结算标签，但不能代表目标交易日已经有数据。",
             "Excel 核对单中的用电量单位为 MWh，进入 actualKwh 前必须乘以 1000。",
             "交易计算表标准化 CSV 可以补部分月末历史实际用电和申报功率，但不能替代目标日持仓和交易限额。",
+            "交易计算表小时持仓和操作量只能作为历史业务约束参考，不能替代目标日 position-96.csv 或 trade-limits.json。",
             "月度交易电量电价表只能做长期背景，不能当作日内点位结算标签。",
             "manual-export manifest 如果 files 为空，只表示已登记补采目标，不表示数据已经到位。",
         ],
