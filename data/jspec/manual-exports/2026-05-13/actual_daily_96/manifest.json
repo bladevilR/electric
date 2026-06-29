@@ -1,0 +1,19 @@
+{
+  "export_date": "2026-05-13",
+  "operator": "manual",
+  "source_system": "JSPEC",
+  "page_name": "用户实际96点日电量",
+  "query_conditions": {
+    "usage_date": "",
+    "subject": "",
+    "account_no": ""
+  },
+  "files": [],
+  "safety_notes": [
+    "普通 Chrome + CA/UKey 手工登录",
+    "未自动输入 PIN",
+    "未保存 Cookie/x-ticket/Authorization"
+  ],
+  "contains_credentials": false,
+  "notes": ""
+}

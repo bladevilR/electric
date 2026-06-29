@@ -1,0 +1,52 @@
+﻿[
+    {
+        "source_file":  "1、交易计算表1月.xls",
+        "export_month":  "2026-01",
+        "usage_date":  "2026-01-31",
+        "submission_points":  96,
+        "usage_detail_rows":  1248,
+        "hourly_rows":  744,
+        "hourly_summary_rows":  144,
+        "contains_credentials":  false
+    },
+    {
+        "source_file":  "1、交易计算表2月.xls",
+        "export_month":  "2026-02",
+        "usage_date":  "2026-02-28",
+        "submission_points":  96,
+        "usage_detail_rows":  1248,
+        "hourly_rows":  672,
+        "hourly_summary_rows":  144,
+        "contains_credentials":  false
+    },
+    {
+        "source_file":  "1、交易计算表3月.xls",
+        "export_month":  "2026-03",
+        "usage_date":  "2026-03-31",
+        "submission_points":  96,
+        "usage_detail_rows":  1248,
+        "hourly_rows":  744,
+        "hourly_summary_rows":  144,
+        "contains_credentials":  false
+    },
+    {
+        "source_file":  "1、交易计算表4月.xls",
+        "export_month":  "2026-04",
+        "usage_date":  "2026-04-30",
+        "submission_points":  96,
+        "usage_detail_rows":  1248,
+        "hourly_rows":  720,
+        "hourly_summary_rows":  144,
+        "contains_credentials":  false
+    },
+    {
+        "source_file":  "1、交易计算表5月.xls",
+        "export_month":  "2026-05",
+        "usage_date":  "2026-05-05",
+        "submission_points":  96,
+        "usage_detail_rows":  1248,
+        "hourly_rows":  120,
+        "hourly_summary_rows":  144,
+        "contains_credentials":  false
+    }
+]

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bladevilr.local/electric/jspec/energy_block_limits.schema.json",
+  "title": "JSPEC Manual Export Energy Block Limit Row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trade_date",
+    "execution_date",
+    "trade_hour",
+    "available_buy_mwh",
+    "available_sell_mwh",
+    "source_file",
+    "exported_at",
+    "parsed_at",
+    "parser_version",
+    "contains_credentials"
+  ],
+  "properties": {
+    "trade_date": { "type": "string", "format": "date" },
+    "execution_date": { "type": "string", "format": "date" },
+    "trade_hour": { "type": "integer", "minimum": 0, "maximum": 24 },
+    "available_buy_mwh": { "type": ["number", "null"], "minimum": 0 },
+    "available_sell_mwh": { "type": ["number", "null"], "minimum": 0 },
+    "limit_mwh": { "type": ["number", "null"], "minimum": 0 },
+    "batch_id": { "type": ["string", "null"] },
+    "sequence_id": { "type": ["string", "null"] },
+    "source_file": { "type": "string", "minLength": 1 },
+    "exported_at": { "type": "string" },
+    "parsed_at": { "type": "string" },
+    "parser_version": { "type": "string", "minLength": 1 },
+    "contains_credentials": { "const": false },
+    "notes": { "type": ["string", "null"] }
+  }
+}

@@ -49,6 +49,21 @@ __jspec_app.js
 jspec-capture/output/
 jspec-capture/work/
 
+# JSPEC local capture / credentials / browser runtime
+data/jspec/raw/
+data/jspec/manual-exports/**/*.cookie
+data/jspec/manual-exports/**/*.har
+data/jspec/manual-exports/**/*.headers
+data/jspec/manual-exports/**/*ticket*
+data/jspec/manual-exports/**/*authorization*
+*.p12
+*.pfx
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+
 # Trading system generated local data/previews
 trading-ai-system/.browser/
 trading-ai-system/start-ukey-assistant.bat

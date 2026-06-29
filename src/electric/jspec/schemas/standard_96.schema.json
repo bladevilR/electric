@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bladevilr.local/electric/jspec/standard_96.schema.json",
+  "title": "JSPEC Standard 96 Point Curve Row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "source_type",
+    "point_index",
+    "time_point",
+    "metric",
+    "value",
+    "unit",
+    "raw_field",
+    "source_file",
+    "captured_at",
+    "parsed_at",
+    "parser_version",
+    "contains_credentials"
+  ],
+  "properties": {
+    "session_id": { "type": "string", "minLength": 1 },
+    "source_type": { "type": "string", "minLength": 1 },
+    "trade_date": { "type": ["string", "null"], "format": "date" },
+    "delivery_date": { "type": ["string", "null"], "format": "date" },
+    "point_index": { "type": "integer", "minimum": 1, "maximum": 96 },
+    "time_point": {
+      "type": "string",
+      "pattern": "^(?:[01][0-9]|2[0-4]):(?:00|15|30|45)$"
+    },
+    "metric": { "type": "string", "minLength": 1 },
+    "value": { "type": ["number", "null"] },
+    "unit": {
+      "type": "string",
+      "enum": ["MWh", "MW", "kWh", "元/MWh", "raw"]
+    },
+    "raw_field": { "type": "string", "minLength": 1 },
+    "source_file": { "type": "string", "minLength": 1 },
+    "captured_at": { "type": "string" },
+    "parsed_at": { "type": "string" },
+    "parser_version": { "type": "string", "minLength": 1 },
+    "contains_credentials": { "const": false },
+    "missing_reason": { "type": ["string", "null"] }
+  }
+}

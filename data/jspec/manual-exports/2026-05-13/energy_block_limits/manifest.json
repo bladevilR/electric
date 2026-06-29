@@ -1,0 +1,21 @@
+{
+  "export_date": "2026-05-13",
+  "operator": "manual",
+  "source_system": "JSPEC",
+  "page_name": "能量块可买可卖量/限额查询",
+  "query_conditions": {
+    "execution_date": "",
+    "trade_date": "",
+    "sequence_id": "",
+    "batch_id": ""
+  },
+  "files": [],
+  "safety_notes": [
+    "普通 Chrome + CA/UKey 手工登录",
+    "未自动输入 PIN",
+    "未保存 Cookie/x-ticket/Authorization",
+    "未点击提交/保存/申报/撤销/确认/签章"
+  ],
+  "contains_credentials": false,
+  "notes": ""
+}

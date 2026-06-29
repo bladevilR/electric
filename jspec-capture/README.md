@@ -1,49 +1,48 @@
-# JSPEC Platform Capture
+# JSPEC Offline Data Tools
 
-This folder contains Playwright-based tools for reading JSPEC platform data from an authenticated Chrome session.
+This folder now treats the 2026-05-12 JSPEC capture as a frozen local dataset. The active workflow is offline inventory, schema, quality reporting, and manual-export ingest. Do not use these tools to automate JSPEC login, batch-open JSPEC routes, probe endpoints, replay requests, or trigger trading actions.
 
-The recommended long-term path is:
+Allowed work:
 
-1. Start a dedicated Chrome window with remote debugging.
-2. Sign in normally with CA/UKey.
-3. Run the session listener.
-4. Open the target JSPEC pages in that Chrome window.
-5. Review `coverage-summary.md` and `inspection-summary.md`.
+1. Read local files already saved under an ignored `jspec-capture/output/session-*` directory.
+2. Build offline inventory and quality reports.
+3. Parse user-provided manual exports that do not contain credentials.
+4. Produce read-only decision-support inputs.
 
-The tools do not reproduce CA login and do not reuse long-term tickets. New captures redact sensitive request headers such as `x-ticket`, `cookie`, and `authorization`.
+Disallowed work:
 
-## Quick Start
+- Automatic JSPEC login or CA/PIN handling.
+- CDP-driven route exploration or background page probing.
+- Saving Cookie, x-ticket, Authorization, private keys, certificates, or temporary tickets.
+- Clicking submit/save/declaration/cancel/confirm/sign actions.
+- Calling JSPEC endpoints from scripts.
 
-1. Run `.\open-chrome-debug.ps1`
-2. In the Chrome window that opens, complete the normal login flow if needed.
-3. Run the session listener:
+Historical capture scripts remain in this directory for auditability, but the current project plan freezes automated JSPEC access. See `../docs/jspec-ca-capture-status-2026-05-12.md`, `../docs/jspec-ca-next-work-plan-2026-05-12-v2.md`, and `../docs/jspec-safe-manual-export-protocol.md`.
 
-```powershell
-.\run-jspec-session.ps1 -DebugUrl http://127.0.0.1:9333 -DurationMinutes 30
-```
+## Offline Session Inventory
 
-4. In the debug Chrome window, open the P0 target pages listed below.
-
-The listener writes immediately while it runs:
-
-- `output/session-*/index.json`
-- `output/session-*/responses/*.json`
-- `output/session-*/coverage-summary.md`
-- `output/session-*/session.json`
-
-## Open Target Pages
-
-For read-only page triggering from an already logged-in debug Chrome:
+Generate a safe index from an existing local session:
 
 ```powershell
-.\open-jspec-target-pages.ps1 -Targets actual_load_96,settle_day
+.\index-session.ps1 -CaptureDir .\output\session-20260512-101623 -OutputDir ..\data\jspec\inventory\session-20260512-101623
 ```
 
-This only opens SPA routes and waits for the page's own queries. It does not click submit/confirm buttons.
+This creates:
+
+- `raw-response-index.json`
+- `raw-response-index.csv`
+- `source-endpoint-summary.md`
+- `standard-output-check.md` when `standard/dataset-summary.json` exists
+
+The index strips URL query strings and only records endpoint paths. Redacted sensitive headers such as `[REDACTED]` are treated as safe; unredacted sensitive header values are flagged.
+
+## Archived Capture Scripts
+
+The older Playwright/CDP scripts are retained only so prior work can be audited. Do not use them for new JSPEC access unless the project safety policy is explicitly revised. In the current plan, new data must come from user-performed manual exports, then be parsed offline.
 
 ## Inspect Response Fields
 
-After a capture run:
+For an already saved local capture folder:
 
 ```powershell
 .\inspect-jspec-capture.ps1 -CaptureDir .\output\session-YYYYMMDD-HHMMSS
@@ -58,7 +57,7 @@ The inspection summary identifies array/object shape, request keys, sample data 
 
 ## Build Standard 96-Point Dataset
 
-After a P0 capture is complete, build the downstream product dataset:
+For an already saved local capture folder, rebuild the downstream product dataset:
 
 ```powershell
 .\build-standard-dataset.ps1 -CaptureDir .\output\session-YYYYMMDD-HHMMSS
@@ -74,24 +73,9 @@ This creates a `standard` folder inside the capture directory:
 
 The builder does not call JSPEC. It only reads local captured response JSON files.
 
-## P0 Target Pages
-
-Open these first. They are the minimum useful JSPEC data sources for the project.
-
-| Data | JSPEC page route |
-| --- | --- |
-| 96点日前申报曲线 | `/pxf-spotgoods-province-extranet/userBid96/index` |
-| 96点缺省申报曲线 | `/pxf-spotgoods-province-extranet/userDefaultBid96/index` |
-| 用户侧日前出清 | `/pxf-spotgoods-province-extranet/Dd2jyUserClearingResult/Dd2jyRqClearing` |
-| 日前公开出清价格 | `/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/DayClearingResult` |
-| 实时公开出清结果 | `/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/CurClearingResult` |
-| 实时加权均价 | `/pxf-spotgoods-province-extranet/realTimeClearingRelease/RealTimeMarAvePricePublic` |
-| 96点实际电量/负荷 | `/pxf-js-outer-deferrableload/dayElectricity` |
-| 日结算明细 | `/pxf-js-outer-deferrableload/settleDay` |
-
 ## Coverage Summary
 
-After a capture run, summarize any capture folder:
+Summarize any already saved local capture folder:
 
 ```powershell
 .\summarize-jspec-capture.ps1 -CaptureDir .\output\session-YYYYMMDD-HHMMSS
@@ -102,33 +86,14 @@ This creates:
 - `coverage-summary.json`
 - `coverage-summary.md`
 
-## One-Shot Dashboard Capture
+## Manual Export Targets
 
-This older command is still useful for quick debugging of a single page:
+The current P0 data gaps are filled only by user-performed exports:
 
-```powershell
-.\run-capture.ps1 -DebugUrl http://127.0.0.1:9333
-```
+| Data | Standard table |
+| --- | --- |
+| 能量块成交结果 | `energy_block_trades` |
+| 能量块可买可卖量/限额 | `energy_block_limits` |
+| 持仓量查询 | `position_curve` |
 
-The script reloads the dashboard, saves XHR/fetch responses from `jspec.com.cn`, and writes `output/capture-*`.
-
-## HAR Fallback
-
-If you already have the dashboard open in a normal Chrome window and do not want to relaunch it with a debug port:
-
-1. Open Chrome DevTools on that page.
-2. Go to `Network`.
-3. Check `Preserve log`.
-4. Refresh the page once.
-5. Right-click the request list and choose `Save all as HAR with content`.
-6. Run:
-
-```powershell
-.\parse-har.ps1 -Har C:\path\to\your.har
-```
-
-If the HAR contains authenticated request headers but not response bodies, you can replay the captured XHR/fetch calls:
-
-```powershell
-.\replay-har.ps1 -Har C:\path\to\your.har
-```
+Place exported files under `data/jspec/manual-exports/` with a manifest as described in `../docs/jspec-safe-manual-export-protocol.md`.

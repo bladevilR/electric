@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-05-12T02:24:57.633Z",
+  "rowCount": 192,
+  "dates": [
+    "2026-05-12",
+    "2026-05-13"
+  ],
+  "sources": {
+    "user_bid_96": {
+      "files": [
+        "036-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouser.json",
+        "040-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouser.json",
+        "043-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouser.json"
+      ],
+      "captures": 3,
+      "rows": 288,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/mosEnergyBidInfoUser/getMosEnergyBidInfoUser"
+    },
+    "user_default_bid_96": {
+      "files": [
+        "052-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouserdefault.json",
+        "056-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouserdefault.json",
+        "058-www-jspec-com-cn-px-spotgoods-province-mosenergybidinfouser-getmosenergybidinfouserdefault.json"
+      ],
+      "captures": 3,
+      "rows": 288,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/mosEnergyBidInfoUser/getMosEnergyBidInfoUserDefault"
+    },
+    "dayahead_user_clearing": {
+      "files": [
+        "062-www-jspec-com-cn-px-spotgoods-province-dd2jyuserclearingresult-querydd2jyrqclearing.json"
+      ],
+      "captures": 1,
+      "rows": 96,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/Dd2jyUserClearingResult/queryDd2jyRqClearing"
+    },
+    "dayahead_public_clearing": {
+      "files": [
+        "065-www-jspec-com-cn-px-spotgoods-province-dayclearingresult-querytablexrdonlyjiesuan.json"
+      ],
+      "captures": 1,
+      "rows": 96,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/dayClearingResult/queryTableXrdOnlyJiesuan"
+    },
+    "realtime_public_clearing": {
+      "files": [
+        "067-www-jspec-com-cn-px-spotgoods-province-curclearingresult-querytablexrdonlyjiesuan.json"
+      ],
+      "captures": 1,
+      "rows": 96,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/curClearingResult/queryTableXrdOnlyJiesuan"
+    },
+    "realtime_average_price": {
+      "files": [
+        "069-www-jspec-com-cn-px-spotgoods-province-realtimeclearingrelease-queryrealtimemaravepricepublic.json"
+      ],
+      "captures": 1,
+      "rows": 96,
+      "endpoint": "https://www.jspec.com.cn/px-spotgoods-province/realTimeClearingRelease/queryRealTimeMarAvePricePublic"
+    },
+    "settle_day": {
+      "files": [
+        "071-www-jspec-com-cn-px-js-outer-deferrableload-trandeclare-querydaysettleresult.json"
+      ],
+      "captures": 1,
+      "rows": 0,
+      "endpoint": "https://www.jspec.com.cn/px-js-outer-deferrableload/tranDeclare/queryDaySettleResult"
+    }
+  },
+  "gaps": [
+    {
+      "id": "actual_load_96_missing",
+      "severity": "high",
+      "message": "P0 source actual_load_96 was not captured."
+    },
+    {
+      "id": "settle_day_empty",
+      "severity": "medium",
+      "message": "P0 source settle_day was captured but returned no standard rows."
+    },
+    {
+      "id": "mixed_dates",
+      "severity": "medium",
+      "message": "Captured rows span 2 dates. This can be valid, but downstream strategy should not compare day-ahead and real-time rows as the same day without checking date."
+    }
+  ],
+  "fieldCompleteness": {
+    "date": 192,
+    "pointIndex": 192,
+    "timePoint": 192,
+    "declarationPower": 0,
+    "declarationPowerUpper": 0,
+    "declarationPowerLower": 0,
+    "declarationStartStopState": 0,
+    "declarationPercent": 0,
+    "defaultDeclarationPower": 96,
+    "defaultDeclarationPowerUpper": 0,
+    "defaultDeclarationPowerLower": 0,
+    "defaultDeclarationStartStopState": 0,
+    "defaultDeclarationPercent": 0,
+    "dayAheadUserMediumLongPower": 0,
+    "dayAheadUserStandardPower": 0,
+    "dayAheadUserSumPower": 0,
+    "dayAheadUserClearingPower": 0,
+    "dayAheadUserPrice": 0,
+    "dayAheadUserPriceFinal": 0,
+    "dayAheadUserSouthPrice": 0,
+    "dayAheadUserNorthPrice": 0,
+    "dayAheadPublicClearingPower": 0,
+    "dayAheadPublicPrice": 0,
+    "dayAheadPublicSouthPrice": 0,
+    "dayAheadPublicNorthPrice": 0,
+    "dayAheadPublicSouthNodePrice": 0,
+    "dayAheadPublicNorthNodePrice": 0,
+    "realTimeSouthPrice": 0,
+    "realTimeNorthPrice": 0,
+    "realTimeSouthNodePrice": 0,
+    "realTimeNorthNodePrice": 0,
+    "realTimeSouthReleaseType": 0,
+    "realTimeNorthReleaseType": 0,
+    "realTimeClearingPower": 0,
+    "realTimeAvgPrice": 57,
+    "realTimePointPrice": 0,
+    "realTimeAvgPriceCurrent": 0,
+    "realTimePointPriceCurrent": 0,
+    "realTimeAvgPriceFinal": 0,
+    "realTimePointPriceFinal": 0,
+    "actualKwh": 0,
+    "settleAmount": 0
+  }
+}

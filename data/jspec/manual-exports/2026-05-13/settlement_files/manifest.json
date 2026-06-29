@@ -1,0 +1,19 @@
+{
+  "export_date": "2026-05-13",
+  "operator": "manual",
+  "source_system": "JSPEC",
+  "page_name": "结算/下载中心文件列表",
+  "query_conditions": {
+    "month": "",
+    "file_type": "",
+    "keyword": ""
+  },
+  "files": [],
+  "safety_notes": [
+    "普通 Chrome + CA/UKey 手工登录",
+    "未自动输入 PIN",
+    "未保存 Cookie/x-ticket/Authorization"
+  ],
+  "contains_credentials": false,
+  "notes": ""
+}
