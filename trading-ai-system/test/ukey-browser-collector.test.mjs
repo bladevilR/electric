@@ -216,9 +216,8 @@ test('parseVisibleBusinessSnapshot handles JSPEC split header and body tables', 
         rows: [['时间', '实时市场加权均价 （元/MWh）', '']],
       },
       {
-        headers: [],
+        headers: ['00:15', '342.3'],
         rows: [
-          ['00:15', '342.3'],
           ['00:30', '341.5'],
         ],
       },
