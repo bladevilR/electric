@@ -109,6 +109,8 @@ test('buildStrategyAdvice exposes trial-only AI advice readiness from price snap
   assert.equal(advice.priceSignal.highThreshold, 210);
   assert.ok(advice.nextDataNeeds.some((item) => item.id === 'forecast_load_96'));
   assert.ok(advice.nextDataNeeds.some((item) => item.id === 'position_96'));
+  assert.equal(advice.costStrategy.policyTiers.length, 3);
+  assert.equal(advice.costStrategy.policyTiers[0].id, 'conservative');
 });
 
 test('buildStrategyAdvice blocks AI advice when realtime price is absent', () => {

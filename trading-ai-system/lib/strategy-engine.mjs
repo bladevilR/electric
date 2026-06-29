@@ -1,3 +1,5 @@
+import { buildCostStrategy } from './cost-optimizer.mjs';
+
 export function numeric(value) {
   if (value === null || value === undefined || value === '') {
     return null;
@@ -192,6 +194,12 @@ function uniqDependencies(items) {
 export function buildStrategyAdvice(dataset, options = {}) {
   const rows = priceRows(dataset, options.date);
   const suggestions = buildStrategySuggestions(dataset, options);
+  const costStrategy = buildCostStrategy(dataset, {
+    date: options.date,
+    assets: options.assets,
+    modelReport: options.modelReport,
+    backtestReport: options.backtestReport,
+  });
   const prices = rows.map((row) => row.realTimeAvgPrice);
   const lowThreshold = quantile(prices, 0.25);
   const highThreshold = quantile(prices, 0.8);
@@ -245,5 +253,6 @@ export function buildStrategyAdvice(dataset, options = {}) {
     },
     nextDataNeeds,
     suggestionCount: suggestions.length,
+    costStrategy,
   };
 }
