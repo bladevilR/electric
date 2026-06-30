@@ -198,6 +198,9 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /fullSweepButton/);
     assert.match(appScript, /一键全量慢采/);
     assert.match(appScript, /全量慢采中/);
+    assert.match(appScript, /后台自动完成/);
+    assert.match(appScript, /可以去做别的/);
+    assert.match(appScript, /保持 UKey、数据窗口和本地服务打开/);
     assert.match(appScript, /mode: 'full'/);
     assert.match(appScript, /计划加载中/);
     assert.match(appScript, /预计耗时/);

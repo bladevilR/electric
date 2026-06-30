@@ -94,6 +94,8 @@ let state = {
   forecastLabError: '',
   backtestError: '',
   backfillError: '',
+  fullSweepRunning: false,
+  fullSweepMessage: '',
 };
 
 const formatNumber = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 3 });
@@ -805,7 +807,11 @@ function renderBackfillQueue(plan = state.backfillPlan) {
   const fullEstimatedSeconds = Math.ceil((fullTargetCount * fullDelayMs) / 1000);
   const targetDelaySeconds = Math.round(fullDelayMs / 1000);
   const fullSweepLoading = !fullTargetCount && !state.ukeyError;
-  const fullSweepDisabled = fullSweepLoading || !fullTargetCount || Boolean(plan?.rateLimited);
+  const fullSweepRunning = state.fullSweepRunning || sweep.state === 'running';
+  const fullSweepDisabled = fullSweepLoading || fullSweepRunning || !fullTargetCount || Boolean(plan?.rateLimited);
+  const fullSweepMessage =
+    state.fullSweepMessage ||
+    '点击后后台自动完成，你可以去做别的；保持 UKey、数据窗口和本地服务打开即可。';
   return `
     <article class="card">
       <h2>补采队列</h2>
@@ -832,11 +838,19 @@ function renderBackfillQueue(plan = state.backfillPlan) {
           <span>${
             fullSweepLoading
               ? '采集目标加载中，稍后会显示完整清单数量和预计耗时。'
-              : `预计耗时：约 ${escapeHtml(formatDuration(fullEstimatedSeconds))}；完整采集 ${fullTargetCount} 个页面，每个页面间隔不低于 ${targetDelaySeconds} 秒。`
+              : `预计耗时：约 ${escapeHtml(formatDuration(fullEstimatedSeconds))}；完整采集 ${fullTargetCount} 个页面，每个页面间隔不低于 ${targetDelaySeconds} 秒。${escapeHtml(fullSweepMessage)}`
           }</span>
         </div>
         <button class="primary-button" id="fullSweepButton" ${fullSweepDisabled ? 'disabled' : ''}>${
-          fullSweepLoading ? '计划加载中' : plan?.rateLimited ? '频率风险，先等待' : fullTargetCount ? '一键全量慢采' : '暂无采集目标'
+          fullSweepLoading
+            ? '计划加载中'
+            : fullSweepRunning
+              ? '后台慢采中...'
+              : plan?.rateLimited
+                ? '频率风险，先等待'
+                : fullTargetCount
+                  ? '一键全量慢采'
+                  : '暂无采集目标'
         }</button>
       </div>
       <p class="muted-text">${
@@ -1537,17 +1551,18 @@ async function startFullSlowSweep() {
   const targetCount = Number(state.ukeyAssistant?.sweep?.targetCount || 0);
   if (!button || !targetCount || state.backfillPlan?.rateLimited) return;
   const delayMs = Math.max(20000, Number(state.ukeyAssistant?.sweep?.defaultDelayMs || 20000));
-  const original = button.textContent;
-  button.disabled = true;
-  button.textContent = '全量慢采中...';
+  state.fullSweepRunning = true;
+  state.fullSweepMessage = '后台慢采已启动，会自动完成；你可以去做别的。保持 UKey、数据窗口和本地服务打开。';
+  render();
   await postUkeyAssistantAction('/api/ukey-assistant/sweep/run', {
     body: {
       mode: 'full',
       delayMs,
     },
   });
-  button.disabled = false;
-  button.textContent = original;
+  state.fullSweepRunning = false;
+  state.fullSweepMessage = '本轮后台慢采已结束，结果已经刷新。';
+  render();
 }
 
 async function loadProductionState() {
