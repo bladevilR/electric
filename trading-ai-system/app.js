@@ -787,8 +787,24 @@ function renderConfidence(score = 0) {
   `;
 }
 
+function formatDuration(seconds = 0) {
+  const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+  if (totalSeconds < 60) return `${totalSeconds} 秒`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const restSeconds = totalSeconds % 60;
+  return restSeconds ? `${minutes} 分 ${restSeconds} 秒` : `${minutes} 分钟`;
+}
+
 function renderBackfillQueue(plan = state.backfillPlan) {
+  const loading = !plan && !state.backfillError;
   const targets = asArray(plan?.targets);
+  const estimatedSeconds =
+    Number(plan?.estimatedSeconds) ||
+    Math.ceil(targets.reduce((sum, target) => sum + Number(target.delayMs || 20000), 0) / 1000);
+  const targetDelaySeconds = targets.length
+    ? Math.round(Math.max(...targets.map((target) => Number(target.delayMs || 20000))) / 1000)
+    : 20;
+  const slowBackfillDisabled = !targets.length || Boolean(plan?.rateLimited);
   return `
     <article class="card">
       <h2>补采队列</h2>
@@ -806,11 +822,28 @@ function renderBackfillQueue(plan = state.backfillPlan) {
                   `
                 )
                 .join('')
-            : '<div class="empty">当前没有定向补采目标。</div>'
+            : `<div class="empty">${loading ? '补采计划加载中。' : '当前没有定向补采目标。'}</div>`
         }
       </div>
-      <p class="muted-text">模式：${escapeHtml(statusText(plan?.mode || 'targeted'))}；预计 ${escapeHtml(String(plan?.estimatedSeconds || 0))} 秒。${
-        plan?.rateLimited ? ' 已检测到频率风险，建议等待后再采。' : ''
+      <div class="slow-backfill-panel">
+        <div>
+          <strong>自动慢采</strong>
+          <span>${
+            loading
+              ? '计划加载中，稍后会显示目标数量和预计耗时。'
+              : `预计耗时：约 ${escapeHtml(formatDuration(estimatedSeconds))}；${targets.length} 个目标，每个目标间隔不低于 ${targetDelaySeconds} 秒。`
+          }</span>
+        </div>
+        <button class="primary-button" id="slowBackfillButton" ${slowBackfillDisabled || loading ? 'disabled' : ''}>${
+          loading ? '计划加载中' : plan?.rateLimited ? '频率风险，先等待' : targets.length ? '开始自动慢采' : '暂无慢采目标'
+        }</button>
+      </div>
+      <p class="muted-text">${
+        loading
+          ? '正在计算补采目标和预计耗时。'
+          : `模式：${escapeHtml(statusText(plan?.mode || 'targeted'))}；预计 ${escapeHtml(formatDuration(estimatedSeconds))}。${
+              plan?.rateLimited ? ' 已检测到频率风险，建议等待后再采。' : ''
+            }`
       }</p>
     </article>
   `;
@@ -1478,6 +1511,7 @@ function bindDynamicActions() {
   wireUkeyActionButton('ukeySampleButton', '/api/ukey-assistant/collector/sample', { label: '采集中...' });
   wireUkeyActionButton('ukeyStartCollectorButton', '/api/ukey-assistant/collector/start', { label: '启动中...' });
   wireUkeyActionButton('ukeyStopCollectorButton', '/api/ukey-assistant/collector/stop', { label: '停止中...' });
+  document.querySelector('#slowBackfillButton')?.addEventListener('click', startSlowBackfill);
   document.querySelector('#ukeyRefreshButton')?.addEventListener('click', async () => {
     await loadUkeyAssistant();
     render();
@@ -1495,6 +1529,25 @@ function wireUkeyActionButton(id, endpoint, options = {}) {
     button.disabled = false;
     button.textContent = original;
   });
+}
+
+async function startSlowBackfill() {
+  const button = document.querySelector('#slowBackfillButton');
+  const targets = asArray(state.backfillPlan?.targets).filter((target) => target?.id);
+  if (!button || !targets.length || state.backfillPlan?.rateLimited) return;
+  const delayMs = Math.max(20000, ...targets.map((target) => Number(target.delayMs || 20000)));
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '慢采中...';
+  await postUkeyAssistantAction('/api/ukey-assistant/sweep/run', {
+    body: {
+      mode: 'targeted',
+      targetIds: targets.map((target) => target.id),
+      delayMs,
+    },
+  });
+  button.disabled = false;
+  button.textContent = original;
 }
 
 async function loadProductionState() {

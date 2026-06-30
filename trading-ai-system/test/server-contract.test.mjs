@@ -195,6 +195,12 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /\/api\/cost-strategy/);
     assert.match(appScript, /\/api\/backfill\/plan/);
     assert.match(appScript, /render\(\);\s*loadSystemData\(\);/);
+    assert.match(appScript, /slowBackfillButton/);
+    assert.match(appScript, /开始自动慢采/);
+    assert.match(appScript, /计划加载中/);
+    assert.match(appScript, /预计耗时/);
+    assert.match(appScript, /startSlowBackfill/);
+    assert.match(appScript, /targetIds: targets\.map\(\(target\) => target\.id\)/);
     assert.match(appScript, /今日工作台/);
     assert.match(appScript, /策略建议/);
     assert.match(appScript, /数据进度/);
