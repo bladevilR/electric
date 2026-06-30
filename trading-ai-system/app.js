@@ -228,6 +228,7 @@ function statusText(value) {
       unavailable: '暂不可用',
       savings_unavailable: '不能声明节省金额',
       targeted: '定向补采',
+      full: '全量慢采',
       conservative: '保守观察',
       neutral: '移峰观察',
       aggressive: '执行优化',
@@ -798,13 +799,13 @@ function formatDuration(seconds = 0) {
 function renderBackfillQueue(plan = state.backfillPlan) {
   const loading = !plan && !state.backfillError;
   const targets = asArray(plan?.targets);
-  const estimatedSeconds =
-    Number(plan?.estimatedSeconds) ||
-    Math.ceil(targets.reduce((sum, target) => sum + Number(target.delayMs || 20000), 0) / 1000);
-  const targetDelaySeconds = targets.length
-    ? Math.round(Math.max(...targets.map((target) => Number(target.delayMs || 20000))) / 1000)
-    : 20;
-  const slowBackfillDisabled = !targets.length || Boolean(plan?.rateLimited);
+  const sweep = state.ukeyAssistant?.sweep || {};
+  const fullTargetCount = Number(sweep.targetCount || 0);
+  const fullDelayMs = Math.max(20000, Number(sweep.defaultDelayMs || 20000));
+  const fullEstimatedSeconds = Math.ceil((fullTargetCount * fullDelayMs) / 1000);
+  const targetDelaySeconds = Math.round(fullDelayMs / 1000);
+  const fullSweepLoading = !fullTargetCount && !state.ukeyError;
+  const fullSweepDisabled = fullSweepLoading || !fullTargetCount || Boolean(plan?.rateLimited);
   return `
     <article class="card">
       <h2>补采队列</h2>
@@ -827,21 +828,21 @@ function renderBackfillQueue(plan = state.backfillPlan) {
       </div>
       <div class="slow-backfill-panel">
         <div>
-          <strong>自动慢采</strong>
+          <strong>一键全量慢采</strong>
           <span>${
-            loading
-              ? '计划加载中，稍后会显示目标数量和预计耗时。'
-              : `预计耗时：约 ${escapeHtml(formatDuration(estimatedSeconds))}；${targets.length} 个目标，每个目标间隔不低于 ${targetDelaySeconds} 秒。`
+            fullSweepLoading
+              ? '采集目标加载中，稍后会显示完整清单数量和预计耗时。'
+              : `预计耗时：约 ${escapeHtml(formatDuration(fullEstimatedSeconds))}；完整采集 ${fullTargetCount} 个页面，每个页面间隔不低于 ${targetDelaySeconds} 秒。`
           }</span>
         </div>
-        <button class="primary-button" id="slowBackfillButton" ${slowBackfillDisabled || loading ? 'disabled' : ''}>${
-          loading ? '计划加载中' : plan?.rateLimited ? '频率风险，先等待' : targets.length ? '开始自动慢采' : '暂无慢采目标'
+        <button class="primary-button" id="fullSweepButton" ${fullSweepDisabled ? 'disabled' : ''}>${
+          fullSweepLoading ? '计划加载中' : plan?.rateLimited ? '频率风险，先等待' : fullTargetCount ? '一键全量慢采' : '暂无采集目标'
         }</button>
       </div>
       <p class="muted-text">${
         loading
           ? '正在计算补采目标和预计耗时。'
-          : `模式：${escapeHtml(statusText(plan?.mode || 'targeted'))}；预计 ${escapeHtml(formatDuration(estimatedSeconds))}。${
+          : `下面这些是当前最缺的关键数据；按钮会按完整清单全量慢采，不只采这 ${targets.length} 个。模式：${escapeHtml(statusText('full'))}；预计 ${escapeHtml(formatDuration(fullEstimatedSeconds))}。${
               plan?.rateLimited ? ' 已检测到频率风险，建议等待后再采。' : ''
             }`
       }</p>
@@ -1287,7 +1288,7 @@ function renderUkeyAssistant() {
     <section class="kpi-grid">
       ${kpi('数据窗口', statusText(browser.state || browser.status || 'not_started'), '点击按钮后会打开专用浏览器')}
       ${kpi('自动采集', statusText(collector.state || 'stopped'), collector.intervalSeconds ? `约 ${collector.intervalSeconds} 秒一次` : '默认约 30 秒一次')}
-      ${kpi('核心巡扫', statusText(sweep.state || 'idle'), sweep.lastRunAt ? `${sweep.lastAcceptedPageCount || 0}/${sweep.lastPageCount || 0} 页，${sweep.lastRowCount || 0} 行` : '默认 4 个核心页面')}
+      ${kpi('全量慢采', statusText(sweep.state || 'idle'), sweep.lastRunAt ? `${sweep.lastAcceptedPageCount || 0}/${sweep.lastPageCount || 0} 页，${sweep.lastRowCount || 0} 行` : `完整清单 ${sweep.targetCount || 0} 个页面`)}
       ${kpi('最近采集', snapshot.generatedAt ? timeText(snapshot.generatedAt) : '-', snapshot.rowCount ? `${snapshot.rowCount} 行` : '还没有采集到表格')}
       ${kpi('实时价格', realtime.pointCount ? `${realtime.pointCount} 点` : '等待页面', statusText(realtime.status))}
     </section>
@@ -1297,7 +1298,7 @@ function renderUkeyAssistant() {
         <h2>一键操作</h2>
         <div class="action-row">
           <button class="primary-button" id="ukeyStartBrowserButton">打开数据窗口</button>
-          <button class="primary-button" id="ukeySweepButton">自动扫核心页</button>
+          <button class="primary-button" id="ukeySweepButton">一键全量慢采</button>
           <button class="ghost-button" id="ukeySampleButton">采集一次</button>
           <button class="ghost-button" id="ukeyStartCollectorButton">开始自动采集</button>
           <button class="ghost-button" id="ukeyStopCollectorButton">停止自动采集</button>
@@ -1305,7 +1306,7 @@ function renderUkeyAssistant() {
         ${simpleList([
           { title: '第一步', note: '插上 UKey，点击“打开数据窗口”。' },
           { title: '第二步', note: '在打开的浏览器里完成登录，停在任意 JSPEC 页面即可。' },
-          { title: '第三步', note: '点击“自动扫核心页”，系统会先扫首页、实时均价、实际负荷、日结算。' },
+          { title: '第三步', note: '点击“一键全量慢采”，系统会按完整清单逐页读取，每页间隔不低于 20 秒。' },
         ])}
       </article>
       <article class="card">
@@ -1319,7 +1320,7 @@ function renderUkeyAssistant() {
             { item: '页面', value: browser.currentUrl || '还没打开实时页面' },
             { item: '登录', value: browser.currentUrl ? '以页面实际显示为准' : '等待打开数据窗口' },
             { item: '采集结果', value: snapshot.accepted ? `已读取 ${snapshot.rowCount || 0} 行` : '还没有读到可用表格' },
-            { item: '巡扫结果', value: sweep.lastRunAt ? `已扫 ${sweep.lastPageCount || 0} 页，命中 ${sweep.lastAcceptedPageCount || 0} 页` : '4 个核心页面待扫' },
+            { item: '巡扫结果', value: sweep.lastRunAt ? `已扫 ${sweep.lastPageCount || 0} 页，命中 ${sweep.lastAcceptedPageCount || 0} 页` : `${sweep.targetCount || 0} 个页面待慢采` },
           ]
         )}
       </article>
@@ -1507,11 +1508,11 @@ function bindDynamicActions() {
     button.addEventListener('click', () => recordProposalReview(button.dataset.decision));
   });
   wireUkeyActionButton('ukeyStartBrowserButton', '/api/ukey-assistant/browser/start', { label: '打开中...' });
-  wireUkeyActionButton('ukeySweepButton', '/api/ukey-assistant/sweep/run', { label: '巡扫中...', body: { mode: 'core' } });
+  wireUkeyActionButton('ukeySweepButton', '/api/ukey-assistant/sweep/run', { label: '全量慢采中...', body: { mode: 'full' } });
   wireUkeyActionButton('ukeySampleButton', '/api/ukey-assistant/collector/sample', { label: '采集中...' });
   wireUkeyActionButton('ukeyStartCollectorButton', '/api/ukey-assistant/collector/start', { label: '启动中...' });
   wireUkeyActionButton('ukeyStopCollectorButton', '/api/ukey-assistant/collector/stop', { label: '停止中...' });
-  document.querySelector('#slowBackfillButton')?.addEventListener('click', startSlowBackfill);
+  document.querySelector('#fullSweepButton')?.addEventListener('click', startFullSlowSweep);
   document.querySelector('#ukeyRefreshButton')?.addEventListener('click', async () => {
     await loadUkeyAssistant();
     render();
@@ -1531,18 +1532,17 @@ function wireUkeyActionButton(id, endpoint, options = {}) {
   });
 }
 
-async function startSlowBackfill() {
-  const button = document.querySelector('#slowBackfillButton');
-  const targets = asArray(state.backfillPlan?.targets).filter((target) => target?.id);
-  if (!button || !targets.length || state.backfillPlan?.rateLimited) return;
-  const delayMs = Math.max(20000, ...targets.map((target) => Number(target.delayMs || 20000)));
+async function startFullSlowSweep() {
+  const button = document.querySelector('#fullSweepButton');
+  const targetCount = Number(state.ukeyAssistant?.sweep?.targetCount || 0);
+  if (!button || !targetCount || state.backfillPlan?.rateLimited) return;
+  const delayMs = Math.max(20000, Number(state.ukeyAssistant?.sweep?.defaultDelayMs || 20000));
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = '慢采中...';
+  button.textContent = '全量慢采中...';
   await postUkeyAssistantAction('/api/ukey-assistant/sweep/run', {
     body: {
-      mode: 'targeted',
-      targetIds: targets.map((target) => target.id),
+      mode: 'full',
       delayMs,
     },
   });
