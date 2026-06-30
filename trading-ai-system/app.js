@@ -1671,6 +1671,7 @@ async function loadStrategyReport() {
   }
   try {
     const response = await fetch(`/api/strategy-report?date=${encodeURIComponent(state.date)}`, {
+      method: 'POST',
       cache: 'no-store',
     });
     if (!response.ok) throw new Error(`服务返回 ${response.status}`);
@@ -1766,4 +1767,5 @@ document.querySelector('#dateSelect')?.addEventListener('change', async (event) 
 document.querySelector('#refreshButton')?.addEventListener('click', refreshData);
 document.querySelector('#reportButton')?.addEventListener('click', loadStrategyReport);
 
+render();
 loadSystemData();

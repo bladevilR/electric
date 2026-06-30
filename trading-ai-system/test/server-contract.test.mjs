@@ -151,6 +151,11 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /blockingReasons/);
     assert.match(appScript, /不会自动提交/);
     assert.match(appScript, /\/api\/strategy-report/);
+    assert.ok(
+      appScript.includes(
+        "fetch(`/api/strategy-report?date=${encodeURIComponent(state.date)}`, {\n      method: 'POST',\n      cache: 'no-store',\n    })"
+      )
+    );
     assert.match(appScript, /\/api\/production\/readiness/);
     assert.match(appScript, /\/api\/execution\/proposal/);
     assert.match(appScript, /\/api\/execution\/review/);
@@ -189,6 +194,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /\/api\/backtest/);
     assert.match(appScript, /\/api\/cost-strategy/);
     assert.match(appScript, /\/api\/backfill\/plan/);
+    assert.match(appScript, /render\(\);\s*loadSystemData\(\);/);
     assert.match(appScript, /今日工作台/);
     assert.match(appScript, /策略建议/);
     assert.match(appScript, /数据进度/);
