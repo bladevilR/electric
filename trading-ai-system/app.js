@@ -43,7 +43,7 @@ const importantFields = [
 ];
 
 const modules = [
-  { id: 'report', group: '总览', label: '今日概览', icon: '总' },
+  { id: 'report', group: '总览', label: '今日工作台', icon: '总' },
   { id: 'revenue', group: '总览', label: '收益情况', icon: '收' },
   { id: 'operator', group: '总览', label: '主体信息', icon: '主' },
   { id: 'settlement', group: '总览', label: '结算复盘', icon: '结' },
@@ -51,13 +51,13 @@ const modules = [
   { id: 'publicData', group: '数据', label: '市场数据', icon: '市' },
   { id: 'privateData', group: '数据', label: '我的数据', icon: '私' },
   { id: 'dataQuality', group: '数据', label: '数据准备情况', icon: '数' },
-  { id: 'dataAssets', group: '数据', label: '数据资产', icon: 'D' },
-  { id: 'settlementReference', group: '数据', label: '结算参考', icon: 'R' },
+  { id: 'dataAssets', group: '数据', label: '数据进度', icon: '资' },
+  { id: 'settlementReference', group: '数据', label: '结算参考', icon: '参' },
   { id: 'ukey', group: '实时', label: '实时数据助手', icon: '实' },
-  { id: 'forecastLab', group: '模型', label: '预测实验室', icon: 'F' },
-  { id: 'backtestReport', group: '模型', label: '回测结果', icon: 'B' },
-  { id: 'costStrategy', group: '策略', label: '省钱策略', icon: '¥' },
-  { id: 'strategy', group: '策略', label: 'AI策略建议', icon: 'AI' },
+  { id: 'forecastLab', group: '预测', label: '价格预测', icon: '预' },
+  { id: 'backtestReport', group: '预测', label: '预测验证', icon: '验' },
+  { id: 'costStrategy', group: '策略', label: '策略建议', icon: '策' },
+  { id: 'strategy', group: '策略', label: '辅助建议', icon: '助' },
   { id: 'production', group: '策略', label: '交易草稿复核', icon: '稿' },
 ];
 
@@ -132,6 +132,10 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function productTitle(value, fallback = '策略建议报告') {
+  return String(value || fallback).replace(/\s*AI\s*/g, '');
 }
 
 function avg(values) {
@@ -218,15 +222,15 @@ function statusText(value) {
       observation_ready: '可以先看建议',
       waiting_for_realtime_price: '等待实时价格',
       trial_only: '只作参考，不会自动提交',
-      heuristic_fallback: '规则兜底',
-      insufficient_history: '历史不足',
-      baseline_ready: '基线可用',
+      heuristic_fallback: '数据不足，按规则提示',
+      insufficient_history: '历史样本不足',
+      baseline_ready: '价格基线可用',
       unavailable: '暂不可用',
       savings_unavailable: '不能声明节省金额',
       targeted: '定向补采',
-      conservative: '保守',
-      neutral: '中性',
-      aggressive: '激进',
+      conservative: '保守观察',
+      neutral: '移峰观察',
+      aggressive: '执行优化',
     }[value] || value || '-'
   );
 }
@@ -401,7 +405,7 @@ function renderStrategyReportPanel() {
       <div class="report-head">
         <div>
           <span class="status-pill">报告已生成</span>
-          <h2>${escapeHtml(report.title || 'AI建议报告')}</h2>
+          <h2>${escapeHtml(productTitle(report.title))}</h2>
           <p>交易日：${escapeHtml(report.date || state.date)} · 生成时间：${escapeHtml(timeText(report.generatedAt))}</p>
         </div>
       </div>
@@ -427,14 +431,35 @@ function renderReport() {
   const settlementChecks = state.integrationClosure?.settlementChecks || {};
   const suggestions = state.strategySuggestions || [];
   const warningCount = suggestions.filter((item) => item.severity === 'warning').length;
+  const forecastStatus = state.forecastLab?.status || state.costStrategy?.modelMode || 'heuristic_fallback';
+  const lowWindows = asArray(state.costStrategy?.signals?.lowPriceWindows);
+  const highWindows = asArray(state.costStrategy?.signals?.highPriceExposureWindows);
   return `
-    ${pageTitle('今日概览', '先看当天价格、数据是否齐，再决定要不要进入策略页。')}
+    ${pageTitle('今日工作台', '先看价格预测、风险窗口和数据缺口，再决定是否进入策略建议。')}
     ${state.loadError ? `<div class="notice warn">${escapeHtml(state.loadError)}</div>` : ''}
     <section class="kpi-grid">
       ${kpi('已读取点位', String(rows.length), '通常一天应有 96 个点')}
       ${kpi('实时均价', fmt(realTimeAverage), '元/MWh')}
-      ${kpi('数据准备度', `${dataReadyPercent()}%`, `${sourceCount()}/${sourceCatalog.length} 类数据已读取`)}
-      ${kpi('AI提醒', String(suggestions.length), warningCount ? `${warningCount} 条需要重点看` : '没有高风险提醒')}
+      ${kpi('价格预测', statusText(forecastStatus), forecastStatusNote(forecastStatus))}
+      ${kpi('风险提醒', String(Math.max(suggestions.length, highWindows.length)), warningCount || highWindows.length ? '有高价风险需要复核' : '暂无明显高价风险')}
+    </section>
+    <section class="decision-strip">
+      <article>
+        <b>能预测实时均价</b>
+        <span>基于历史同点位价格，给出目标日 96 点实时均价参考。</span>
+      </article>
+      <article>
+        <b>能识别高价风险</b>
+        <span>结合实时均价、日前价差和分位阈值，标出需要重点复核的时段。</span>
+      </article>
+      <article>
+        <b>能验证预测误差</b>
+        <span>用过去日期回看平均误差、均方根误差和预测偏差。</span>
+      </article>
+      <article class="blocked">
+        <b>暂不生成执行电量</b>
+        <span>需要目标日实际负荷、需要目标日结算，并补齐持仓与交易限额后才能给 MWh。</span>
+      </article>
     </section>
     <section class="grid two">
       <article class="card">
@@ -447,9 +472,10 @@ function renderReport() {
       <article class="card">
         <h2>今天能做什么</h2>
         ${simpleList([
-          { title: '先看实时数据', note: fieldCount('realTimeAvgPrice') ? '已经有实时价格，可以进入 AI策略建议。' : '还没有实时价格，先打开实时数据助手采集。' },
-          { title: '再看负荷和持仓', note: fieldCount('actualKwh') ? '已有实际负荷，可用于复盘。' : '实际负荷未到齐时，策略只作参考。' },
-          { title: '最后人工确认', note: '系统只给建议和草稿，最终申报仍由人确认。' },
+          { title: '预测价格', note: '可以看实时均价、实时-日前价差和高价风险预测。' },
+          { title: '看低价窗口', note: lowWindows.length ? `已识别 ${lowWindows.length} 个低价观察时段。` : '低价窗口会在数据足够时显示。' },
+          { title: '看高价暴露', note: highWindows.length ? `已识别 ${highWindows.length} 个高价风险时段。` : '高价风险会随实时价格更新。' },
+          { title: '人工决策', note: '系统只做价格预测和策略提示，不会自动提交交易。' },
         ])}
       </article>
     </section>
@@ -459,10 +485,12 @@ function renderReport() {
         ${pointTable(rows)}
       </article>
       <article class="card">
-        <h2>结算文件</h2>
+        <h2>还需要补什么</h2>
         ${simpleList([
-          { title: '已读取文件', note: `${settlementChecks.fileCount || 0} 个` },
-          { title: '需要留意', note: settlementChecks.gapCount ? `${settlementChecks.gapCount} 项数据还需要补齐` : '目前没有明显缺项' },
+          { title: '需要目标日实际负荷', note: fieldCount('actualKwh') ? '已有可用于复盘的负荷点。' : '没有它，只能判断价格风险，不能计算移峰电量。' },
+          { title: '需要目标日结算', note: fieldCount('settleAmount') ? '已有结算金额，可用于核算收益。' : '没有它，不能证明实际省了多少钱。' },
+          { title: '需要持仓和交易限额', note: '补齐后才会从“提示窗口”升级为“可复核的执行电量”。' },
+          { title: '结算文件', note: `${settlementChecks.fileCount || 0} 个已读取；${settlementChecks.gapCount || 0} 项还需确认。` },
         ])}
       </article>
     </section>
@@ -698,9 +726,49 @@ function targetLabel(value) {
 function forecastTargetLabel(value) {
   return (
     {
-      realTimeAvgPrice: '实时均价',
-      priceSpread: '实时-日前价差',
-      highPriceRiskLabel: '高价风险',
+      realTimeAvgPrice: '实时均价预测',
+      priceSpread: '实时-日前价差预测',
+      highPriceRiskLabel: '高价风险预测',
+    }[value] || value || '-'
+  );
+}
+
+function forecastStatusNote(status) {
+  return (
+    {
+      baseline_ready: '可以给出实时均价、价差和高价风险的价格预测；仍需结算数据证明省钱效果。',
+      insufficient_history: '历史同点位样本还不够，只能先展示缺口和少量参考。',
+      heuristic_fallback: '目标日输入还不完整，先按价格分位和价差规则提示风险。',
+      unavailable: '预测服务暂时不可用，先检查数据进度。',
+    }[status] || '按当前数据给出价格参考，最终决策仍需人工复核。'
+  );
+}
+
+function metricLabel(value) {
+  return (
+    {
+      mae: 'MAE 平均误差',
+      rmse: 'RMSE 均方根误差',
+      bias: 'Bias 预测偏差',
+    }[value] || value || '-'
+  );
+}
+
+function forecastMethodLabel(value) {
+  const text = String(value || '');
+  if (/rolling/i.test(text)) return '滚动同点位历史基线';
+  if (/naive/i.test(text)) return '上一历史日同点位基线';
+  if (/baseline/i.test(text)) return '同点位历史基线';
+  return text || '-';
+}
+
+function signalReasonText(value) {
+  return (
+    {
+      negative_spread: '实时价明显低于日前价',
+      low_quantile: '处于当日低价分位',
+      positive_spread: '实时价明显高于日前价',
+      high_quantile: '处于当日高价分位',
     }[value] || value || '-'
   );
 }
@@ -764,17 +832,17 @@ function renderDataAssets() {
     { name: '交易序列', rows: summary.tradeSequenceRows || 0 },
   ];
   return `
-    ${pageTitle('数据资产', '把本地 raw captures 里能用的数据、分页缺口和空接口证据放在一起看。')}
+    ${pageTitle('数据进度', '把已经整理好的平台数据、分页缺口和空返回证据放在一起看。')}
     ${state.dataAssetsError ? `<div class="notice warn">${escapeHtml(state.dataAssetsError)}</div>` : ''}
     <section class="kpi-grid">
-      ${kpi('实时均价行数', String(summary.realtimeAveragePriceRows || 0), 'raw capture 标准化后')}
+      ${kpi('实时均价行数', String(summary.realtimeAveragePriceRows || 0), '已整理的平台价格行')}
       ${kpi('日前公开行数', String(summary.dayAheadPublicClearingRows || 0), '出清价格基础')}
-      ${kpi('当前合同', `${summary.contractCurrentCapturedRows || 0}/${summary.contractCurrentTotal || 0}`, 'captured / total')}
-      ${kpi('历史合同', `${summary.contractHistoryCapturedRows || 0}/${summary.contractHistoryTotal || 0}`, 'captured / total')}
+      ${kpi('当前合同', `${summary.contractCurrentCapturedRows || 0}/${summary.contractCurrentTotal || 0}`, '已读取 / 平台总数')}
+      ${kpi('历史合同', `${summary.contractHistoryCapturedRows || 0}/${summary.contractHistoryTotal || 0}`, '已读取 / 平台总数')}
     </section>
     <section class="grid two">
       <article class="card">
-        <h2>raw 数据类别</h2>
+        <h2>平台数据类别</h2>
         ${table(
           [
             { key: 'name', label: '类别' },
@@ -786,15 +854,15 @@ function renderDataAssets() {
       <article class="card">
         <h2>缺失证据</h2>
         ${simpleList([
-          { title: '空实际负荷接口', note: `${summary.emptyActualLoadEndpoints || 0} 个 endpoint 返回空列表` },
-          { title: '空结算接口', note: `${summary.emptySettlementEndpoints || 0} 个 endpoint 返回空列表` },
-          { title: '合同分页缺口', note: `${asArray(evidence.partialSources).length} 个接口 total 大于已抓取行数` },
+          { title: '实际负荷为空', note: `${summary.emptyActualLoadEndpoints || 0} 处数据源返回空列表` },
+          { title: '结算数据为空', note: `${summary.emptySettlementEndpoints || 0} 处数据源返回空列表` },
+          { title: '合同分页缺口', note: `${asArray(evidence.partialSources).length} 处平台总数大于已读取行数` },
         ])}
       </article>
     </section>
     <section class="grid two">
       <article class="card">
-        <h2>空接口样本</h2>
+        <h2>平台空返回记录</h2>
         ${simpleList(
           asArray(evidence.emptySources)
             .slice(0, 8)
@@ -811,7 +879,7 @@ function renderDataAssets() {
             .slice(0, 8)
             .map((item) => ({
               title: targetLabel(item.targetId),
-              note: `total ${item.total || 0}，已抓 ${item.capturedRows || 0}`,
+              note: `平台总数 ${item.total || 0}，已读取 ${item.capturedRows || 0}`,
             }))
         )}
       </article>
@@ -994,20 +1062,20 @@ function renderForecastLab() {
   const readiness = report.readiness || {};
   const forecasts = asArray(report.forecasts);
   return `
-    ${pageTitle('预测实验室', '只展示当前可验证的基线预测；历史不足时明确给出原因，不声称训练模型更好。')}
+    ${pageTitle('价格预测', '预测实时均价、实时-日前价差和高价风险；历史不足时会直接显示原因。')}
     ${state.forecastLabError ? `<div class="notice warn">${escapeHtml(state.forecastLabError)}</div>` : ''}
     <section class="kpi-grid">
-      ${kpi('模型状态', statusText(report.status || 'unavailable'), '当前不训练深度学习')}
+      ${kpi('预测状态', statusText(report.status || 'unavailable'), forecastStatusNote(report.status || 'unavailable'))}
       ${kpi('历史天数', String(readiness.historicalDateCount || 0), '目标日前可用历史')}
       ${kpi('可比点位', String(readiness.comparablePointCount || 0), '同点位历史覆盖')}
-      ${kpi('预测点数', String(forecasts.length), 'same-slot baseline 输出')}
+      ${kpi('预测点数', String(forecasts.length), '同点位历史基线输出')}
     </section>
     <section class="grid two">
       <article class="card">
-        <h2>模型清单</h2>
+        <h2>预测口径</h2>
         ${table(
           [
-            { key: 'label', label: '模型' },
+            { label: '方法', render: (row) => forecastMethodLabel(row.label || row.id) },
             { label: '状态', render: (row) => (row.enabled ? '启用' : '未启用') },
           ],
           asArray(report.models)
@@ -1015,18 +1083,18 @@ function renderForecastLab() {
       </article>
       <article class="card">
         <h2>缺失原因</h2>
-        ${simpleList(asArray(readiness.missingReasons).map((item) => ({ title: reasonText(item), note: item })))}
+        ${simpleList(asArray(readiness.missingReasons).map((item) => ({ title: reasonText(item), note: '补齐后会自动纳入价格预测。' })))}
       </article>
     </section>
     <article class="card">
-      <h2>基线预测摘要</h2>
+      <h2>价格预测摘要</h2>
       ${table(
         [
-          { label: '目标', render: (row) => forecastTargetLabel(row.target) },
+          { label: '预测内容', render: (row) => forecastTargetLabel(row.target) },
           { key: 'pointIndex', label: '点位' },
-          { label: '预测', render: (row) => fmt(row.pointForecast) },
-          { label: 'p90', render: (row) => fmt(row.p90) },
-          { key: 'evidenceRows', label: '证据行' },
+          { label: '预测值', render: (row) => fmt(row.pointForecast) },
+          { label: 'P90 风险上沿', render: (row) => fmt(row.p90) },
+          { key: 'evidenceRows', label: '参考样本' },
         ],
         forecasts.slice(0, 18)
       )}
@@ -1044,13 +1112,13 @@ function renderBacktestReport() {
   }));
   const strategy = report.strategyComparison || {};
   return `
-    ${pageTitle('回测结果', 'walk-forward 按日期评估，只用评估日前的数据；没有实际负荷/结算时不伪造节省金额。')}
+    ${pageTitle('预测验证', '逐日回看预测误差，只使用当时已经发生的历史数据；没有结算时不声称省钱。')}
     ${state.backtestError ? `<div class="notice warn">${escapeHtml(state.backtestError)}</div>` : ''}
     <section class="kpi-grid">
-      ${kpi('评估状态', statusText(report.status || 'unavailable'), 'walk-forward')}
+      ${kpi('验证状态', statusText(report.status || 'unavailable'), '逐日回看')}
       ${kpi('评估日期', String(asArray(report.evaluationDates).length), '满足历史门槛的日期')}
       ${kpi('实时价样本', String(metrics.realTimeAvgPrice?.sampleCount || 0), '价格误差样本')}
-      ${kpi('策略回测', statusText(strategy.status || 'unavailable'), strategy.estimatedSavings === null ? '不声明节省金额' : '可对比 no_action')}
+      ${kpi('节省验证', statusText(strategy.status || 'unavailable'), strategy.estimatedSavings === null ? '不声明节省金额' : '可对比不操作基线')}
     </section>
     <section class="grid two">
       <article class="card">
@@ -1059,9 +1127,9 @@ function renderBacktestReport() {
           [
             { key: 'label', label: '目标' },
             { key: 'sampleCount', label: '样本' },
-            { label: 'MAE', render: (row) => fmt(row.mae) },
-            { label: 'RMSE', render: (row) => fmt(row.rmse) },
-            { label: 'Bias', render: (row) => fmt(row.bias) },
+            { label: metricLabel('mae'), render: (row) => fmt(row.mae) },
+            { label: metricLabel('rmse'), render: (row) => fmt(row.rmse) },
+            { label: metricLabel('bias'), render: (row) => fmt(row.bias) },
           ],
           metricRows
         )}
@@ -1070,8 +1138,8 @@ function renderBacktestReport() {
         <h2>为什么还不能声明节省金额</h2>
         ${simpleList(
           asArray(report.warnings).length
-            ? asArray(report.warnings).map((item) => ({ title: reasonText(item), note: item }))
-            : [{ title: '仍需人工复核', note: '策略收益需要和 no_action 基线、实际负荷、结算共同验证。' }]
+            ? asArray(report.warnings).map((item) => ({ title: reasonText(item), note: '补齐后才能验证真实节省金额。' }))
+            : [{ title: '仍需人工复核', note: '策略收益需要和不操作基线、实际负荷、结算共同验证。' }]
         )}
       </article>
     </section>
@@ -1086,17 +1154,27 @@ function renderCostStrategy() {
   const highWindows = asArray(signals.highPriceExposureWindows);
   const tiers = asArray(strategy.policyTiers);
   return `
-    ${pageTitle('省钱策略', '把价格窗口、基线预测、回测状态和数据缺口合成三档人工决策建议。')}
+    ${pageTitle('策略建议', '把价格预测、低价窗口、高价暴露和数据缺口合成可复核的人工建议。')}
     ${state.costStrategyError ? `<div class="notice warn">${escapeHtml(state.costStrategyError)}</div>` : ''}
     ${state.backfillError ? `<div class="notice warn">${escapeHtml(state.backfillError)}</div>` : ''}
     <section class="kpi-grid">
-      ${kpi('模型模式', statusText(strategy.modelMode || 'heuristic_fallback'), '缺数据时只做规则兜底')}
-      ${kpi('置信度', `${confidence.score ?? 0}/100`, '按缺口扣分')}
+      ${kpi('建议状态', statusText(strategy.modelMode || 'heuristic_fallback'), forecastStatusNote(strategy.modelMode || 'heuristic_fallback'))}
+      ${kpi('数据置信度', `${confidence.score ?? 0}/100`, '按缺口扣分，分数越高越适合进入执行测算')}
       ${kpi('低价窗口', String(lowWindows.length), '可观察补采或移峰机会')}
       ${kpi('高价暴露', String(highWindows.length), '需要人工复核偏差风险')}
     </section>
+    <section class="decision-strip compact">
+      <article>
+        <b>现在能做</b>
+        <span>预测价格、标出低价窗口、识别高价风险，给出保守和中性的人工复核建议。</span>
+      </article>
+      <article class="blocked">
+        <b>现在不能做</b>
+        <span>暂不生成执行电量；需要目标日实际负荷、需要目标日结算、持仓曲线和交易限额。</span>
+      </article>
+    </section>
     <article class="card">
-      <h2>置信度</h2>
+      <h2>数据置信度</h2>
       ${renderConfidence(confidence.score || 0)}
       <div class="tag-list">
         ${asArray(confidence.penalties)
@@ -1115,7 +1193,7 @@ function renderCostStrategy() {
                 ${riskBadge(tier.executable ? '可执行' : '不可执行', tier.executable ? 'good' : 'warn')}
               </div>
               <p>${escapeHtml(tier.action || '')}</p>
-              <small>${escapeHtml(compactText(tier.blockers, '无阻断项'))}</small>
+              <small>${escapeHtml(compactText(asArray(tier.blockers).map(reasonText), '无阻断项'))}</small>
             </article>
           `
         )
@@ -1130,7 +1208,7 @@ function renderCostStrategy() {
             { key: 'timePoint', label: '时间' },
             { label: '实时价', render: (row) => fmt(row.realTimeAvgPrice) },
             { label: '价差', render: (row) => fmt(row.priceSpread) },
-            { key: 'reason', label: '原因' },
+            { label: '原因', render: (row) => signalReasonText(row.reason) },
           ],
           lowWindows
         )}
@@ -1143,7 +1221,7 @@ function renderCostStrategy() {
             { key: 'timePoint', label: '时间' },
             { label: '实时价', render: (row) => fmt(row.realTimeAvgPrice) },
             { label: '价差', render: (row) => fmt(row.priceSpread) },
-            { key: 'reason', label: '原因' },
+            { label: '原因', render: (row) => signalReasonText(row.reason) },
           ],
           highWindows
         )}
@@ -1217,7 +1295,7 @@ function renderUkeyAssistant() {
       <h2>使用边界</h2>
       ${simpleList([
         { title: '只读屏幕上看得到的数据', note: '比如时间点、价格、申报量、负荷等业务表格。' },
-        { title: '不会替你点提交', note: 'AI 只给建议和草稿，最终操作仍由用户确认。' },
+        { title: '不会替你点提交', note: '系统只给建议和草稿，最终操作仍由用户确认。' },
         { title: '登录留在本机', note: 'UKey 和浏览器登录状态只保存在使用者电脑上。' },
       ])}
     </article>
@@ -1225,7 +1303,7 @@ function renderUkeyAssistant() {
 }
 
 function renderStrategyAdvicePanel() {
-  if (state.strategyError) return emptyCard('AI建议暂时没出来', state.strategyError);
+  if (state.strategyError) return emptyCard('辅助建议暂时没出来', state.strategyError);
   const advice = state.strategyAdvice || {};
   const signal = advice.priceSignal || {};
   const realtime = advice.realtimePrice || {};
@@ -1265,7 +1343,7 @@ function renderStrategyAdvicePanel() {
 function renderStrategy() {
   return `
     ${pageTitle(
-      'AI策略建议',
+      '辅助建议',
       '这里把实时价格转换成“观察窗口”和“风险提醒”。它不是下单器，只帮你少漏看。'
     )}
     ${renderStrategyAdvicePanel()}
@@ -1281,7 +1359,7 @@ function renderProduction() {
   return `
     ${pageTitle(
       '交易草稿复核',
-      '把 AI 建议整理成草稿，给人复核用；这里不会自动提交交易。',
+      '把辅助建议整理成草稿，给人复核用；这里不会自动提交交易。',
       '<button class="primary-button" id="proposalButton">生成草稿</button>'
     )}
     ${state.executionError ? `<div class="notice warn">${escapeHtml(state.executionError)}</div>` : ''}
@@ -1460,7 +1538,7 @@ async function loadStrategySuggestions() {
     state.strategyAdvice = null;
     state.strategySuggestions = [];
     state.strategyModelPrediction = null;
-    state.strategyError = `AI建议暂时没有生成：${error.message}`;
+    state.strategyError = `辅助建议暂时没有生成：${error.message}`;
   }
 }
 
@@ -1496,7 +1574,7 @@ async function loadForecastLab() {
     state.forecastLabError = '';
   } catch (error) {
     state.forecastLab = null;
-    state.forecastLabError = `预测实验室没有读到：${error.message}`;
+    state.forecastLabError = `价格预测没有读到：${error.message}`;
   }
 }
 
@@ -1508,7 +1586,7 @@ async function loadBacktestReport() {
     state.backtestError = '';
   } catch (error) {
     state.backtestReport = null;
-    state.backtestError = `回测结果没有读到：${error.message}`;
+    state.backtestError = `预测验证没有读到：${error.message}`;
   }
 }
 
@@ -1520,7 +1598,7 @@ async function loadCostStrategy() {
     state.costStrategyError = '';
   } catch (error) {
     state.costStrategy = null;
-    state.costStrategyError = `省钱策略没有读到：${error.message}`;
+    state.costStrategyError = `策略建议没有读到：${error.message}`;
   }
 }
 

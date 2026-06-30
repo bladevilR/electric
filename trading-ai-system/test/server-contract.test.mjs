@@ -135,7 +135,7 @@ test('local server exposes the P0 system loop', async () => {
       ),
     ]);
 
-    assert.match(home, /电力交易 AI 助手/);
+    assert.match(home, /电力交易策略助手/);
     assert.match(home, /<script src="\.\/app\.js"><\/script>/);
     assert.match(home, /id="reportButton"/);
     assert.doesNotMatch(home, /data\/standard-96\.js/);
@@ -147,7 +147,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /integrationClosure/);
     assert.match(appScript, /\/api\/strategy/);
     assert.match(appScript, /strategySuggestions/);
-    assert.match(appScript, /AI策略建议/);
+    assert.match(appScript, /辅助建议/);
     assert.match(appScript, /blockingReasons/);
     assert.match(appScript, /不会自动提交/);
     assert.match(appScript, /\/api\/strategy-report/);
@@ -189,11 +189,23 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(appScript, /\/api\/backtest/);
     assert.match(appScript, /\/api\/cost-strategy/);
     assert.match(appScript, /\/api\/backfill\/plan/);
-    assert.match(appScript, /省钱策略/);
-    assert.match(appScript, /数据资产/);
+    assert.match(appScript, /今日工作台/);
+    assert.match(appScript, /策略建议/);
+    assert.match(appScript, /数据进度/);
     assert.match(appScript, /结算参考/);
-    assert.match(appScript, /预测实验室/);
-    assert.match(appScript, /回测结果/);
+    assert.match(appScript, /价格预测/);
+    assert.match(appScript, /预测验证/);
+    assert.match(appScript, /能预测实时均价/);
+    assert.match(appScript, /识别高价风险/);
+    assert.match(appScript, /暂不生成执行电量/);
+    assert.match(appScript, /需要目标日实际负荷/);
+    assert.match(appScript, /需要目标日结算/);
+    assert.match(appScript, /MAE 平均误差/);
+    assert.match(appScript, /RMSE 均方根误差/);
+    assert.doesNotMatch(appScript, /模型模式/);
+    assert.doesNotMatch(appScript, /same-slot baseline/);
+    assert.doesNotMatch(appScript, /raw captures/);
+    assert.doesNotMatch(appScript, /walk-forward/);
     assert.match(appScript, /报告已生成/);
     assert.doesNotMatch(appScript, /待接入/);
     assert.doesNotMatch(appScript, /72,783|218 ~ 728|协鑫能科|GCL-ET|10:30-14:30|17:30-20:30|21:00-22:00|\+2\.8 万kWh|\+1\.2 ~ \+2\.6|2026-03/);
