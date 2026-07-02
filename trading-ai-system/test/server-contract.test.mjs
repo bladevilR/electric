@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -410,4 +410,32 @@ test('local server exposes the P0 system loop', async () => {
   } finally {
     await server.close();
   }
+});
+
+test('one-minute onboarding page is friendly and launchable', async () => {
+  const [guideHtml, homeHtml, launcherBat, packageScript, iconInfo] = await Promise.all([
+    readFile(path.join(systemRoot, '一分钟上手.html'), 'utf8'),
+    readFile(path.join(systemRoot, 'index.html'), 'utf8'),
+    readFile(path.join(systemRoot, '启动系统.bat'), 'utf8'),
+    readFile(path.join(systemRoot, 'tools/package-one-minute.mjs'), 'utf8'),
+    stat(path.join(systemRoot, 'assets/app-icon.png')),
+  ]);
+
+  assert.match(guideHtml, /一分钟上手/);
+  assert.match(guideHtml, /一键启动/);
+  assert.match(guideHtml, /全量功能/);
+  assert.match(guideHtml, /全量慢采/);
+  assert.match(guideHtml, /价格预测/);
+  assert.match(guideHtml, /省钱策略/);
+  assert.match(guideHtml, /UKey/);
+  assert.match(guideHtml, /不会自动提交/);
+  assert.match(guideHtml, /启动系统\.bat/);
+  assert.match(guideHtml, /assets\/app-icon\.png/);
+
+  assert.match(homeHtml, /assets\/app-icon\.png/);
+  assert.match(homeHtml, /一分钟上手/);
+  assert.match(launcherBat, /run-system\.ps1/);
+  assert.match(launcherBat, /standard-96\.sample\.json/);
+  assert.match(packageScript, /trading-ai-system-one-minute/);
+  assert.ok(iconInfo.size > 1000);
 });

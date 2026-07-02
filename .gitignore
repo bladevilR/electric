@@ -30,6 +30,7 @@ coverage/
 *.jpeg
 *.gif
 *.webp
+!trading-ai-system/assets/app-icon.png
 
 # Extracted/generated working assets
 .ppt_extract/
