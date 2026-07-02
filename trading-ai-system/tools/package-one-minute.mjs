@@ -27,6 +27,7 @@ const files = [
   'styles.css',
   'server.mjs',
   'run-system.ps1',
+  'start-system.ps1',
   'build-data.mjs',
 ];
 
