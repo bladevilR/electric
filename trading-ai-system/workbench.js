@@ -812,11 +812,11 @@ async function loadWorkbench(date = '') {
     }
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
-    const date = browserState.payload?.date || '';
+    const selectedDate = browserState.payload?.date || '';
     const [strategyValidation, declarationRecommendation] = await Promise.all([
       fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
       fetch(
-        `/api/declaration-optimizer/recommendation?date=${encodeURIComponent(date)}`,
+        `/api/declaration-optimizer/recommendation?date=${encodeURIComponent(selectedDate)}`,
         { cache: 'no-store' }
       ).then(responseJson),
     ]);
