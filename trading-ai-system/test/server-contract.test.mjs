@@ -70,8 +70,10 @@ test('local server exposes the P0 system loop', async () => {
     const [
       home,
       appScript,
+      workbenchScript,
       health,
       summary,
+      workbench,
       strategy,
       strategyReport,
       strategyReportMarkdown,
@@ -90,12 +92,17 @@ test('local server exposes the P0 system loop', async () => {
       backtest,
       costStrategy,
       backfillPlan,
+      declarationOptimizerValidation,
+      declarationRecommendation,
+      strategyValidation,
       refresh,
     ] = await Promise.all([
       fetch(`${server.baseUrl}/`).then((response) => response.text()),
       fetch(`${server.baseUrl}/app.js`).then((response) => response.text()),
+      fetch(`${server.baseUrl}/workbench.js`).then((response) => response.text()),
       fetch(`${server.baseUrl}/api/health`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/summary`).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/workbench?date=2026-07-27`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/strategy?date=2026-05-07`).then((response) => response.json()),
       fetch(`${server.baseUrl}/api/strategy-report?date=2026-05-07`, { method: 'POST' }).then(
         (response) => response.json()
@@ -130,15 +137,28 @@ test('local server exposes the P0 system loop', async () => {
       fetch(`${server.baseUrl}/api/backfill/plan?date=2026-05-07`).then((response) =>
         response.json()
       ),
+      fetch(`${server.baseUrl}/api/declaration-optimizer/validation`).then(
+        (response) => response.json()
+      ),
+      fetch(
+        `${server.baseUrl}/api/declaration-optimizer/recommendation?date=2026-07-29`
+      ).then((response) => response.json()),
+      fetch(`${server.baseUrl}/api/strategy-validation`).then((response) =>
+        response.json()
+      ),
       fetch(`${server.baseUrl}/api/refresh`, { method: 'POST' }).then((response) =>
         response.json()
       ),
     ]);
 
-    assert.match(home, /电力交易策略助手/);
-    assert.match(home, /<script src="\.\/app\.js"><\/script>/);
-    assert.match(home, /id="reportButton"/);
+    assert.match(home, /电力交易智能决策平台/);
+    assert.match(home, /<script type="module" src="\.\/workbench\.js"><\/script>/);
+    assert.match(home, /id="workbenchRoot"/);
     assert.doesNotMatch(home, /data\/standard-96\.js/);
+    assert.match(workbenchScript, /当日交易决策中心/);
+    assert.match(workbenchScript, /\/api\/workbench/);
+    assert.match(workbenchScript, /未获取/);
+    assert.match(workbenchScript, /系统运行成本/);
     assert.match(appScript, /dataQuality/);
     assert.match(appScript, /数据准备情况/);
     assert.match(appScript, /业务数据是否到位/);
@@ -237,6 +257,18 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(summary.p0SourceCoverage.total, 8);
     assert.ok(summary.gapCount >= 1);
 
+    assert.equal(workbench.date, '2026-07-27');
+    assert.equal(workbench.status, 'blocked');
+    assert.equal(workbench.execution.allowed, false);
+    assert.equal(workbench.savings.estimatedNetYuan, null);
+    assert.equal(workbench.savings.realizedNetYuan, null);
+    assert.equal(workbench.primaryAction.id, 'collect_today_data');
+    assert.ok(workbench.blockers.some((item) => item.id === 'current_day_missing'));
+    assert.deepEqual(
+      workbench.stages.map((stage) => stage.label),
+      ['数据接入', '质量校验', '策略决策', '结算评估']
+    );
+
     assert.ok(Array.isArray(strategy.suggestions));
     assert.equal(strategy.modelRuntime.provider, 'openai_compatible');
     assert.equal(strategy.modelPrediction.status, 'disabled');
@@ -279,9 +311,12 @@ test('local server exposes the P0 system loop', async () => {
     assert.match(integrationsMarkdown, /\u6e90\u8fd4\u56de\u7a7a/);
     assert.doesNotMatch(integrationsMarkdown, /\u5f85\u63a5\u5165/);
 
-    assert.equal(productionReadiness.status, 'decision_support_ready');
+    assert.equal(productionReadiness.status, 'data_blocked');
+    assert.equal(productionReadiness.capabilities.proposalDraft, false);
+    assert.equal(productionReadiness.capabilities.verifiedSavings, false);
     assert.equal(productionReadiness.capabilities.autoSubmit, false);
     assert.equal(productionReadiness.blockers.some((item) => item.id === 'ca_ukey'), false);
+    assert.ok(productionReadiness.blockers.some((item) => item.id === 'current_day_data'));
     assert.ok(productionReadiness.warnings.some((item) => item.id === 'source_empty_data'));
     assert.doesNotMatch(JSON.stringify(productionReadiness), /寰呮帴鍏?/);
     assert.equal(businessInputs.summary.readyForDraftPrefill, false);
@@ -335,6 +370,25 @@ test('local server exposes the P0 system loop', async () => {
     assert.ok(Array.isArray(costStrategy.policyTiers));
     assert.ok(Array.isArray(backfillPlan.targets));
     assert.equal(backfillPlan.targets.length <= 4, true);
+    assert.equal(declarationOptimizerValidation.status, 'validated');
+    assert.equal(
+      declarationOptimizerValidation.selectedModel.id,
+      'same_slot_mean_w42_a1'
+    );
+    assert.equal(declarationOptimizerValidation.holdout.pointCount, 4128);
+    assert.equal(declarationOptimizerValidation.holdout.improvementPct, 9.64);
+    assert.equal(
+      declarationOptimizerValidation.holdout.dailyWinRatePct,
+      86.05
+    );
+    assert.equal(declarationOptimizerValidation.costSavingsYuan, null);
+    assert.equal(declarationRecommendation.status, 'missing_baseline');
+    assert.equal(
+      declarationRecommendation.operatingMode,
+      'baseline_fallback'
+    );
+    assert.equal(strategyValidation.operatingMode, 'validated_optimizer');
+    assert.equal(strategyValidation.executionAllowed, false);
 
     const browserStart = await fetch(`${server.baseUrl}/api/ukey-assistant/browser/start`, {
       method: 'POST',
@@ -385,18 +439,18 @@ test('local server exposes the P0 system loop', async () => {
       response.json()
     );
 
-    assert.equal(executionProposal.status, 'draft_ready');
+    assert.equal(executionProposal.status, 'blocked');
     assert.equal(executionProposal.autoSubmit, false);
     assert.equal(executionProposal.humanDecisionRequired, true);
     assert.deepEqual(executionProposal.orderLines, []);
     assert.ok(executionProposal.costStrategy);
-    assert.ok(executionProposal.reviewWarnings.some((item) => item.includes('省钱策略置信度')));
-    assert.ok(executionProposal.proposalLines.length > 0);
-    assert.ok(executionProposal.proposalLines.every((item) => item.editable));
+    assert.ok(executionProposal.reviewWarnings.some((item) => item.includes('成本优化策略置信度')));
+    assert.deepEqual(executionProposal.proposalLines, []);
+    assert.ok(executionProposal.blockers.some((item) => item.includes('负荷、持仓与交易限额')));
     assert.equal(executionProposal.blockers.some((item) => item.includes('CA/UKey')), false);
 
     const review = await fetch(
-      `${server.baseUrl}/api/execution/review?proposalId=${executionProposal.proposalLines[0].id}&date=2026-05-07&decision=accepted&note=manual`,
+      `${server.baseUrl}/api/execution/review?proposalId=blocked-contract&date=2026-05-07&decision=accepted&note=manual`,
       { method: 'POST', headers: { 'x-reviewer-id': 'reviewer-test' } }
     ).then((response) => response.json());
     assert.ok(audit.events.some((item) => item.type === 'execution_proposal_created'));
@@ -413,9 +467,10 @@ test('local server exposes the P0 system loop', async () => {
 });
 
 test('one-minute onboarding page is friendly and launchable', async () => {
-  const [guideHtml, homeHtml, launcherBat, launchScript, packageScript, iconInfo] = await Promise.all([
+  const [guideHtml, homeHtml, workbenchScript, launcherBat, launchScript, packageScript, iconInfo] = await Promise.all([
     readFile(path.join(systemRoot, '一分钟上手.html'), 'utf8'),
     readFile(path.join(systemRoot, 'index.html'), 'utf8'),
+    readFile(path.join(systemRoot, 'workbench.js'), 'utf8'),
     readFile(path.join(systemRoot, '启动系统.bat'), 'utf8'),
     readFile(path.join(systemRoot, 'start-system.ps1'), 'utf8'),
     readFile(path.join(systemRoot, 'tools/package-one-minute.mjs'), 'utf8'),
@@ -438,7 +493,7 @@ test('one-minute onboarding page is friendly and launchable', async () => {
   assert.match(guideHtml, /assets\/app-icon\.png/);
 
   assert.match(homeHtml, /assets\/app-icon\.png/);
-  assert.match(homeHtml, /一分钟上手/);
+  assert.match(workbenchScript, /一分钟上手/);
   assert.match(launcherBat, /start-system\.ps1/);
   assert.match(launcherBat, /chcp 65001/);
   assert.match(launchScript, /Invoke-RestMethod/);

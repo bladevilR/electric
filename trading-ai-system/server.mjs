@@ -33,9 +33,15 @@ import { buildModelConfig, requestStrategyModelPrediction } from './lib/ai-model
 import { buildInventoryFromDirectories } from './lib/data-assets.mjs';
 import { buildForecastFeatureStore } from './lib/forecast-feature-store.mjs';
 import { buildForecastModelReport } from './lib/forecast-models.mjs';
-import { runForecastBacktest } from './lib/backtest-engine.mjs';
+import { buildStrategyValidation, runForecastBacktest } from './lib/backtest-engine.mjs';
 import { buildCostStrategy } from './lib/cost-optimizer.mjs';
 import { buildSettlementReference } from './lib/settlement-reference.mjs';
+import { buildSavingsWorkbench } from './lib/savings-workbench.mjs';
+import { buildDeclarationReplay } from './lib/declaration-replay.mjs';
+import {
+  backtestDeclarationOptimizer,
+  buildDeclarationRecommendation,
+} from './lib/declaration-optimizer.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -58,6 +64,8 @@ const visibleSnapshotPath = path.resolve(
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 let settlementReferenceCache = null;
+let strategyValidationCache = null;
+let declarationOptimizerValidationCache = null;
 
 function getArgValue(name, defaultValue) {
   const index = process.argv.indexOf(name);
@@ -305,13 +313,65 @@ async function loadForecastContext(date = '') {
   };
 }
 
-async function loadProductionReadiness() {
-  const dataset = await loadDataset();
+async function loadStrategyValidation() {
+  if (!strategyValidationCache) {
+    strategyValidationCache = Promise.all([
+      loadForecastContext(''),
+      loadDeclarationOptimizerValidation(),
+    ])
+      .then(([context, declarationOptimizer]) =>
+        buildStrategyValidation(context.backtestReport, {
+          declarationReplay: buildDeclarationReplay(context.allFeatureStore),
+          declarationOptimizer,
+        })
+      )
+      .catch((error) => {
+        strategyValidationCache = null;
+        throw error;
+      });
+  }
+  return strategyValidationCache;
+}
+
+async function loadDeclarationOptimizerValidation() {
+  if (!declarationOptimizerValidationCache) {
+    declarationOptimizerValidationCache = loadForecastContext('')
+      .then((context) =>
+        backtestDeclarationOptimizer(context.allFeatureStore)
+      )
+      .catch((error) => {
+        declarationOptimizerValidationCache = null;
+        throw error;
+      });
+  }
+  return declarationOptimizerValidationCache;
+}
+
+async function loadProductionReadiness(date = '') {
+  const [dataset, integrationClosure, businessInputs] = await Promise.all([
+    loadDataset(),
+    loadIntegrationClosure(),
+    loadBusinessInputs(),
+  ]);
   const summary = summarizeDataset(dataset);
-  const integrationClosure = await loadIntegrationClosure();
+  const workbench = buildSavingsWorkbench({
+    date,
+    dataset,
+    businessInputs,
+  });
   return buildProductionReadiness({
     summary,
     integrationClosure,
+    selectedDateSummary: {
+      date: workbench.date,
+      rowCount: workbench.metrics.rowCount,
+      marketPricePointCount: workbench.metrics.marketPricePointCount,
+      actualLoadPointCount: workbench.metrics.actualLoadPointCount,
+      settlementPointCount: workbench.metrics.settlementPointCount,
+    },
+    businessInputSummary: {
+      readyForDraftPrefill: workbench.metrics.executionInputsReady,
+    },
     env: process.env,
     paths: {
       standardPath,
@@ -319,6 +379,26 @@ async function loadProductionReadiness() {
       auditLogPath,
     },
   });
+}
+
+async function loadUkeyStatus(dataset = null) {
+  const [resolvedDataset, visibleSnapshot] = await Promise.all([
+    dataset ? Promise.resolve(dataset) : loadDataset(),
+    loadVisibleSnapshot(),
+  ]);
+  return {
+    ...buildUkeyAssistantStatus({
+      env: process.env,
+      summary: summarizeDataset(resolvedDataset),
+    }),
+    ...ukeyBrowserCollector.status(),
+    visibleSnapshot: {
+      accepted: Boolean(visibleSnapshot.accepted),
+      rowCount: visibleSnapshot.rowCount || 0,
+      generatedAt: visibleSnapshot.generatedAt || null,
+      storagePath: visibleSnapshotPath,
+    },
+  };
 }
 
 async function handleApi(request, response, url) {
@@ -356,6 +436,26 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/workbench') {
+    const dataset = await loadDataset();
+    const [businessInputs, ukeyStatus, auditEvents] = await Promise.all([
+      loadBusinessInputs(),
+      loadUkeyStatus(dataset),
+      readAuditLog(auditLogPath, { limit: 8 }),
+    ]);
+    sendJson(
+      response,
+      buildSavingsWorkbench({
+        date: url.searchParams.get('date') || '',
+        dataset,
+        businessInputs,
+        ukeyStatus,
+        auditEvents,
+      })
+    );
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/integrations') {
     sendJson(response, await loadIntegrationClosure());
     return;
@@ -367,7 +467,7 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/production/readiness') {
-    const readiness = await loadProductionReadiness();
+    const readiness = await loadProductionReadiness(url.searchParams.get('date') || '');
     await appendAuditEvent(auditLogPath, {
       type: 'production_readiness_checked',
       actor: 'system',
@@ -416,6 +516,35 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/strategy-validation') {
+    sendJson(response, await loadStrategyValidation());
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/api/declaration-optimizer/validation'
+  ) {
+    sendJson(response, await loadDeclarationOptimizerValidation());
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/api/declaration-optimizer/recommendation'
+  ) {
+    const date = url.searchParams.get('date') || '';
+    const [context, validation] = await Promise.all([
+      loadForecastContext(date),
+      loadDeclarationOptimizerValidation(),
+    ]);
+    sendJson(
+      response,
+      buildDeclarationRecommendation(context.allFeatureStore, date, validation)
+    );
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/cost-strategy') {
     const context = await loadForecastContext(url.searchParams.get('date') || '');
     sendJson(
@@ -443,23 +572,7 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/ukey-assistant') {
-    const dataset = await loadDataset();
-    const summary = summarizeDataset(dataset);
-    const visibleSnapshot = await loadVisibleSnapshot();
-    const collectorStatus = ukeyBrowserCollector.status();
-    sendJson(response, {
-      ...buildUkeyAssistantStatus({
-        env: process.env,
-        summary,
-      }),
-      ...collectorStatus,
-      visibleSnapshot: {
-        accepted: Boolean(visibleSnapshot.accepted),
-        rowCount: visibleSnapshot.rowCount || 0,
-        generatedAt: visibleSnapshot.generatedAt || null,
-        storagePath: visibleSnapshotPath,
-      },
-    });
+    sendJson(response, await loadUkeyStatus());
     return;
   }
 
@@ -599,6 +712,8 @@ async function handleApi(request, response, url) {
 
   if (request.method === 'POST' && url.pathname === '/api/refresh') {
     settlementReferenceCache = null;
+    strategyValidationCache = null;
+    declarationOptimizerValidationCache = null;
     const summary = await writeBrowserDataFile({
       sourcePath: standardPath,
       outputPath: browserDataPath,
@@ -631,7 +746,7 @@ async function handleApi(request, response, url) {
     const date = url.searchParams.get('date') || '';
     const context = await loadForecastContext(date);
     const integrationClosure = await loadIntegrationClosure();
-    const readiness = await loadProductionReadiness();
+    const readiness = await loadProductionReadiness(date);
     const businessInputs = await loadBusinessInputs();
     const proposal = await createExecutionProposal({
       dataset: context.dataset,
