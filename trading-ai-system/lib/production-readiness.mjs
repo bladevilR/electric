@@ -44,6 +44,9 @@ export function buildProductionReadiness(options = {}) {
   const completion = closure.completion || {};
   const items = Array.isArray(closure.items) ? closure.items : [];
   const coverage = summary.p0SourceCoverage || {};
+  const selectedDateSummary = options.selectedDateSummary || {};
+  const businessInputSummary = options.businessInputSummary || {};
+  const hasSelectedDateContext = Boolean(selectedDateSummary.date);
 
   const sourceEmptyItems = itemsByStatus(items, 'source_empty');
   const registeredItems = itemsByStatus(items, 'registered');
@@ -54,6 +57,18 @@ export function buildProductionReadiness(options = {}) {
   const p0CoverageReady =
     Number(coverage.total || 0) > 0 &&
     Number(coverage.present || 0) === Number(coverage.total || 0);
+  const currentDayReady =
+    !hasSelectedDateContext ||
+    (Number(selectedDateSummary.rowCount || 0) > 0 &&
+      Number(selectedDateSummary.marketPricePointCount || 0) >= 96);
+  const businessInputsReady =
+    businessInputSummary.readyForDraftPrefill === undefined
+      ? true
+      : Boolean(businessInputSummary.readyForDraftPrefill);
+  const settlementVerificationReady =
+    hasSelectedDateContext &&
+    Number(selectedDateSummary.actualLoadPointCount || 0) >= 96 &&
+    Number(selectedDateSummary.settlementPointCount || 0) > 0;
 
   const controls = [
     control(
@@ -69,6 +84,34 @@ export function buildProductionReadiness(options = {}) {
       integrationReady ? 'ready' : 'blocked',
       '交易台账、核对单和源返回证据需要全部纳入闭环台账。',
       { completion: `${completion.accounted || 0}/${completion.total || 0}` }
+    ),
+    control(
+      'current_day_data',
+      '目标交易日数据',
+      currentDayReady ? 'ready' : 'blocked',
+      '目标交易日必须有完整的 96 点市场价格，历史数据不能冒充今日数据。',
+      {
+        date: selectedDateSummary.date || '',
+        rowCount: selectedDateSummary.rowCount || 0,
+        marketPricePointCount: selectedDateSummary.marketPricePointCount || 0,
+      }
+    ),
+    control(
+      'execution_business_inputs',
+      '负荷、持仓与交易限额',
+      businessInputsReady ? 'ready' : 'blocked',
+      '生成可复核电量草稿前，目标日负荷预测、持仓和完整交易限额必须到位。',
+      { readyForDraftPrefill: businessInputsReady }
+    ),
+    control(
+      'settlement_verification',
+      '成本优化绩效验收数据',
+      settlementVerificationReady ? 'ready' : 'warning',
+      '只有目标日实际负荷和结算结果到位后，才能核验成本优化绩效。',
+      {
+        actualLoadPointCount: selectedDateSummary.actualLoadPointCount || 0,
+        settlementPointCount: selectedDateSummary.settlementPointCount || 0,
+      }
     ),
     control(
       'p0_source_coverage',
@@ -139,7 +182,8 @@ export function buildProductionReadiness(options = {}) {
   const warnings = controls
     .filter((item) => ['warning', 'action_required'].includes(item.status))
     .map(asIssue);
-  const decisionReady = hasRows && integrationReady;
+  const decisionReady = hasRows && integrationReady && currentDayReady;
+  const proposalDraftReady = decisionReady && businessInputsReady;
   const status = decisionReady ? 'decision_support_ready' : 'data_blocked';
 
   return {
@@ -150,7 +194,8 @@ export function buildProductionReadiness(options = {}) {
     capabilities: {
       decisionSupport: decisionReady,
       reportExport: decisionReady,
-      proposalDraft: decisionReady,
+      proposalDraft: proposalDraftReady,
+      verifiedSavings: settlementVerificationReady,
       platformPrefill: isPresent(env.TRADING_PLATFORM_URL),
       autoSubmit: false,
     },

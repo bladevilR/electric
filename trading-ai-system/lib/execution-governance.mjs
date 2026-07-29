@@ -144,13 +144,14 @@ export function buildExecutionProposal({
   const reviewWarnings = uniqueText([
     ...readinessWarnings(readiness),
     ...(Array.isArray(report?.blockingReasons) ? report.blockingReasons : []),
-    `省钱策略置信度 ${confidenceScore}/100；当前为人工决策支持，不会自动提交。`,
+    `成本优化策略置信度 ${confidenceScore}/100；当前为人工决策支持，不会自动提交。`,
   ]);
-  const proposalLines = proposalLinesFromSuggestions(suggestions, {
+  const candidateLines = proposalLinesFromSuggestions(suggestions, {
     date: report?.date,
     businessInputs,
   });
-  const canDraft = readiness?.capabilities?.proposalDraft !== false && proposalLines.length > 0;
+  const canDraft = readiness?.capabilities?.proposalDraft !== false && candidateLines.length > 0;
+  const proposalLines = blockers.length || !canDraft ? [] : candidateLines;
 
   return {
     generatedAt: new Date().toISOString(),

@@ -24,6 +24,16 @@ test('buildProductionReadiness exposes a decision-support state without auto-sub
   const readiness = buildProductionReadiness({
     summary,
     integrationClosure: closure,
+    selectedDateSummary: {
+      date: '2026-07-27',
+      rowCount: 96,
+      marketPricePointCount: 96,
+      actualLoadPointCount: 0,
+      settlementPointCount: 0,
+    },
+    businessInputSummary: {
+      readyForDraftPrefill: true,
+    },
     env: {},
     paths: {
       standardPath: 'E:/electric/jspec-capture/output/session/standard-96.json',
@@ -35,11 +45,37 @@ test('buildProductionReadiness exposes a decision-support state without auto-sub
   assert.equal(readiness.status, 'decision_support_ready');
   assert.equal(readiness.capabilities.decisionSupport, true);
   assert.equal(readiness.capabilities.proposalDraft, true);
+  assert.equal(readiness.capabilities.verifiedSavings, false);
   assert.equal(readiness.capabilities.autoSubmit, false);
   assert.equal(readiness.blockers.some((item) => item.id === 'ca_ukey'), false);
   assert.ok(readiness.warnings.some((item) => item.id === 'source_empty_data'));
   assert.ok(readiness.controls.some((item) => item.id === 'human_decision_policy' && item.status === 'ready'));
   assert.ok(readiness.controls.every((item) => item.status !== 'pending'));
+});
+
+test('buildProductionReadiness blocks proposal drafts when today or execution constraints are missing', () => {
+  const readiness = buildProductionReadiness({
+    summary,
+    integrationClosure: closure,
+    selectedDateSummary: {
+      date: '2026-07-27',
+      rowCount: 0,
+      marketPricePointCount: 0,
+      actualLoadPointCount: 0,
+      settlementPointCount: 0,
+    },
+    businessInputSummary: {
+      readyForDraftPrefill: false,
+    },
+    env: {},
+  });
+
+  assert.equal(readiness.status, 'data_blocked');
+  assert.equal(readiness.capabilities.decisionSupport, false);
+  assert.equal(readiness.capabilities.proposalDraft, false);
+  assert.equal(readiness.capabilities.verifiedSavings, false);
+  assert.ok(readiness.blockers.some((item) => item.id === 'current_day_data'));
+  assert.ok(readiness.blockers.some((item) => item.id === 'execution_business_inputs'));
 });
 
 test('buildProductionReadiness does not leak secret environment values', () => {

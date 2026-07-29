@@ -6,7 +6,7 @@ import os from 'node:os';
 
 import { readAuditLog } from '../lib/audit-log.mjs';
 import { buildProductionReadiness } from '../lib/production-readiness.mjs';
-import { createExecutionProposal } from '../lib/execution-governance.mjs';
+import { buildExecutionProposal, createExecutionProposal } from '../lib/execution-governance.mjs';
 
 const dataset = {
   generatedAt: '2026-05-07T03:00:00.000Z',
@@ -35,6 +35,32 @@ const integrationClosure = {
     { id: 'manual_confirmation', name: '人工确认', status: 'registered', closureText: '执行前必须人工确认。' },
   ],
 };
+
+test('buildExecutionProposal hides draft lines when execution inputs are blocked', () => {
+  const proposal = buildExecutionProposal({
+    report: {
+      date: '2026-07-27',
+      suggestions: [
+        {
+          type: 'low_price',
+          title: '低价观察',
+          points: [1, 2],
+          description: '测试建议',
+        },
+      ],
+    },
+    readiness: {
+      capabilities: { proposalDraft: false },
+      blockers: [{ id: 'execution_business_inputs', title: '负荷、持仓与交易限额' }],
+      warnings: [],
+    },
+    businessInputs: {},
+  });
+
+  assert.equal(proposal.status, 'blocked');
+  assert.deepEqual(proposal.proposalLines, []);
+  assert.match(proposal.nextAction, /补齐数据/);
+});
 
 test('createExecutionProposal generates editable draft lines without auto submit', async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-execution-'));
@@ -113,7 +139,7 @@ test('createExecutionProposal generates editable draft lines without auto submit
     assert.equal(proposal.proposalLines[0].priceLimit, 180);
     assert.ok(proposal.proposalLines[0].evidence.some((item) => item.includes('预测负荷')));
     assert.ok(proposal.reviewWarnings.some((item) => item.includes('实际负荷')));
-    assert.ok(proposal.reviewWarnings.some((item) => item.includes('省钱策略置信度')));
+    assert.ok(proposal.reviewWarnings.some((item) => item.includes('成本优化策略置信度')));
     assert.ok(proposal.reviewWarnings.some((item) => item.includes('人工决策支持')));
     assert.equal(proposal.blockers.some((item) => item.includes('CA/UKey')), false);
 

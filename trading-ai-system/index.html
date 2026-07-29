@@ -3,53 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>电力交易策略助手</title>
+  <title>电力交易智能决策平台</title>
   <link rel="icon" href="./assets/app-icon.png">
   <link rel="apple-touch-icon" href="./assets/app-icon.png">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./workbench.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark"><img src="./assets/app-icon.png" alt=""></div>
-        <div>
-          <strong>电力交易策略助手</strong>
-          <span>价格预测与策略复核</span>
-        </div>
-      </div>
-
-      <a class="quick-start-link" href="./一分钟上手.html" target="_blank" rel="noreferrer">一分钟上手</a>
-
-      <nav class="side-nav" id="sideNav"></nav>
-
-      <section class="side-card">
-        <span>本地试用版</span>
-        <strong>先看数据，再看建议</strong>
-        <p>只做辅助判断，不会自动提交交易。实时数据需要你插上 UKey 登录后采集。</p>
-      </section>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="crumb">
-          <span>当前位置</span>
-          <strong id="moduleCrumb">今日工作台</strong>
-        </div>
-        <div class="top-actions">
-          <label class="select-like">
-            交易日
-            <select id="dateSelect"></select>
-          </label>
-          <button class="ghost-button" id="refreshButton">刷新数据</button>
-          <button class="primary-button" id="reportButton">生成建议报告</button>
-        </div>
-      </header>
-
-      <section class="workspace" id="workspace"></section>
-    </main>
+  <div id="workbenchRoot">
+    <div class="loading-screen">
+      <img src="./assets/app-icon.png" alt="">
+      <strong>正在核对今日数据…</strong>
+      <p>只加载首屏需要的轻量数据。</p>
+    </div>
   </div>
-
-  <script src="./app.js"></script>
+  <noscript>需要启用 JavaScript 才能使用电力交易智能决策平台。</noscript>
+  <script type="module" src="./workbench.js"></script>
 </body>
 </html>
