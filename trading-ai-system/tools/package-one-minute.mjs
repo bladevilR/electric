@@ -25,6 +25,8 @@ const files = [
   'index.html',
   'app.js',
   'styles.css',
+  'workbench.js',
+  'workbench.css',
   'server.mjs',
   'run-system.ps1',
   'start-system.ps1',

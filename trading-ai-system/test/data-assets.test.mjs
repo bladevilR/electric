@@ -166,3 +166,13 @@ test('readCaptureDirectory reads nested response files and buildInventoryFromDir
     await rm(temp, { recursive: true, force: true });
   }
 });
+
+test('buildInventoryFromDirectories treats a missing capture directory as an empty source', async () => {
+  const inventory = await buildInventoryFromDirectories([
+    path.join(os.tmpdir(), 'trading-ai-system-missing-captures'),
+  ]);
+
+  assert.equal(inventory.summary.realtimeAveragePriceRows, 0);
+  assert.equal(inventory.summary.actualUserLoadRows, 0);
+  assert.deepEqual(inventory.evidence.emptySources, []);
+});

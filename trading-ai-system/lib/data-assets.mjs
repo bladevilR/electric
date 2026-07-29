@@ -325,7 +325,15 @@ async function walkJsonFiles(directoryPath) {
 }
 
 export async function readCaptureDirectory(directoryPath) {
-  const files = await walkJsonFiles(directoryPath);
+  let files;
+  try {
+    files = await walkJsonFiles(directoryPath);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
   const captures = [];
   for (const filePath of files) {
     let capture;
