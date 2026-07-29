@@ -91,3 +91,140 @@ test('backtestDeclarationOptimizer requires complete chronological evidence', as
   assert.equal(result.selectedModel, null);
   assert.equal(result.costSavingsYuan, null);
 });
+
+test('buildDeclarationRecommendation emits bounded point recommendations from earlier actuals', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  assert.equal(typeof buildDeclarationRecommendation, 'function');
+  const rows = [];
+  for (let day = 1; day <= 7; day += 1) {
+    const date = `2026-04-${String(day).padStart(2, '0')}`;
+    rows.push(point(date, 10), {
+      ...point(date, 20),
+      pointIndex: 2,
+    });
+  }
+  rows.push(
+    {
+      date: '2026-04-08',
+      pointIndex: 1,
+      timePoint: '00:15',
+      defaultDeclarationPower: 14,
+    },
+    {
+      date: '2026-04-08',
+      pointIndex: 2,
+      timePoint: '00:30',
+      defaultDeclarationPower: 24,
+    }
+  );
+  const validation = {
+    status: 'validated',
+    selectedModel: {
+      id: 'same_slot_mean_w7_a1',
+      windowDays: 7,
+      weight: 1,
+      minHistoryPerPoint: 7,
+    },
+  };
+
+  const result = buildDeclarationRecommendation(
+    { rows },
+    '2026-04-08',
+    validation,
+    { expectedPointsPerDay: 2, maxActualAgeHours: 48 }
+  );
+
+  assert.equal(result.status, 'ready');
+  assert.equal(result.operatingMode, 'validated_optimizer');
+  assert.equal(result.coverage.recommendedPointCount, 2);
+  assert.equal(result.rows[0].recommendedPowerMw, 10);
+  assert.equal(result.rows[1].recommendedPowerMw, 20);
+  assert.equal(
+    result.rows.every((row) => row.recommendedPowerMw >= 0),
+    true
+  );
+  assert.equal(result.costSavingsYuan, null);
+});
+
+test('buildDeclarationRecommendation blocks stale actual-load history', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        point('2026-04-01', 10),
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    {
+      status: 'validated',
+      selectedModel: {
+        id: 'same_slot_mean_w7_a1',
+        windowDays: 7,
+        weight: 1,
+        minHistoryPerPoint: 1,
+      },
+    },
+    { expectedPointsPerDay: 1, maxActualAgeHours: 48 }
+  );
+
+  assert.equal(result.status, 'stale_inputs');
+  assert.equal(result.operatingMode, 'baseline_fallback');
+  assert.ok(result.fallbackReasons.includes('actual_history_stale'));
+  assert.deepEqual(result.rows, []);
+});
+
+test('buildDeclarationRecommendation requires a complete target baseline', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    { rows: [point('2026-04-07', 10)] },
+    '2026-04-08',
+    {
+      status: 'validated',
+      selectedModel: {
+        id: 'same_slot_mean_w7_a1',
+        windowDays: 7,
+        weight: 1,
+        minHistoryPerPoint: 1,
+      },
+    },
+    { expectedPointsPerDay: 1 }
+  );
+
+  assert.equal(result.status, 'missing_baseline');
+  assert.ok(
+    result.fallbackReasons.includes(
+      'target_default_declaration_incomplete'
+    )
+  );
+});
+
+test('buildDeclarationRecommendation keeps a complete default baseline reviewable when optimizer is rejected', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    { expectedPointsPerDay: 1 }
+  );
+
+  assert.equal(result.status, 'baseline_ready');
+  assert.equal(result.operatingMode, 'baseline_fallback');
+  assert.equal(result.coverage.recommendedPointCount, 1);
+  assert.equal(result.rows[0].recommendedPowerMw, 14);
+  assert.equal(result.rows[0].fallbackUsed, true);
+  assert.ok(result.fallbackReasons.includes('optimizer_not_validated'));
+});

@@ -282,3 +282,218 @@ export function backtestDeclarationOptimizer(featureStore = {}, options = {}) {
     warnings: ['cost_attribution_unavailable'],
   };
 }
+
+function targetBaselineRows(featureStore, targetDate) {
+  const byPoint = new Map();
+  (Array.isArray(featureStore?.rows) ? featureStore.rows : []).forEach((row) => {
+    const pointIndex = numeric(row.pointIndex);
+    const baselinePowerMw = numeric(row.defaultDeclarationPower);
+    if (
+      String(row.date || '') !== targetDate ||
+      pointIndex === null ||
+      baselinePowerMw === null ||
+      baselinePowerMw < 0
+    ) {
+      return;
+    }
+    byPoint.set(pointIndex, {
+      date: targetDate,
+      pointIndex,
+      timePoint: row.timePoint || '',
+      baselinePowerMw,
+    });
+  });
+  return [...byPoint.values()].sort(
+    (left, right) => left.pointIndex - right.pointIndex
+  );
+}
+
+function completeActualHistory(featureStore, targetDate, expectedPointsPerDay) {
+  const byDatePoint = new Map();
+  (Array.isArray(featureStore?.rows) ? featureStore.rows : []).forEach((row) => {
+    const date = String(row.date || '');
+    const pointIndex = numeric(row.pointIndex);
+    const actualKwh = numeric(row.actualKwh);
+    if (
+      !date ||
+      date >= targetDate ||
+      pointIndex === null ||
+      actualKwh === null
+    ) {
+      return;
+    }
+    byDatePoint.set(`${date}:${pointIndex}`, {
+      date,
+      pointIndex,
+      actualMw: actualKwh / 250,
+    });
+  });
+  const rowsByDate = new Map();
+  [...byDatePoint.values()].forEach((row) => {
+    if (!rowsByDate.has(row.date)) rowsByDate.set(row.date, []);
+    rowsByDate.get(row.date).push(row);
+  });
+  const completeDates = [...rowsByDate.entries()]
+    .filter(([, rows]) => rows.length === expectedPointsPerDay)
+    .map(([date]) => date)
+    .sort();
+  const completeDateSet = new Set(completeDates);
+  return {
+    dates: completeDates,
+    rows: [...byDatePoint.values()]
+      .filter((row) => completeDateSet.has(row.date))
+      .sort(
+        (left, right) =>
+          left.date.localeCompare(right.date) ||
+          left.pointIndex - right.pointIndex
+      ),
+  };
+}
+
+function dateAgeHours(earlierDate, laterDate) {
+  const earlier = Date.parse(`${earlierDate}T00:00:00Z`);
+  const later = Date.parse(`${laterDate}T00:00:00Z`);
+  if (!Number.isFinite(earlier) || !Number.isFinite(later)) return Infinity;
+  return Math.max(0, (later - earlier) / 3_600_000);
+}
+
+function baselineRecommendation(targetRows, reason, requiredPointCount) {
+  return {
+    status: 'baseline_ready',
+    operatingMode: 'baseline_fallback',
+    coverage: {
+      baselinePointCount: targetRows.length,
+      recommendedPointCount: targetRows.length,
+      requiredPointCount,
+      optimizerPointCount: 0,
+      fallbackPointCount: targetRows.length,
+    },
+    rows: targetRows.map((row) => ({
+      ...row,
+      recommendedPowerMw: row.baselinePowerMw,
+      deltaPowerMw: 0,
+      sourceModel: 'default_declaration',
+      fallbackUsed: true,
+    })),
+    fallbackReasons: [reason],
+    costSavingsYuan: null,
+  };
+}
+
+export function buildDeclarationRecommendation(
+  featureStore = {},
+  targetDate = '',
+  validation = {},
+  options = {}
+) {
+  const expectedPointsPerDay = Number(options.expectedPointsPerDay || 96);
+  const maxActualAgeHours = Number(options.maxActualAgeHours || 48);
+  const targetRows = targetBaselineRows(featureStore, String(targetDate || ''));
+  const emptyCoverage = {
+    baselinePointCount: targetRows.length,
+    recommendedPointCount: 0,
+    requiredPointCount: expectedPointsPerDay,
+    optimizerPointCount: 0,
+    fallbackPointCount: 0,
+  };
+
+  if (!targetDate || targetRows.length !== expectedPointsPerDay) {
+    return {
+      status: 'missing_baseline',
+      operatingMode: 'baseline_fallback',
+      coverage: emptyCoverage,
+      rows: [],
+      fallbackReasons: ['target_default_declaration_incomplete'],
+      costSavingsYuan: null,
+    };
+  }
+
+  if (validation?.status !== 'validated' || !validation?.selectedModel) {
+    return baselineRecommendation(
+      targetRows,
+      'optimizer_not_validated',
+      expectedPointsPerDay
+    );
+  }
+
+  const actualHistory = completeActualHistory(
+    featureStore,
+    String(targetDate),
+    expectedPointsPerDay
+  );
+  const latestActualDate = actualHistory.dates.at(-1) || '';
+  if (!latestActualDate) {
+    return {
+      status: 'stale_inputs',
+      operatingMode: 'baseline_fallback',
+      coverage: emptyCoverage,
+      rows: [],
+      fallbackReasons: ['actual_history_missing'],
+      costSavingsYuan: null,
+    };
+  }
+  if (dateAgeHours(latestActualDate, String(targetDate)) > maxActualAgeHours) {
+    return {
+      status: 'stale_inputs',
+      operatingMode: 'baseline_fallback',
+      coverage: emptyCoverage,
+      rows: [],
+      fallbackReasons: ['actual_history_stale'],
+      costSavingsYuan: null,
+    };
+  }
+
+  const model = validation.selectedModel;
+  const minHistoryPerPoint = Number(model.minHistoryPerPoint || 7);
+  const windowDays = Number(model.windowDays || 0);
+  const weight = Number(model.weight);
+  const historyByPoint = new Map();
+  actualHistory.rows.forEach((row) => {
+    if (!historyByPoint.has(row.pointIndex)) {
+      historyByPoint.set(row.pointIndex, []);
+    }
+    historyByPoint.get(row.pointIndex).push(row.actualMw);
+  });
+  let optimizerPointCount = 0;
+  let fallbackPointCount = 0;
+  const rows = targetRows.map((row) => {
+    const history = (historyByPoint.get(row.pointIndex) || []).slice(-windowDays);
+    const canOptimize = history.length >= minHistoryPerPoint;
+    const historyMean = canOptimize ? mean(history) : null;
+    const candidate =
+      historyMean === null
+        ? row.baselinePowerMw
+        : row.baselinePowerMw * (1 - weight) + historyMean * weight;
+    const validCandidate = Number.isFinite(candidate) && candidate >= 0;
+    const recommendedPowerMw =
+      canOptimize && validCandidate ? candidate : row.baselinePowerMw;
+    const fallbackUsed = !canOptimize || !validCandidate;
+    optimizerPointCount += Number(!fallbackUsed);
+    fallbackPointCount += Number(fallbackUsed);
+    return {
+      ...row,
+      recommendedPowerMw: round(recommendedPowerMw),
+      deltaPowerMw: round(recommendedPowerMw - row.baselinePowerMw),
+      sourceModel: fallbackUsed ? 'default_declaration' : model.id,
+      fallbackUsed,
+    };
+  });
+
+  return {
+    status: 'ready',
+    operatingMode: 'validated_optimizer',
+    coverage: {
+      baselinePointCount: targetRows.length,
+      recommendedPointCount: rows.length,
+      requiredPointCount: expectedPointsPerDay,
+      optimizerPointCount,
+      fallbackPointCount,
+    },
+    rows,
+    fallbackReasons: fallbackPointCount
+      ? ['point_history_insufficient']
+      : [],
+    latestActualDate,
+    costSavingsYuan: null,
+  };
+}
