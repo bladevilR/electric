@@ -2004,6 +2004,7 @@ body {
   stroke: rgb(80 110 157 / 0.13);
   stroke-width: 1;
   stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .curve-area {
@@ -2017,6 +2018,7 @@ body {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .curve-baseline {
@@ -2033,12 +2035,14 @@ body {
 .curve-hit {
   fill: transparent;
   stroke: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .curve-dot {
   fill: #fff;
   stroke: var(--emerald);
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
   transition:
     r 160ms ease,
     filter 160ms ease;

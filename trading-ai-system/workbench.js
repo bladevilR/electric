@@ -1070,7 +1070,7 @@ function declarationCurve(view) {
         rows.length
           ? `
             <div class="curve-canvas">
-              <svg viewBox="0 0 ${geometry.width} ${geometry.height}" role="img" aria-label="历史申报与 AI 建议申报曲线">
+              <svg viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" role="img" aria-label="历史申报与 AI 建议申报曲线">
                 <g class="curve-grid">${renderCurveGrid(geometry)}</g>
                 <path class="curve-area" d="${escapeHtml(`${geometry.recommendedPath} L ${geometry.points.at(-1).x.toFixed(2)} ${geometry.height - geometry.padding.bottom} L ${geometry.points[0].x.toFixed(2)} ${geometry.height - geometry.padding.bottom} Z`)}"></path>
                 <path class="curve-baseline" d="${escapeHtml(geometry.baselinePath)}"></path>

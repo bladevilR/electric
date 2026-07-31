@@ -330,3 +330,16 @@ test('curve canvas expands with its panel instead of leaving fixed-height dead s
   assert.match(css, /\.curve-canvas svg\s*\{[^}]*height:\s*100%/s);
   assert.doesNotMatch(css, /\.curve-canvas svg\s*\{[^}]*height:\s*292px/s);
 });
+
+test('wide curve canvas lets the data geometry fill the available panel width', () => {
+  const payload = buildStandaloneDemoWorkbenchPayload();
+  const html = renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    evidenceOpen: false,
+  });
+
+  assert.match(
+    html,
+    /<svg[^>]*preserveAspectRatio="none"[^>]*aria-label="历史申报与 AI 建议申报曲线"/
+  );
+});
