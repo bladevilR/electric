@@ -4,6 +4,7 @@ Thumbs.db
 .vscode/
 .idea/
 .omc/
+.worktrees/
 
 # Dependency/build output
 node_modules/
