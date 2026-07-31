@@ -14,6 +14,7 @@ import {
   buildFfmpegArgs,
   buildNarrationMixArgs,
   buildNarrationChapters,
+  buildAlignedNarrationClips,
   buildChapterCaptionSegments,
   buildNarrationSegments,
   buildOutputPaths,
@@ -364,6 +365,36 @@ test('五个连续章节保留源镜头并按实际音频时长生成章内字�
   assert.equal(captions[0].startMs, 500);
   assert.equal(captions.at(-1).endMs, 9500);
   assert.ok(captions[0].endMs <= captions[1].startMs);
+});
+
+test('章节连续旁白在静音边界切分后居中对齐每个真实镜头', () => {
+  const timeline = {
+    segments: [
+      { id: 'intro', narrationChapter: 'chapter-value', narration: '成本问题。', startMs: 0, endMs: 7000 },
+      { id: 'savings', narrationChapter: 'chapter-value', narration: '节约金额。', startMs: 7000, endMs: 15000 },
+    ],
+  };
+  const clips = buildAlignedNarrationClips({
+    timeline,
+    speech: [{ id: 'chapter-value', file: '/tmp/value.wav', durationMs: 12000 }],
+    alignment: { 'chapter-value': [5200] },
+  });
+
+  assert.deepEqual(clips.map((clip) => clip.id), ['intro', 'savings']);
+  assert.deepEqual(clips.map((clip) => clip.trimStartMs), [0, 5200]);
+  assert.deepEqual(clips.map((clip) => clip.durationMs), [5200, 6800]);
+  assert.equal(clips[0].startMs, 900);
+  assert.equal(clips[1].startMs, 7600);
+  assert.ok(clips.every((clip) => clip.endMs <= clip.segmentEndMs - 500));
+
+  const args = buildNarrationMixArgs({
+    inputs: clips,
+    durationMs: 15000,
+    output: '/tmp/aligned.wav',
+  });
+  const filter = args[args.indexOf('-filter_complex') + 1];
+  assert.match(filter, /atrim=start=0\.000:duration=5\.200,asetpts=PTS-STARTPTS/);
+  assert.match(filter, /atrim=start=5\.200:duration=6\.800,asetpts=PTS-STARTPTS/);
 });
 
 test('Qwen 旁白轻微超时使用高质量时长适配且保留 WAV', () => {

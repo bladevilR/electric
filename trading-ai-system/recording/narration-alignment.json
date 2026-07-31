@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "method": "Qwen3-TTS Serena 章节音频的 -42dB 静音边界中点",
+  "boundariesMs": {
+    "chapter-value": [14871, 31554],
+    "chapter-data": [18126, 32763],
+    "chapter-decision": [12982, 29822, 44852, 61090, 64348],
+    "chapter-close": [15996, 22717, 34347]
+  }
+}

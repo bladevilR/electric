@@ -1,11 +1,10 @@
 import { spawn } from 'node:child_process';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
   buildNarrationMixArgs,
-  buildNarrationChapters,
-  buildChapterCaptionSegments,
+  buildAlignedNarrationClips,
   buildQwenTtsManifest,
   buildSpeechFitArgs,
   buildSrt,
@@ -205,23 +204,24 @@ export async function renderNarration({
     projectRoot,
     log,
   });
-  const durationsById = Object.fromEntries(
-    speech.map((item) => [item.id, item.durationMs])
+  const alignmentConfig = JSON.parse(
+    await readFile(
+      path.join(projectRoot, 'recording', 'narration-alignment.json'),
+      'utf8'
+    )
   );
-  const chapters = buildNarrationChapters(timeline);
-  const narrationSegments = chapters.flatMap((chapter) =>
-    buildChapterCaptionSegments(chapter, durationsById[chapter.id])
-  );
+  const narrationSegments = buildAlignedNarrationClips({
+    timeline,
+    speech,
+    alignment: alignmentConfig.boundariesMs,
+  });
   await writeFile(paths.subtitles, buildSrt(narrationSegments), 'utf8');
   await writeFile(
     path.join(paths.narrationDirectory, 'metadata.json'),
     `${JSON.stringify(speech, null, 2)}\n`,
     'utf8'
   );
-  const audioInputs = chapters.map((chapter) => ({
-    file: speech.find((item) => item.id === chapter.id).file,
-    startMs: chapter.startMs + 500,
-  }));
+  const audioInputs = narrationSegments;
   await run(
     'ffmpeg',
     buildNarrationMixArgs({

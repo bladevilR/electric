@@ -413,6 +413,60 @@ export function buildChapterCaptionSegments(
   });
 }
 
+export function buildAlignedNarrationClips({
+  timeline,
+  speech,
+  alignment,
+  minimumEdgePaddingMs = 300,
+}) {
+  const speechById = new Map(speech.map((item) => [item.id, item]));
+  const segmentById = new Map(timeline.segments.map((item) => [item.id, item]));
+  return buildNarrationChapters(timeline).flatMap((chapter) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    if (!chapterSpeech) throw new Error(`${chapter.id} 缺少旁白音频`);
+    const durationMs = Math.ceil(Number(chapterSpeech.durationMs));
+    const boundaries = alignment?.[chapter.id];
+    if (!Array.isArray(boundaries) || boundaries.length !== chapter.sourceSegments.length - 1) {
+      throw new Error(`${chapter.id} 静音对齐边界数量不正确`);
+    }
+    const points = [0, ...boundaries.map(Number), durationMs];
+    for (let index = 1; index < points.length; index += 1) {
+      if (!Number.isFinite(points[index]) || points[index] <= points[index - 1]) {
+        throw new Error(`${chapter.id} 静音对齐边界必须严格递增`);
+      }
+    }
+    if (points.at(-1) !== durationMs) {
+      throw new Error(`${chapter.id} 静音对齐边界超出音频时长`);
+    }
+    return chapter.sourceSegments.map((source, index) => {
+      const segment = segmentById.get(source.id);
+      if (!segment) throw new Error(`${source.id} 缺少真实镜头时间`);
+      const trimStartMs = points[index];
+      const clipDurationMs = points[index + 1] - trimStartMs;
+      const segmentDurationMs = segment.endMs - segment.startMs;
+      const availableMs = segmentDurationMs - minimumEdgePaddingMs * 2;
+      if (clipDurationMs > availableMs) {
+        throw new Error(
+          `${source.id} 对齐旁白超过镜头安全区：${clipDurationMs}ms > ${availableMs}ms`
+        );
+      }
+      const startMs =
+        segment.startMs + Math.round((segmentDurationMs - clipDurationMs) / 2);
+      return {
+        id: source.id,
+        chapterId: chapter.id,
+        text: source.text,
+        file: chapterSpeech.file,
+        trimStartMs,
+        durationMs: clipDurationMs,
+        startMs,
+        endMs: startMs + clipDurationMs,
+        segmentEndMs: segment.endMs,
+      };
+    });
+  });
+}
+
 function formatSrtTimestamp(milliseconds) {
   const value = Math.max(0, Math.round(milliseconds));
   const hours = Math.floor(value / 3_600_000);
@@ -517,12 +571,17 @@ export function buildNarrationMixArgs({
     args.push('-i', input.file);
   }
 
-  const chains = inputs.map(
-    (input, index) =>
-      `[${index + 1}:a]loudnorm=I=-18:TP=-2:LRA=7,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,adelay=${Math.round(
-        input.startMs
-      )}|${Math.round(input.startMs)}[voice${index + 1}]`
-  );
+  const chains = inputs.map((input, index) => {
+    const trim =
+      Number.isFinite(input.trimStartMs) && Number.isFinite(input.durationMs)
+        ? `,atrim=start=${(input.trimStartMs / 1000).toFixed(3)}:duration=${(
+            input.durationMs / 1000
+          ).toFixed(3)},asetpts=PTS-STARTPTS`
+        : '';
+    return `[${index + 1}:a]loudnorm=I=-18:TP=-2:LRA=7${trim},aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,adelay=${Math.round(
+      input.startMs
+    )}|${Math.round(input.startMs)}[voice${index + 1}]`;
+  });
   const mixInputs = ['[0:a]', ...inputs.map((_, index) => `[voice${index + 1}]`)]
     .join('');
   chains.push(
