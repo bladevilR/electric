@@ -111,3 +111,12 @@ test('workbench schedules motion only after dashboard markup is rendered', async
   assert.ok(markupAssignment >= 0);
   assert.ok(motionSchedule > markupAssignment);
 });
+
+test('motion css includes reduced-motion final-state fallback', async () => {
+  const css = await readFile(new URL('../workbench.css', import.meta.url), 'utf8');
+
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /animation-duration:\s*0\.01ms/);
+  assert.match(css, /\.recommendation-panel::after/);
+  assert.match(css, /\.dashboard-metric:hover/);
+});
