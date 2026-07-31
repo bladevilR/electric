@@ -1,119 +1,93 @@
 [
   {
-    "id": "intro",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/intro.wav",
+    "id": "chapter-cost",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-cost.wav",
     "engine": "qwen3-tts",
     "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 9280
+    "seed": 20260731,
+    "durationMs": 45859,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "intro",
+      "opening",
+      "savings-impact"
+    ],
+    "startMs": 0,
+    "endMs": 47309
   },
   {
-    "id": "opening",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/opening.wav",
+    "id": "chapter-data",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-data.wav",
     "engine": "qwen3-tts",
     "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 6769
+    "seed": 20260731,
+    "durationMs": 43908,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "data-quality",
+      "validation-evidence",
+      "prediction-proof"
+    ],
+    "startMs": 47309,
+    "endMs": 92652
   },
   {
-    "id": "core-metrics",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/core-metrics.wav",
+    "id": "chapter-optimize",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-optimize.wav",
     "engine": "qwen3-tts",
     "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 7025
+    "seed": 20260731,
+    "durationMs": 42800,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "return-curve",
+      "curve",
+      "recommendation"
+    ],
+    "startMs": 92652,
+    "endMs": 146348
   },
   {
-    "id": "open-evolution",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/open-evolution.wav",
+    "id": "chapter-review",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-review.wav",
     "engine": "qwen3-tts",
     "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 6640
+    "seed": 20260731,
+    "durationMs": 49810,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "open-evidence",
+      "close-evidence",
+      "human-review",
+      "audit-mode"
+    ],
+    "startMs": 146349,
+    "endMs": 198736
   },
   {
-    "id": "champion-challenger",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/champion-challenger.wav",
+    "id": "chapter-outro",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-outro.wav",
     "engine": "qwen3-tts",
     "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 6480
-  },
-  {
-    "id": "experiment-lab",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/experiment-lab.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 7360
-  },
-  {
-    "id": "ops-and-governance",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/ops-and-governance.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 7920
-  },
-  {
-    "id": "approve-challenger",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/approve-challenger.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 6480
-  },
-  {
-    "id": "return-declaration",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/return-declaration.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 7680
-  },
-  {
-    "id": "curve",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/curve.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 7039
-  },
-  {
-    "id": "human-loop",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/human-loop.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 5746
-  },
-  {
-    "id": "audit-mode",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/audit-mode.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 6480
-  },
-  {
-    "id": "outro",
-    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/outro.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "durationMs": 13920
+    "seed": 20260731,
+    "durationMs": 29040,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "open-evolution",
+      "evolution-proof",
+      "outro"
+    ],
+    "startMs": 198736,
+    "endMs": 235512
   }
 ]

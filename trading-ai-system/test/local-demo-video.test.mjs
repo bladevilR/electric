@@ -11,6 +11,7 @@ import {
   buildChapterCaptionSegments,
   buildNarrationSegments,
   buildOutputPaths,
+  buildProductionStages,
   buildSrt,
   buildTimelineSkeleton,
   validateProductionConfig,
@@ -395,4 +396,23 @@ test('开场卡退场后的首个工作台镜头会重新播放完整动效', ()
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('intro'), false);
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('opening'), true);
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('core-metrics'), false);
+});
+
+test('smoke 快速遍历全部镜头且不把完整章节旁白塞进短时间线', () => {
+  assert.equal(typeof browserRecording.selectRecordingSegments, 'function');
+  const skeleton = {
+    segments: [{ id: 'intro' }, { id: 'opening' }, { id: 'curve' }, { id: 'outro' }],
+  };
+  assert.deepEqual(
+    browserRecording.selectRecordingSegments(skeleton, { smoke: true }).map((item) => item.id),
+    ['intro', 'opening', 'curve', 'outro']
+  );
+  assert.deepEqual(buildProductionStages('all', { smoke: true }), ['record']);
+  assert.deepEqual(buildProductionStages('all'), ['record', 'tts', 'final']);
+});
+
+test('镜头停留预算会扣除点击滚动耗时而不是重复叠加', () => {
+  assert.equal(typeof browserRecording.remainingHoldMs, 'function');
+  assert.equal(browserRecording.remainingHoldMs(16_000, 3_800), 12_200);
+  assert.equal(browserRecording.remainingHoldMs(4_000, 5_200), 0);
 });

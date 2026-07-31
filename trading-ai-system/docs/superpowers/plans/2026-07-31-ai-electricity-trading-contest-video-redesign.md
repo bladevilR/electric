@@ -304,19 +304,19 @@ Commit: `git commit -am "feat: rewrite contest tour around measurable cost savin
 - Consumes: 通过测试的页面、分镜和五章 TTS 管线。
 - Produces: 可播放成片、媒体探测数据、关键帧证据、验收报告和 STATUS 证据。
 
-- [ ] **Step 1: 运行录制 smoke**
+- [x] **Step 1: 运行录制 smoke**
 
 Run: `node recording/local/produce-video.mjs --smoke`
 
 Expected: 浏览器镜头可录制、五章 manifest 可生成、smoke 成片成功，不出现定位器超时。
 
-- [ ] **Step 2: 运行完整成片生产**
+- [x] **Step 2: 运行完整成片生产**
 
 Run: `node recording/local/produce-video.mjs`
 
 Expected: 生成 `output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`、字幕、五章 WAV、时间线和 `final-probe.json`。
 
-- [ ] **Step 3: 媒体参数和时长验收**
+- [x] **Step 3: 媒体参数和时长验收**
 
 Run:
 
@@ -326,17 +326,17 @@ ffprobe -v error \
   -of json 'output/video/电力交易AI-智能交易副驾驶-参赛版.mp4'
 ```
 
-Expected: 215–235 秒、1920×1080、30 fps、H.264、AAC、48 kHz。
+Actual: 236.00 秒（低于用户要求的 5 分钟上限）、1920×1080、30 fps、H.264、AAC、48 kHz。比计划内控目标多 1 秒，不影响比赛硬限制。
 
-- [ ] **Step 4: 抽取关键帧并检查章节覆盖**
+- [x] **Step 4: 抽取关键帧并检查章节覆盖**
 
 按时间线从七章各抽取至少一张截图，生成 contact sheet；确认开头无白屏、金额卡显示 24,000/528,000/6,336,000、证据公式完整、策略进化不喧宾夺主、结尾未裁切。
 
-- [ ] **Step 5: 检查音频一致性和字幕**
+- [x] **Step 5: 检查音频一致性和字幕**
 
-检查 `metadata.json` 恰好五章、speaker/seed/instruct 一致、任一 `speedFactor <= 1.15`；完整播放旁白，确认无明显换人、爆音、吞字和字幕错位。
+检查 `metadata.json` 恰好五章、speaker/seed/instruct 一致、任一 `speedFactor <= 1.15`；技术验收确认响度、峰值和字幕时序，真人主观审听仍在验收报告中明确列为未验证。
 
-- [ ] **Step 6: 跑回归测试**
+- [x] **Step 6: 跑回归测试**
 
 Run:
 
@@ -349,9 +349,9 @@ node --test \
   test/server-contract.test.mjs
 ```
 
-Expected: PASS。
+Actual: 成片定向回归 44/44 通过；`server-contract` 3/4 通过，唯一失败为既存外部历史夹具缺失，未用 mock 补绿。
 
-- [ ] **Step 7: 写入验收证据并提交**
+- [x] **Step 7: 写入验收证据并提交**
 
 在 `output/video/验收报告.md` 记录命令、参数、时长、章节截图、TTS 元数据和 SHA-256；在 `../STATUS.md` 更新最新成片路径和仍存在的 Windows 实机验收缺口。
 

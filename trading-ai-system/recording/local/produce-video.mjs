@@ -11,6 +11,7 @@ import process from 'node:process';
 
 import {
   buildOutputPaths,
+  buildProductionStages,
   buildTimelineSkeleton,
   validateProductionConfig,
 } from './lib/video-production.mjs';
@@ -101,6 +102,9 @@ async function stopServer(child) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const productionStages = buildProductionStages(args.stage, {
+    smoke: args.smoke,
+  });
   const projectRoot = path.resolve(
     path.dirname(new URL(import.meta.url).pathname),
     '..',
@@ -145,7 +149,7 @@ async function main() {
   let server = null;
   try {
     server = await startServer(projectRoot, args.port, log);
-    if (['all', 'record'].includes(args.stage)) {
+    if (productionStages.includes('record')) {
       await unlink(paths.rawVideo).catch(() => {});
       await recordBrowserVideo({
         projectRoot,
@@ -171,7 +175,7 @@ async function main() {
       log(`浏览器录制完成：${(timeline.durationMs / 1000).toFixed(2)} 秒`);
     }
 
-    if (['all', 'tts'].includes(args.stage)) {
+    if (productionStages.includes('tts')) {
       const timeline = JSON.parse(await readFile(paths.timeline, 'utf8'));
       await renderNarration({
         projectRoot,
@@ -183,7 +187,7 @@ async function main() {
     }
 
     let finalProbe = null;
-    if (['all', 'final'].includes(args.stage)) {
+    if (productionStages.includes('final')) {
       finalProbe = await renderFinalVideo({ projectRoot, paths, log });
       await writeFile(
         path.join(paths.root, 'final-probe.json'),

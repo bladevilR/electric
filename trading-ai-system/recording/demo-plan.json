@@ -10,7 +10,7 @@
   },
   "outro": {
     "title": "让每一笔节约都有依据",
-    "narration": "从预测真实需求，到优化每一个申报时点，再到复盘每一笔偏差成本，AI让每一笔节约都有依据，让每一次决策都可复核。按当前演示规模测算，年度节约潜力约六百三十三点六万元。",
+    "narration": "从预测需求、优化申报到复盘偏差成本，AI让节约有依据、决策可复核。按演示规模测算，年度节约潜力约633.6万元。",
     "narrationChapter": "chapter-outro"
   },
   "steps": [
@@ -46,7 +46,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"validate\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".dashboard-context-alert" }] },
       "networkIdleMs": 700,
-      "holdMs": 15000,
+      "holdMs": 13000,
       "timeoutMs": 20000
     },
     {
@@ -57,7 +57,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#validationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 16000,
+      "holdMs": 14000,
       "timeoutMs": 20000
     },
     {
@@ -68,7 +68,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 16000,
+      "holdMs": 15000,
       "timeoutMs": 20000
     },
     {
@@ -155,7 +155,7 @@
       "title": "AI 持续改进策略",
       "chapter": "05 · 结果继续反哺下一次交易",
       "narrationChapter": "chapter-outro",
-      "narration": "结果不仅用于报表，也会继续反哺下一次决策。当历史效果下降时，系统产生候选策略，用滚动回测和影子运行证明它是否真的更好，再交给人员审批。",
+      "narration": "结算结果继续反哺下一次决策。系统生成候选策略，经过回测和影子运行，再由人员审批。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"evolution\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyEvolutionTitle" }] },
       "networkIdleMs": 700,
@@ -166,7 +166,7 @@
       "id": "evolution-proof",
       "title": "候选策略只是持续学习的证据",
       "narrationChapter": "chapter-outro",
-      "narration": "挑战者不是系统的主角，它只是证明AI能够根据实际结果持续学习。新版本不会自动上线，也不会自动申报，始终保留人工审批和回滚能力。",
+      "narration": "挑战者只是持续学习的证据。新版本不会自动上线或申报，始终保留人工审批和回滚。",
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#evolutionComparison" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evolutionCenter" }] },
       "networkIdleMs": 500,

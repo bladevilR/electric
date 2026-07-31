@@ -40,6 +40,14 @@ export function shouldReplayWorkbenchMotion(segmentId) {
   return segmentId === 'opening';
 }
 
+export function selectRecordingSegments(skeleton) {
+  return skeleton.segments;
+}
+
+export function remainingHoldMs(plannedMs, elapsedMs) {
+  return Math.max(0, Math.round(Number(plannedMs) - Number(elapsedMs)));
+}
+
 function buildRunCode(segment, step, { smoke = false } = {}) {
   const payload = JSON.stringify({
     segment,
@@ -52,6 +60,11 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
   return `async (page) => {
     const payload = ${payload};
     const { segment, step, holdMs, replayWorkbenchMotion } = payload;
+    const segmentStartedAt = Date.now();
+    const waitForRemainingHold = async () => {
+      const remaining = Math.max(0, holdMs - (Date.now() - segmentStartedAt));
+      if (remaining > 0) await page.waitForTimeout(remaining);
+    };
     const ensureOverlay = async () => {
       await page.evaluate(() => {
         if (window.__localDemoVideo) return;
@@ -214,7 +227,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
     await showText();
     if (segment.id === 'intro' || segment.id === 'outro') {
       await showCard(segment.id);
-      await page.waitForTimeout(holdMs);
+      await waitForRemainingHold();
       if (segment.id === 'intro') {
         await page.evaluate(() => window.__localDemoVideo.card.classList.remove('visible'));
       }
@@ -269,7 +282,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         await page.waitForTimeout(850);
       }
     }
-    await page.waitForTimeout(holdMs);
+    await waitForRemainingHold();
     return { id: segment.id, status: 'completed' };
   }`;
 }
@@ -329,9 +342,7 @@ export async function recordBrowserVideo({
     log?.('Playwright 页面级录制已开始');
 
     const recordingStart = Date.now();
-    const sourceSegments = smoke
-      ? [skeleton.segments[0], skeleton.segments[1], skeleton.segments.at(-1)]
-      : skeleton.segments;
+    const sourceSegments = selectRecordingSegments(skeleton, { smoke });
     for (const source of sourceSegments) {
       const step = plan.steps.find((candidate) => candidate.id === source.id);
       const segmentStart = Date.now() - recordingStart;

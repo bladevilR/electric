@@ -4,6 +4,13 @@ const DEFAULT_WIDTH = 1920;
 const DEFAULT_HEIGHT = 1080;
 const DEFAULT_FPS = 30;
 
+export function buildProductionStages(stage = 'all', { smoke = false } = {}) {
+  if (smoke) return ['record'];
+  if (stage === 'all') return ['record', 'tts', 'final'];
+  if (['record', 'tts', 'final'].includes(stage)) return [stage];
+  throw new Error(`不支持的制作阶段：${stage}`);
+}
+
 export function validateProductionConfig(config) {
   const parsedUrl = new URL(config.baseUrl);
   if (!['reviewable', 'settled'].includes(parsedUrl.searchParams.get('demo'))) {
