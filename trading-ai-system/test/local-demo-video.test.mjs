@@ -145,7 +145,7 @@ test('输出路径全部收敛到 output/video', () => {
   assert.equal(paths.root, '/tmp/electric/output/video');
   assert.equal(
     paths.finalVideo,
-    '/tmp/electric/output/video/电力交易AI-两分钟演示-最终版.mp4'
+    '/tmp/electric/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4'
   );
   for (const value of Object.values(paths)) {
     assert.match(value, /^\/tmp\/electric\/output\/video(?:\/|$)/);
@@ -184,11 +184,23 @@ test('FFmpeg 合成参数固定为交付编码规格', () => {
     rawVideo: '/tmp/raw.webm',
     narrationAudio: '/tmp/narration.wav',
     finalVideo: '/tmp/final.mp4',
-    durationSeconds: 180,
+    durationSeconds: 360,
+    maxDurationSeconds: 300,
   });
   assert.deepEqual(
     capped.slice(capped.indexOf('-t'), capped.indexOf('-t') + 2),
-    ['-t', '130.000']
+    ['-t', '300.000']
+  );
+
+  const awardLength = buildFfmpegArgs({
+    rawVideo: '/tmp/raw.webm',
+    narrationAudio: '/tmp/narration.wav',
+    finalVideo: '/tmp/final.mp4',
+    durationSeconds: 225,
+  });
+  assert.deepEqual(
+    awardLength.slice(awardLength.indexOf('-t'), awardLength.indexOf('-t') + 2),
+    ['-t', '225.000']
   );
 });
 

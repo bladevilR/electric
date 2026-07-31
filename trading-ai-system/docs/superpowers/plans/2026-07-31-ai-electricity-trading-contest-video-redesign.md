@@ -124,7 +124,7 @@ Commit: `git commit -am "fix: make contest savings evidence mathematically consi
 - Consumes: 最终时间线的真实 `durationMs`。
 - Produces: `buildFfmpegArgs(..., maxDurationSeconds: 300)`；新成片路径 `output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`。
 
-- [ ] **Step 1: 写时长和输出路径失败测试**
+- [x] **Step 1: 写时长和输出路径失败测试**
 
 将测试期望更新为：
 
@@ -146,13 +146,13 @@ assert.deepEqual(
 );
 ```
 
-- [ ] **Step 2: 运行测试确认旧 130 秒上限失败**
+- [x] **Step 2: 运行测试确认旧 130 秒上限失败**
 
 Run: `node --test test/local-demo-video.test.mjs`
 
 Expected: FAIL，旧输出名仍含“两分钟”，旧上限仍为 130 秒。
 
-- [ ] **Step 3: 更新输出和合成上限**
+- [x] **Step 3: 更新输出和合成上限**
 
 在 `buildOutputPaths` 使用新文件名；`renderFinalVideo` 明确传入 `maxDurationSeconds: 300`；`produce-video.mjs` 将非 smoke 计划校验改为：
 
@@ -162,7 +162,7 @@ if (!args.smoke && (skeleton.durationMs < 215_000 || skeleton.durationMs > 235_0
 }
 ```
 
-- [ ] **Step 4: 运行测试并提交**
+- [x] **Step 4: 运行测试并提交**
 
 Run: `node --test test/local-demo-video.test.mjs`
 

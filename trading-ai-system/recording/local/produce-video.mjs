@@ -163,8 +163,13 @@ async function main() {
     appendFile(paths.log, line, 'utf8').catch(() => {});
   };
   const skeleton = buildTimelineSkeleton(plan);
-  if (!args.smoke && skeleton.durationMs > 130_000) {
-    throw new Error(`计划时长异常：${skeleton.durationMs}ms`);
+  if (
+    !args.smoke &&
+    (skeleton.durationMs < 215_000 || skeleton.durationMs > 235_000)
+  ) {
+    throw new Error(
+      `计划时长必须在 3:35–3:55：${skeleton.durationMs}ms`
+    );
   }
 
   let server = null;

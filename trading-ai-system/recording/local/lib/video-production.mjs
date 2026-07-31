@@ -133,7 +133,7 @@ export function buildOutputPaths(projectRoot) {
     subtitles: path.join(root, 'subtitles.srt'),
     narrationDirectory: path.join(root, 'narration'),
     narrationAudio: path.join(root, 'narration.wav'),
-    finalVideo: path.join(root, '电力交易AI-两分钟演示-最终版.mp4'),
+    finalVideo: path.join(root, '电力交易AI-智能交易副驾驶-参赛版.mp4'),
     log: path.join(root, 'production.log'),
     screenshots: path.join(root, 'acceptance'),
   };
@@ -144,7 +144,7 @@ export function buildFfmpegArgs({
   narrationAudio,
   finalVideo,
   durationSeconds = null,
-  maxDurationSeconds = 130,
+  maxDurationSeconds = 300,
 }) {
   const args = [
     '-y',
@@ -176,7 +176,7 @@ export function buildFfmpegArgs({
     '+faststart',
     '-shortest',
   ];
-  // 以实际成片时长为准，默认不超过 130 秒（约两分钟交付上限）
+  // 以实际成片时长为准，比赛规定最长不超过五分钟。
   let limit = durationSeconds;
   if (limit == null || !Number.isFinite(limit) || limit <= 0) {
     limit = maxDurationSeconds;

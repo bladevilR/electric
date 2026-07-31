@@ -67,7 +67,7 @@ export async function renderFinalVideo({ projectRoot, paths, log }) {
       narrationAudio: paths.narrationAudio,
       finalVideo: paths.finalVideo,
       durationSeconds,
-      maxDurationSeconds: 130,
+      maxDurationSeconds: 300,
     }),
     { cwd: projectRoot, log }
   );
