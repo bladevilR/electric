@@ -592,6 +592,185 @@ function reviewPanel(payload) {
   `;
 }
 
+function demoTimePoint(pointIndex) {
+  const totalMinutes = pointIndex * 15;
+  if (totalMinutes === 24 * 60) {
+    return '24:00';
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+export function buildStandaloneDemoWorkbenchPayload() {
+  const rows = Array.from({ length: 96 }, (_, index) => {
+    const pointIndex = index + 1;
+    const hour = (pointIndex * 15) / 60;
+    const baselinePowerMw =
+      520 +
+      260 * Math.sin(((hour - 6) / 24) * Math.PI * 2) +
+      95 * Math.sin((hour / 24) * Math.PI * 4);
+    const deltaPowerMw =
+      34 * Math.sin(((hour + 1) / 24) * Math.PI * 6) -
+      18 * Math.cos((hour / 24) * Math.PI * 2);
+
+    return {
+      pointIndex,
+      timePoint: demoTimePoint(pointIndex),
+      baselinePowerMw: Number(baselinePowerMw.toFixed(2)),
+      recommendedPowerMw: Number(
+        (baselinePowerMw + deltaPowerMw).toFixed(2)
+      ),
+      deltaPowerMw: Number(deltaPowerMw.toFixed(2)),
+    };
+  });
+
+  return {
+    date: '2026-07-31',
+    status: 'review_required',
+    currentStage: 'execute',
+    dataFreshness: {
+      status: 'ready',
+      generatedAt: '2026-07-31T07:28:00.000Z',
+      ageMinutes: 2,
+    },
+    savings: {
+      estimatedNetYuan: null,
+      realizedNetYuan: null,
+      formulaComplete: false,
+      formula:
+        '基准成本 − 实际结算成本 − 手续费 − 偏差成本 − 系统运行成本',
+      costs: {},
+    },
+    execution: {
+      dataReady: true,
+      reviewed: false,
+      allowed: false,
+      mode: 'human_decision_only',
+    },
+    stages: [
+      {
+        id: 'connect',
+        label: '数据接入',
+        status: 'complete',
+        description: '演示数据已接入',
+      },
+      {
+        id: 'validate',
+        label: '质量校验',
+        status: 'complete',
+        description: '演示校验已通过',
+      },
+      {
+        id: 'execute',
+        label: '策略决策',
+        status: 'active',
+        description: '等待人工复核',
+      },
+      {
+        id: 'settle',
+        label: '结算评估',
+        status: 'blocked',
+        description: '等待结算',
+      },
+    ],
+    blockers: [],
+    dataEvidence: [
+      {
+        id: 'market_price',
+        label: '演示市场价格',
+        status: 'ready',
+        value: '96/96 点',
+        detail: '演示状态的完整点位，仅用于界面展示。',
+      },
+      {
+        id: 'actual_load',
+        label: '演示实际负荷',
+        status: 'ready',
+        value: '96/96 点',
+        detail: '演示状态的负荷曲线，不用于交易。',
+      },
+    ],
+    primaryAction: {
+      id: 'review_strategy',
+      label: '进入人工复核',
+    },
+    auditEvents: [],
+    strategyValidation: {
+      overallStatus: 'validated',
+      operatingMode: 'validated_optimizer',
+      reviewRecommendationAllowed: true,
+      executionAllowed: false,
+      priceModel: {
+        status: 'validated',
+        sampleCount: 20544,
+        candidateImprovementPct: 5.8,
+      },
+      sampleCoverage: {
+        evaluationDateCount: 214,
+        pricePointCount: 20544,
+      },
+      costStrategy: {
+        status: 'not_validated',
+        estimatedSavingsYuan: null,
+      },
+      declarationReplay: {
+        status: 'validated',
+        verdict: 'improved',
+        comparablePointCount: 20544,
+        dateCount: 214,
+        submittedMaeMwh: 3.19,
+        baselineMaeMwh: 3.42,
+        improvementPct: 6.73,
+        winRatePct: 68.4,
+        costSavingsYuan: null,
+      },
+      declarationOptimizer: {
+        status: 'validated',
+        selectedModel: {
+          id: 'same_slot_mean_w42_a1',
+          windowDays: 42,
+          weight: 1,
+        },
+        holdout: {
+          pointCount: 4128,
+          dateCount: 43,
+          baselineMaeMwh: 1.64,
+          modelMaeMwh: 1.48,
+          improvementPct: 9.64,
+          pointWinRatePct: 58.48,
+          dailyWinRatePct: 86.05,
+        },
+        promotion: {
+          eligible: true,
+          reasons: [],
+        },
+        costSavingsYuan: null,
+      },
+      reasons: [],
+    },
+    declarationRecommendation: {
+      status: 'ready',
+      operatingMode: 'validated_optimizer',
+      coverage: {
+        baselinePointCount: 96,
+        recommendedPointCount: 96,
+        requiredPointCount: 96,
+        optimizerPointCount: 96,
+        fallbackPointCount: 0,
+      },
+      rows,
+      fallbackReasons: [],
+      costSavingsYuan: null,
+    },
+    costStrategy: {
+      dataConfidence: {
+        score: 88,
+      },
+    },
+  };
+}
+
 export function buildDemoWorkbenchScenario(payload, scenario) {
   const base = structuredClone(payload || {});
   if (scenario === 'reviewable') {
@@ -855,16 +1034,25 @@ function declarationCurve(view) {
   const geometry = view.curve.geometry;
   const rows = view.curve.rows;
   const points = geometry.points
-    .map(
-      (point) => `
+    .map((point, index) => {
+      const isAnchor =
+        index === 0 ||
+        index === geometry.points.length - 1 ||
+        index % 8 === 0;
+      return `
         <g class="curve-point" tabindex="0" data-curve-point="${escapeHtml(point.row.pointIndex)}"
+           ${isAnchor ? 'data-curve-anchor="true"' : ''}
            aria-label="${escapeHtml(`${point.row.timePoint || `第 ${point.row.pointIndex} 点`}：基线 ${point.row.baselinePowerMw} MWh，AI 建议 ${point.row.recommendedPowerMw} MWh`)}">
           <circle class="curve-hit" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="10"></circle>
-          <circle class="curve-dot" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="3.5"></circle>
+          ${
+            isAnchor
+              ? `<circle class="curve-dot" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="3.5"></circle>`
+              : ''
+          }
           <title>${escapeHtml(`${point.row.timePoint || point.row.pointIndex} · AI ${point.row.recommendedPowerMw} MWh · 基线 ${point.row.baselinePowerMw} MWh`)}</title>
         </g>
-      `
-    )
+      `;
+    })
     .join('');
   return `
     <section class="declaration-curve-panel" aria-labelledby="declarationCurveTitle">
@@ -1139,12 +1327,20 @@ async function loadWorkbench(date = '') {
   browserState.loading = true;
   browserState.error = '';
   renderBrowser();
+  const scenario = demoScenario();
+  if (scenario) {
+    browserState.payload = buildDemoWorkbenchScenario(
+      buildStandaloneDemoWorkbenchPayload(),
+      scenario
+    );
+    browserState.activeStage = browserState.payload.currentStage;
+    browserState.loading = false;
+    renderBrowser();
+    return;
+  }
   try {
     const query = date ? `?date=${encodeURIComponent(date)}` : '';
     browserState.payload = await fetch(`/api/workbench${query}`, { cache: 'no-store' }).then(responseJson);
-    if (demoScenario()) {
-      browserState.payload = buildDemoWorkbenchScenario(browserState.payload, demoScenario());
-    }
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';

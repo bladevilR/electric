@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
-import { renderWorkbenchMarkup } from '../workbench.js';
+import {
+  buildStandaloneDemoWorkbenchPayload,
+  renderWorkbenchMarkup,
+} from '../workbench.js';
 
 function blockedPayload() {
   return {
@@ -191,6 +195,20 @@ test('demo scenarios are visibly labeled and never replace the default payload s
   });
 });
 
+test('standalone reviewable demo does not depend on external standard data', async () => {
+  const module = await import('../workbench.js');
+
+  assert.equal(typeof module.buildStandaloneDemoWorkbenchPayload, 'function');
+  const payload = module.buildStandaloneDemoWorkbenchPayload();
+  const reviewable = module.buildDemoWorkbenchScenario(payload, 'reviewable');
+
+  assert.equal(reviewable.demoMode, true);
+  assert.equal(reviewable.declarationRecommendation.status, 'ready');
+  assert.equal(reviewable.declarationRecommendation.rows.length, 96);
+  assert.equal(reviewable.costStrategy.dataConfidence.score, 88);
+  assert.equal(reviewable.execution.dataReady, true);
+});
+
 test('workbench markup escapes untrusted blocker text', () => {
   const html = renderWorkbenchMarkup(blockedPayload(), { mode: 'operation', evidenceOpen: true });
 
@@ -291,4 +309,24 @@ test('dashboard exposes only functional navigation actions', () => {
   assert.match(html, /data-dashboard-nav="review"/);
   assert.match(html, /data-action="open-evidence"/);
   assert.doesNotMatch(html, /href="#"/);
+});
+
+test('96-point curve keeps interaction coverage without rendering a bead on every point', () => {
+  const payload = buildStandaloneDemoWorkbenchPayload();
+  const html = renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    evidenceOpen: false,
+  });
+
+  assert.equal([...html.matchAll(/data-curve-point=/g)].length, 96);
+  const anchorCount = [...html.matchAll(/data-curve-anchor=/g)].length;
+  assert.ok(anchorCount >= 10 && anchorCount <= 14);
+});
+
+test('curve canvas expands with its panel instead of leaving fixed-height dead space', async () => {
+  const css = await readFile(new URL('../workbench.css', import.meta.url), 'utf8');
+
+  assert.match(css, /\.curve-canvas\s*\{[^}]*display:\s*flex/s);
+  assert.match(css, /\.curve-canvas svg\s*\{[^}]*height:\s*100%/s);
+  assert.doesNotMatch(css, /\.curve-canvas svg\s*\{[^}]*height:\s*292px/s);
 });

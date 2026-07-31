@@ -1922,12 +1922,14 @@ body {
 .dashboard-primary-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: stretch;
   gap: 16px;
 }
 
 .declaration-curve-panel,
 .recommendation-panel {
-  min-height: 430px;
+  height: 500px;
+  min-height: 0;
   border-radius: 20px;
 }
 
@@ -1984,14 +1986,17 @@ body {
 }
 
 .curve-canvas {
+  display: flex;
   min-height: 0;
   flex: 1;
+  align-items: stretch;
   margin-top: 12px;
 }
 
 .curve-canvas svg {
   width: 100%;
-  height: 292px;
+  height: 100%;
+  min-height: 0;
   overflow: visible;
 }
 
@@ -2047,6 +2052,13 @@ body {
 .curve-point:hover .curve-dot {
   r: 6;
   filter: drop-shadow(0 0 5px rgb(6 166 107 / 0.5));
+}
+
+.curve-point:focus .curve-hit,
+.curve-point:hover .curve-hit {
+  fill: #fff;
+  stroke: var(--emerald);
+  stroke-width: 2;
 }
 
 .curve-axis {
@@ -2120,7 +2132,7 @@ body {
 .recommendation-panel {
   display: flex;
   flex-direction: column;
-  padding: 22px 20px 18px;
+  padding: 18px;
 }
 
 .recommendation-state {
@@ -2135,8 +2147,8 @@ body {
 .recommendation-impact,
 .recommendation-windows,
 .recommendation-safety {
-  margin-top: 15px;
-  padding: 15px 16px;
+  margin-top: 12px;
+  padding: 12px 14px;
   background: rgb(249 252 255 / 0.76);
   border: 1px solid var(--line-soft);
   border-radius: 13px;
@@ -2184,7 +2196,7 @@ body {
 }
 
 .recommendation-windows article {
-  min-height: 27px;
+  min-height: 23px;
   display: grid;
   grid-template-columns: 74px 1fr 38px;
   align-items: center;
@@ -2243,7 +2255,7 @@ body {
   grid-template-columns: 0.85fr 1.25fr;
   gap: 10px;
   margin-top: auto;
-  padding-top: 15px;
+  padding-top: 12px;
 }
 
 .recommendation-actions .primary-action,
@@ -2273,7 +2285,7 @@ body {
 }
 
 .recommendation-footnote {
-  margin: 13px 0 0;
+  margin: 8px 0 0;
   color: var(--dashboard-muted);
   font-size: 9px;
   line-height: 1.55;
@@ -2559,6 +2571,7 @@ body {
   }
 
   .recommendation-panel {
+    height: auto;
     min-height: auto;
   }
 
@@ -2654,6 +2667,10 @@ body {
   .declaration-curve-panel,
   .recommendation-panel {
     padding: 18px 14px;
+  }
+
+  .declaration-curve-panel {
+    height: 460px;
   }
 
   .curve-heading {
