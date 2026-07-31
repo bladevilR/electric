@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>比赛视频自动录制说明</title>
+  <style>
+    :root { color-scheme: light; font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f4f8ff; color: #17324d; }
+    main { max-width: 920px; margin: 48px auto; padding: 0 24px 64px; }
+    .hero, section { background: rgba(255,255,255,.96); border: 1px solid #dce8f7; border-radius: 24px; box-shadow: 0 18px 60px rgba(37,86,135,.09); }
+    .hero { padding: 42px; background: linear-gradient(135deg,#fff 15%,#eef6ff 65%,#f6f2ff); }
+    section { margin-top: 18px; padding: 28px 32px; }
+    h1 { margin: 8px 0 12px; font-size: 36px; }
+    h2 { margin: 0 0 14px; font-size: 21px; }
+    p, li { line-height: 1.75; }
+    .tag { color: #0a66ff; font-weight: 700; letter-spacing: .08em; }
+    .primary { display: inline-block; margin-top: 16px; padding: 12px 18px; border-radius: 12px; color: #fff; background: #0a66ff; font-weight: 700; }
+    code { padding: 2px 7px; border-radius: 7px; background: #edf4fd; }
+    .warning { border-left: 5px solid #f2a93b; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <div class="tag">WINDOWS · ONE CLICK RECORDING</div>
+      <h1>只双击一次，后面不用操作</h1>
+      <p>脚本会自动启动系统、打开全屏 Edge、按比赛分镜演示并录成 1080p MP4。录制期间请不要动鼠标或键盘。</p>
+      <span class="primary">双击包根目录的「录制比赛视频.bat」</span>
+    </div>
+
+    <section>
+      <h2>开始前确认</h2>
+      <ol>
+        <li>使用 Windows 10/11，主屏分辨率至少为 1920×1080。</li>
+        <li>关闭钉钉聊天、密码框、证书详情等不应进入画面的窗口。</li>
+        <li>如需展示 UKey 环境，请提前插好 UKey并完成需要的人工登录；脚本不会读取或输入 PIN。</li>
+        <li>保持至少 2GB 磁盘空间，录制约 1 分 20 秒。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>录完后在哪里</h2>
+      <p>成功后会自动打开视频所在目录。原始画面文件名为 <code>系统演示-无声.mp4</code>，同目录还会生成实际时间线、中文解说稿、SSML 和字幕。</p>
+      <p>旁白稍后统一用 TTS 制作，不需要现场说话，也不要开麦克风。</p>
+    </section>
+
+    <section class="warning">
+      <h2>如果失败</h2>
+      <p>不要反复乱点。请把 <code>recording\recordings</code> 下最新的整个日期目录发回；里面已有步骤日志、失败截图和录制报告，可以直接定位卡在哪一步。</p>
+    </section>
+  </main>
+</body>
+</html>

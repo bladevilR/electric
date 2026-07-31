@@ -42,6 +42,7 @@ import {
   backtestDeclarationOptimizer,
   buildDeclarationRecommendation,
 } from './lib/declaration-optimizer.mjs';
+import { buildStrategyEvolution } from './lib/strategy-evolution.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -76,6 +77,7 @@ function getArgValue(name, defaultValue) {
 }
 
 const port = Number(getArgValue('--port', process.env.PORT || 5177));
+const host = process.env.HOST || '127.0.0.1';
 const standardPath = path.resolve(getArgValue('--standard', defaultStandardPath));
 const pythonPath = getArgValue('--python', process.env.TRADING_AI_PYTHON || '');
 const auditLogPath = path.resolve(getArgValue('--audit', process.env.TRADING_AUDIT_LOG || defaultAuditLogPath));
@@ -522,6 +524,23 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/strategy-evolution') {
+    const date = url.searchParams.get('date') || '';
+    const [strategyValidation, auditEvents] = await Promise.all([
+      loadStrategyValidation(),
+      readAuditLog(auditLogPath, { limit: 12 }),
+    ]);
+    sendJson(
+      response,
+      buildStrategyEvolution({
+        date,
+        strategyValidation,
+        auditEvents,
+      })
+    );
+    return;
+  }
+
   if (
     request.method === 'GET' &&
     url.pathname === '/api/declaration-optimizer/validation'
@@ -822,6 +841,6 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, '127.0.0.1', () => {
-  process.stdout.write(`Trading AI System running at http://127.0.0.1:${port}\n`);
+server.listen(port, host, () => {
+  process.stdout.write(`Trading AI System running at http://${host}:${port}\n`);
 });

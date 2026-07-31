@@ -1,0 +1,74 @@
+{
+  "modelDirectory": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "speaker": "Serena",
+  "language": "Chinese",
+  "seed": 20260731,
+  "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
+  "segments": [
+    {
+      "id": "intro",
+      "text": "电力交易 AI：发现衰减，实验评估，影子验证，人工审批上线，异常一键回滚。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/intro.wav"
+    },
+    {
+      "id": "opening",
+      "text": "系统不只给一条建议，而是把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/opening.wav"
+    },
+    {
+      "id": "core-metrics",
+      "text": "首屏看现役策略的偏差改善、日胜率和可信度，指标来自真实回测，不是写死的演示数字。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/core-metrics.wav"
+    },
+    {
+      "id": "open-evolution",
+      "text": "进入策略进化中枢。系统发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/open-evolution.wav"
+    },
+    {
+      "id": "champion-challenger",
+      "text": "进化中心对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/champion-challenger.wav"
+    },
+    {
+      "id": "experiment-lab",
+      "text": "实验中心完成漂移诊断、参数搜索和滚动回测，候选策略带着证据进入影子运行。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/experiment-lab.wav"
+    },
+    {
+      "id": "ops-and-governance",
+      "text": "运营盯住漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线与自动申报。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/ops-and-governance.wav"
+    },
+    {
+      "id": "approve-challenger",
+      "text": "人工审批挑战者上线，只切换策略版本，不会自动向交易平台提交申报。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/approve-challenger.wav"
+    },
+    {
+      "id": "return-declaration",
+      "text": "回到申报优化主视图。九十六点曲线和人工复核仍在，进化中枢与日常决策共用证据链。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/return-declaration.wav"
+    },
+    {
+      "id": "curve",
+      "text": "逐点比较历史申报与人工智能建议，标出关键调整窗口，让上调下调都有时段依据。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/curve.wav"
+    },
+    {
+      "id": "human-loop",
+      "text": "人工智能只生成并解释建议；进入申报前必须人工复核，系统不会自动提交交易。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/human-loop.wav"
+    },
+    {
+      "id": "audit-mode",
+      "text": "审计模式复核模型、执行、结算与成本是否同一主体、同一交易日。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/audit-mode.wav"
+    },
+    {
+      "id": "outro",
+      "text": "从衰减预警到候选策略，从影子运行到人工上线，再到统计与回滚，系统会进化，也守住人工在环。未经复核，不会自动提交。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/outro.wav"
+    }
+  ]
+}

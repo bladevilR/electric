@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "title": "电力交易 AI · 策略自进化参赛演示",
+  "url": "/?demo=reviewable",
+  "maxDurationMs": 270000,
+  "steps": [
+    {
+      "id": "opening",
+      "title": "策略自进化中枢",
+      "chapter": "01 · 不是一次性建议",
+      "narration": "系统把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。",
+      "action": {
+        "type": "show",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#declarationDashboardTitle"
+          },
+          {
+            "type": "text",
+            "value": "AI申报优化",
+            "exact": false
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#declarationDashboardTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 900,
+      "holdMs": 6200,
+      "timeoutMs": 30000
+    },
+    {
+      "id": "core-metrics",
+      "title": "现役策略表现",
+      "narration": "首屏看偏差改善、日胜率和可信度，指标来自真实回测，不是写死演示数字。",
+      "action": {
+        "type": "scroll",
+        "align": "center",
+        "locators": [
+          {
+            "type": "css",
+            "value": ".dashboard-metrics"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": ".dashboard-metrics"
+          }
+        ]
+      },
+      "networkIdleMs": 700,
+      "holdMs": 5600,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "open-evolution",
+      "title": "进入策略进化",
+      "chapter": "02 · 四中心闭环",
+      "narration": "进入策略进化中枢。发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。",
+      "action": {
+        "type": "click",
+        "locators": [
+          {
+            "type": "css",
+            "value": "[data-dashboard-nav=\"evolution\"]"
+          },
+          {
+            "type": "text",
+            "value": "策略进化",
+            "exact": true
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#strategyEvolutionTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 800,
+      "holdMs": 6500,
+      "timeoutMs": 25000
+    },
+    {
+      "id": "champion-challenger",
+      "title": "冠军与挑战者",
+      "narration": "对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。",
+      "action": {
+        "type": "scroll",
+        "align": "center",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#evolutionComparison"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#evolutionCenter"
+          }
+        ]
+      },
+      "networkIdleMs": 600,
+      "holdMs": 6200,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "experiment-lab",
+      "title": "智能实验",
+      "narration": "实验中心完成漂移诊断、参数搜索和滚动回测，候选策略进入影子运行。",
+      "action": {
+        "type": "scroll",
+        "align": "center",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#experimentCenter"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#experimentCenterTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 600,
+      "holdMs": 6000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "ops-and-governance",
+      "title": "运营与治理",
+      "chapter": "03 · 敢落地的治理",
+      "narration": "运营盯漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线申报。",
+      "action": {
+        "type": "scroll",
+        "align": "center",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#governanceQueue"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#governanceCenter"
+          }
+        ]
+      },
+      "networkIdleMs": 600,
+      "holdMs": 6800,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "approve-challenger",
+      "title": "人工审批上线",
+      "narration": "人工审批挑战者上线，只切换策略版本，不会自动提交申报。",
+      "action": {
+        "type": "click",
+        "locators": [
+          {
+            "type": "css",
+            "value": "[data-evolution-action=\"approve_challenger\"]"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "[data-queue-status=\"approved\"], .queue-status.is-approved, #governanceQueue"
+          }
+        ]
+      },
+      "networkIdleMs": 700,
+      "holdMs": 5500,
+      "timeoutMs": 25000
+    },
+    {
+      "id": "return-declaration",
+      "title": "回到申报优化",
+      "chapter": "04 · 申报证据仍在",
+      "narration": "回到申报优化主视图。九十六点曲线和人工复核仍在，与进化中枢共用证据链。",
+      "action": {
+        "type": "click",
+        "locators": [
+          {
+            "type": "css",
+            "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]"
+          },
+          {
+            "type": "text",
+            "value": "AI申报优化",
+            "exact": true
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#declarationDashboardTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 700,
+      "holdMs": 5500,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "curve",
+      "title": "96 点申报曲线",
+      "narration": "逐点比较历史申报与人工智能建议，标出关键调整窗口。",
+      "action": {
+        "type": "scroll",
+        "align": "center",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 700,
+      "holdMs": 5600,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "human-loop",
+      "title": "人工在环",
+      "narration": "人工智能只生成建议，进入申报前必须人工复核，不会自动提交。",
+      "action": {
+        "type": "show",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ]
+      },
+      "networkIdleMs": 500,
+      "holdMs": 5200,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "audit-mode",
+      "title": "审计复核",
+      "chapter": "05 · 可追溯",
+      "narration": "审计模式复核模型、执行、结算是否同一主体、同一交易日。",
+      "action": {
+        "type": "click",
+        "locators": [
+          {
+            "type": "css",
+            "value": "[data-mode=\"review\"]"
+          },
+          {
+            "type": "text",
+            "value": "审计",
+            "exact": true
+          }
+        ]
+      },
+      "ready": {
+        "state": "visible",
+        "locators": [
+          {
+            "type": "css",
+            "value": ".review-workspace"
+          }
+        ]
+      },
+      "networkIdleMs": 700,
+      "holdMs": 5600,
+      "timeoutMs": 20000
+    }
+  ]
+}

@@ -1,0 +1,292 @@
+import path from 'node:path';
+
+const DEFAULT_WIDTH = 1920;
+const DEFAULT_HEIGHT = 1080;
+const DEFAULT_FPS = 30;
+
+export function validateProductionConfig(config) {
+  const parsedUrl = new URL(config.baseUrl);
+  if (parsedUrl.searchParams.get('demo') !== 'reviewable') {
+    throw new Error('录制入口必须包含 demo=reviewable 演示标识');
+  }
+  if (
+    config.width !== DEFAULT_WIDTH ||
+    config.height !== DEFAULT_HEIGHT ||
+    config.fps !== DEFAULT_FPS
+  ) {
+    throw new Error('录制规格必须为 1920×1080、30fps');
+  }
+  return config;
+}
+
+export function buildTimelineSkeleton(
+  plan,
+  { introMs = 10000, outroMs = 15000 } = {}
+) {
+  let cursorMs = 0;
+  const segments = [];
+  const append = (segment) => {
+    const startMs = cursorMs;
+    const endMs = startMs + segment.durationMs;
+    segments.push({
+      ...segment,
+      startMs,
+      endMs,
+    });
+    cursorMs = endMs;
+  };
+
+  append({
+    id: 'intro',
+    title: '电力交易 AI · 策略自进化',
+    narration:
+      '电力交易 AI：发现衰减，实验评估，影子验证，人工审批，异常回滚。',
+    durationMs: introMs,
+  });
+  for (const step of plan.steps) {
+    append({
+      id: step.id,
+      title: step.title,
+      narration: step.narration,
+      durationMs: step.holdMs,
+    });
+  }
+  append({
+    id: 'outro',
+    title: '可进化、可解释、敢落地',
+    narration:
+      '从衰减预警到候选上线，再到统计与回滚，系统会进化，也守住人工在环。未经复核，不会自动提交。',
+    durationMs: outroMs,
+  });
+
+  return {
+    version: 1,
+    title: plan.title,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    fps: DEFAULT_FPS,
+    durationMs: cursorMs,
+    segments,
+  };
+}
+
+export function buildNarrationSegments(
+  timeline,
+  durationsById,
+  { leadingPaddingMs = 500, trailingPaddingMs = 500 } = {}
+) {
+  return timeline.segments
+    .filter((segment) => segment.narration)
+    .map((segment) => {
+      const durationMs = Math.ceil(Number(durationsById[segment.id]));
+      if (!Number.isFinite(durationMs) || durationMs <= 0) {
+        throw new Error(`${segment.id} 缺少有效旁白时长`);
+      }
+      const startMs = segment.startMs + leadingPaddingMs;
+      const endMs = startMs + durationMs;
+      if (endMs > segment.endMs - trailingPaddingMs) {
+        throw new Error(
+          `${segment.id} 旁白超过镜头安全区：${durationMs}ms > ${
+            segment.endMs - segment.startMs - leadingPaddingMs - trailingPaddingMs
+          }ms`
+        );
+      }
+      return {
+        id: segment.id,
+        text: segment.narration,
+        startMs,
+        endMs,
+        durationMs,
+      };
+    });
+}
+
+function formatSrtTimestamp(milliseconds) {
+  const value = Math.max(0, Math.round(milliseconds));
+  const hours = Math.floor(value / 3_600_000);
+  const minutes = Math.floor((value % 3_600_000) / 60_000);
+  const seconds = Math.floor((value % 60_000) / 1000);
+  const millis = value % 1000;
+  return [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, '0'))
+    .join(':')
+    .concat(',', String(millis).padStart(3, '0'));
+}
+
+export function buildSrt(segments) {
+  return `${segments
+    .map(
+      (segment, index) =>
+        `${index + 1}\n${formatSrtTimestamp(
+          segment.startMs
+        )} --> ${formatSrtTimestamp(segment.endMs)}\n${segment.text}`
+    )
+    .join('\n\n')}\n`;
+}
+
+export function buildOutputPaths(projectRoot) {
+  const root = path.join(path.resolve(projectRoot), 'output', 'video');
+  return {
+    root,
+    rawVideo: path.join(root, 'raw', 'browser-recording.webm'),
+    timeline: path.join(root, 'timeline.json'),
+    subtitles: path.join(root, 'subtitles.srt'),
+    narrationDirectory: path.join(root, 'narration'),
+    narrationAudio: path.join(root, 'narration.wav'),
+    finalVideo: path.join(root, '电力交易AI-两分钟演示-最终版.mp4'),
+    log: path.join(root, 'production.log'),
+    screenshots: path.join(root, 'acceptance'),
+  };
+}
+
+export function buildFfmpegArgs({
+  rawVideo,
+  narrationAudio,
+  finalVideo,
+  durationSeconds = null,
+  maxDurationSeconds = 130,
+}) {
+  const args = [
+    '-y',
+    '-i',
+    rawVideo,
+    '-i',
+    narrationAudio,
+    '-map',
+    '0:v:0',
+    '-map',
+    '1:a:0',
+    '-vf',
+    'scale=1920:1080:flags=lanczos,fps=30',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'medium',
+    '-crf',
+    '18',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-ar',
+    '48000',
+    '-b:a',
+    '160k',
+    '-movflags',
+    '+faststart',
+    '-shortest',
+  ];
+  // 以实际成片时长为准，默认不超过 130 秒（约两分钟交付上限）
+  let limit = durationSeconds;
+  if (limit == null || !Number.isFinite(limit) || limit <= 0) {
+    limit = maxDurationSeconds;
+  } else {
+    limit = Math.min(limit, maxDurationSeconds);
+  }
+  args.push('-t', limit.toFixed(3), finalVideo);
+  return args;
+}
+
+export function buildNarrationMixArgs({
+  inputs,
+  durationMs,
+  output,
+}) {
+  const args = [
+    '-y',
+    '-f',
+    'lavfi',
+    '-t',
+    (durationMs / 1000).toFixed(3),
+    '-i',
+    'anullsrc=r=48000:cl=stereo',
+  ];
+  for (const input of inputs) {
+    args.push('-i', input.file);
+  }
+
+  const chains = inputs.map(
+    (input, index) =>
+      `[${index + 1}:a]loudnorm=I=-18:TP=-2:LRA=7,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,adelay=${Math.round(
+        input.startMs
+      )}|${Math.round(input.startMs)}[voice${index + 1}]`
+  );
+  const mixInputs = ['[0:a]', ...inputs.map((_, index) => `[voice${index + 1}]`)]
+    .join('');
+  chains.push(
+    `${mixInputs}amix=inputs=${
+      inputs.length + 1
+    }:duration=first:normalize=0,alimiter=limit=0.95[out]`
+  );
+
+  args.push(
+    '-filter_complex',
+    chains.join(';'),
+    '-map',
+    '[out]',
+    '-ar',
+    '48000',
+    '-c:a',
+    'pcm_s16le',
+    output
+  );
+  return args;
+}
+
+export function buildEdgeTtsArgs({
+  text,
+  ratePercent = 0,
+  output,
+}) {
+  const signedRate =
+    ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
+  return [
+    'edge-tts',
+    '--voice',
+    'zh-CN-XiaoxiaoNeural',
+    `--rate=${signedRate}`,
+    '--pitch=-2Hz',
+    '--text',
+    text,
+    '--write-media',
+    output,
+  ];
+}
+
+export function buildQwenTtsManifest(timeline, narrationDirectory) {
+  return {
+    modelDirectory:
+      '/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice',
+    speaker: 'Serena',
+    language: 'Chinese',
+    // 全片统一推理种子，避免分段各自随机导致音色/情绪漂移
+    seed: 20260731,
+    instruct:
+      '同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。',
+    segments: timeline.segments
+      .filter((segment) => segment.narration)
+      .map((segment) => ({
+        id: segment.id,
+        text: segment.narration,
+        output: path.join(narrationDirectory, `${segment.id}.wav`),
+      })),
+  };
+}
+
+export function buildSpeechFitArgs({ input, output, speedFactor }) {
+  if (!Number.isFinite(speedFactor) || speedFactor < 1 || speedFactor > 2) {
+    throw new Error(`无效旁白适配倍率：${speedFactor}`);
+  }
+  return [
+    '-y',
+    '-i',
+    input,
+    '-filter:a',
+    `atempo=${speedFactor.toFixed(4)}`,
+    '-ar',
+    '24000',
+    '-c:a',
+    'pcm_s16le',
+    output,
+  ];
+}

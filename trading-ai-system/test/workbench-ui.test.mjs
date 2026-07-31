@@ -133,10 +133,12 @@ function blockedPayload() {
   };
 }
 
-test('blocked workbench renders four steps, one action, and no invented savings', () => {
+test('blocked workbench renders navigation stages, one action, and no invented savings', () => {
   const html = renderWorkbenchMarkup(blockedPayload(), { mode: 'operation', evidenceOpen: true });
 
-  assert.equal([...html.matchAll(/data-stage=/g)].length, 4);
+  // 侧栏：申报优化 / 总览 / 曲线 / 策略进化 / 复盘
+  assert.equal([...html.matchAll(/data-stage=/g)].length, 5);
+  assert.match(html, /策略进化/);
   assert.equal([...html.matchAll(/data-primary-action=/g)].length, 1);
   assert.match(html, /预计综合成本优化额/);
   assert.match(html, /未获取/);
@@ -207,6 +209,40 @@ test('standalone reviewable demo does not depend on external standard data', asy
   assert.equal(reviewable.declarationRecommendation.rows.length, 96);
   assert.equal(reviewable.costStrategy.dataConfidence.score, 88);
   assert.equal(reviewable.execution.dataReady, true);
+  assert.ok(reviewable.strategyEvolution?.centers?.evolution);
+  assert.equal(reviewable.strategyEvolution.centers.governance.policy.autoPromote, false);
+});
+
+test('strategy evolution dashboard renders four centers and safe governance actions', async () => {
+  const module = await import('../workbench.js');
+  const payload = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'reviewable'
+  );
+  const html = module.renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    activeStage: 'evolve',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /策略自进化决策中枢/);
+  assert.match(html, /id="evolutionCenter"/);
+  assert.match(html, /id="experimentCenter"/);
+  assert.match(html, /id="operationsCenter"/);
+  assert.match(html, /id="governanceCenter"/);
+  assert.match(html, /data-evolution-action="approve_challenger"/);
+  assert.match(html, /data-evolution-action="rollback_champion"/);
+  assert.doesNotMatch(html, /data-primary-action="approve_challenger"/);
+  assert.match(html, /禁止自动上线/);
+  assert.match(html, /不会自动提交/);
+
+  const approved = module.buildDemoActionResult(payload, 'approve_challenger');
+  assert.equal(approved.handled, true);
+  assert.equal(approved.activeStage, 'evolve');
+  assert.equal(
+    approved.payloadPatch.strategyEvolution.centers.evolution.champion.id,
+    'v3-challenger'
+  );
 });
 
 test('workbench markup escapes untrusted blocker text', () => {

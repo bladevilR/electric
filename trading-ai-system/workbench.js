@@ -1,4 +1,8 @@
 import { buildDeclarationDashboardView } from './lib/declaration-dashboard-view.mjs';
+import {
+  applyStrategyEvolutionAction,
+  buildStrategyEvolution,
+} from './lib/strategy-evolution.mjs';
 import { scheduleWorkbenchMotion } from './workbench-motion.js';
 
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
@@ -769,6 +773,39 @@ export function buildStandaloneDemoWorkbenchPayload() {
         score: 88,
       },
     },
+    strategyEvolution: buildStrategyEvolution({
+      date: '2026-07-31',
+      strategyValidation: {
+        overallStatus: 'validated',
+        declarationOptimizer: {
+          status: 'validated',
+          selectedModel: {
+            id: 'same_slot_mean_w42_a1',
+            windowDays: 42,
+            weight: 1,
+          },
+          holdout: {
+            pointCount: 4128,
+            dateCount: 43,
+            baselineMaeMwh: 1.64,
+            modelMaeMwh: 1.48,
+            improvementPct: 9.64,
+            pointWinRatePct: 58.48,
+            dailyWinRatePct: 86.05,
+          },
+        },
+        sampleCoverage: {
+          evaluationDateCount: 214,
+          pricePointCount: 20544,
+        },
+        declarationReplay: {
+          improvementPct: 6.73,
+          winRatePct: 68.4,
+          submittedMaeMwh: 3.19,
+          baselineMaeMwh: 3.42,
+        },
+      },
+    }),
   };
 }
 
@@ -853,6 +890,20 @@ export function buildDemoActionResult(payload, actionId) {
       message: '演示：已打开结算证据链。',
     };
   }
+  if (actionId === 'approve_challenger' || actionId === 'rollback_champion') {
+    const result = applyStrategyEvolutionAction(payload.strategyEvolution, actionId);
+    if (!result.handled) return { handled: false };
+    return {
+      handled: true,
+      mode: 'operation',
+      activeStage: 'evolve',
+      evidenceOpen: false,
+      message: result.message,
+      payloadPatch: {
+        strategyEvolution: result.evolution,
+      },
+    };
+  }
   return { handled: false };
 }
 
@@ -861,6 +912,7 @@ function dashboardSidebar(payload, activeStage) {
     { id: 'curve', stage: 'connect', label: 'AI申报优化', icon: '⌁' },
     { id: 'validate', stage: 'validate', label: '申报总览', icon: '▦' },
     { id: 'curve', stage: 'execute', label: '曲线对比', icon: '⌁' },
+    { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
     { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
   ];
   const activeNavigation =
@@ -868,7 +920,9 @@ function dashboardSidebar(payload, activeStage) {
       ? 'validate'
       : activeStage === 'settle'
         ? 'review'
-        : 'primary';
+        : activeStage === 'evolve'
+          ? 'evolution'
+          : 'primary';
   return `
     <aside class="dashboard-sidebar">
       <div class="dashboard-brand">
@@ -886,7 +940,8 @@ function dashboardSidebar(payload, activeStage) {
                 type="button"
                 class="${
                   (activeNavigation === 'primary' && item.stage === 'connect') ||
-                  (activeNavigation === item.id && item.stage !== 'connect')
+                  (activeNavigation === item.id && item.stage !== 'connect') ||
+                  (activeNavigation === 'evolution' && item.stage === 'evolve')
                     ? 'is-active'
                     : ''
                 }"
@@ -1242,17 +1297,258 @@ export function renderDeclarationDashboard(payload, options = {}) {
   `;
 }
 
+function evolutionLoop(loop = []) {
+  return `
+    <ol class="evolution-loop" aria-label="策略运营闭环">
+      ${loop
+        .map(
+          (step) => `
+            <li class="is-${escapeHtml(step.status)}">
+              <strong>${escapeHtml(step.label)}</strong>
+              <small>${escapeHtml(
+                {
+                  complete: '已完成',
+                  active: '进行中',
+                  pending: '待处理',
+                  standby: '待命',
+                }[step.status] || step.status
+              )}</small>
+            </li>
+          `
+        )
+        .join('')}
+    </ol>
+  `;
+}
+
+function versionCard(version, tone = 'neutral') {
+  if (!version) {
+    return `<article class="evolution-version is-empty"><p>当前无挑战者</p></article>`;
+  }
+  return `
+    <article class="evolution-version is-${escapeHtml(tone)}" data-version-id="${escapeHtml(version.id)}">
+      <header>
+        <span class="version-role">${escapeHtml(
+          version.role === 'champion'
+            ? 'Champion'
+            : version.role === 'challenger'
+              ? 'Challenger'
+              : '历史'
+        )}</span>
+        <span class="version-status is-${escapeHtml(version.status)}">${escapeHtml(version.status)}</span>
+      </header>
+      <h3>${escapeHtml(version.label)}</h3>
+      <p>${escapeHtml(version.reason || '')}</p>
+      <dl>
+        <div><dt>偏差改善</dt><dd>${escapeHtml(String(version.improvementPct ?? '—'))}%</dd></div>
+        <div><dt>日胜率</dt><dd>${escapeHtml(String(version.winRatePct ?? '—'))}%</dd></div>
+        <div><dt>MAE</dt><dd>${escapeHtml(String(version.maeMwh ?? '—'))} MWh</dd></div>
+        <div><dt>窗口</dt><dd>${escapeHtml(version.windowDays ? `${version.windowDays} 日` : '—')}</dd></div>
+      </dl>
+      ${
+        version.recentImprovementPct != null
+          ? `<p class="version-drift">近窗改善 ${escapeHtml(String(version.recentImprovementPct))}%，近窗胜率 ${escapeHtml(String(version.recentWinRatePct))}%</p>`
+          : ''
+      }
+    </article>
+  `;
+}
+
+export function renderStrategyEvolutionDashboard(payload) {
+  const evolution =
+    payload.strategyEvolution ||
+    buildStrategyEvolution({
+      date: payload.date,
+      strategyValidation: payload.strategyValidation,
+      declarationRecommendation: payload.declarationRecommendation,
+      auditEvents: payload.auditEvents,
+    });
+  const centers = evolution.centers;
+  const comparison = centers.evolution.comparison;
+  const queue = centers.governance.queue[0];
+  const primary = evolution.primaryAction || {};
+  const secondary = evolution.secondaryAction || {};
+
+  return `
+    <section class="evolution-dashboard" aria-labelledby="strategyEvolutionTitle" data-evolution-root="true">
+      <header class="evolution-hero">
+        <div>
+          <span class="hero-kicker">STRATEGY EVOLUTION HUB</span>
+          <h1 id="strategyEvolutionTitle">${escapeHtml(evolution.title)}</h1>
+          <p>${escapeHtml(evolution.subtitle)}</p>
+        </div>
+        <div class="evolution-hero-meta">
+          <span>样本口径：${escapeHtml(
+            evolution.sampleKind === 'derived_from_validation' ? '由验证结果派生' : '参赛演示样本'
+          )}</span>
+          <span>交易日 ${escapeHtml(evolution.date || payload.date || '—')}</span>
+        </div>
+      </header>
+
+      <section class="evolution-story" aria-label="核心叙事">
+        <strong>${escapeHtml(evolution.narrative.headline)}</strong>
+        <ol>
+          ${evolution.narrative.story.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+        </ol>
+      </section>
+
+      ${evolutionLoop(evolution.loop)}
+
+      <div class="evolution-centers-grid">
+        <section class="evolution-center" id="evolutionCenter" aria-labelledby="evolutionCenterTitle">
+          <div class="section-heading">
+            <div>
+              <span class="hero-kicker">01</span>
+              <h2 id="evolutionCenterTitle">${escapeHtml(centers.evolution.title)}</h2>
+            </div>
+            <span class="comparison-badge">${escapeHtml(comparison.verdictLabel)}</span>
+          </div>
+          <div class="evolution-version-grid">
+            ${versionCard(centers.evolution.champion, 'champion')}
+            ${versionCard(centers.evolution.challenger, 'challenger')}
+          </div>
+          <div class="evolution-delta" id="evolutionComparison">
+            <article><span>改善差额</span><strong>+${escapeHtml(String(comparison.improvementDeltaPp))} pp</strong></article>
+            <article><span>胜率差额</span><strong>+${escapeHtml(String(comparison.winRateDeltaPp))} pp</strong></article>
+            <article><span>MAE 改善</span><strong>${escapeHtml(String(comparison.maeDeltaMwh))} MWh</strong></article>
+          </div>
+        </section>
+
+        <section class="evolution-center" id="experimentCenter" aria-labelledby="experimentCenterTitle">
+          <div class="section-heading">
+            <div>
+              <span class="hero-kicker">02</span>
+              <h2 id="experimentCenterTitle">${escapeHtml(centers.experiment.title)}</h2>
+            </div>
+          </div>
+          <div class="experiment-list">
+            ${centers.experiment.experiments
+              .map(
+                (exp) => `
+                  <article class="experiment-card is-${escapeHtml(exp.status)}" data-experiment-id="${escapeHtml(exp.id)}">
+                    <header>
+                      <strong>${escapeHtml(exp.title)}</strong>
+                      <span>${escapeHtml(exp.status === 'running' ? '进行中' : '已完成')}</span>
+                    </header>
+                    <p><b>数据窗口</b> ${escapeHtml(exp.dataWindow)}</p>
+                    <p><b>方法</b> ${escapeHtml(exp.method)}</p>
+                    <p><b>发现</b> ${escapeHtml(exp.finding)}</p>
+                    <p><b>结果</b> ${escapeHtml(exp.outcome)}</p>
+                  </article>
+                `
+              )
+              .join('')}
+          </div>
+        </section>
+
+        <section class="evolution-center" id="operationsCenter" aria-labelledby="operationsCenterTitle">
+          <div class="section-heading">
+            <div>
+              <span class="hero-kicker">03</span>
+              <h2 id="operationsCenterTitle">${escapeHtml(centers.operations.title)}</h2>
+            </div>
+          </div>
+          <div class="ops-kpi-grid" id="opsKpiGrid">
+            ${centers.operations.kpis
+              .map(
+                (kpi) => `
+                  <article class="ops-kpi is-${escapeHtml(kpi.trend)}" data-kpi="${escapeHtml(kpi.id)}">
+                    <span>${escapeHtml(kpi.label)}</span>
+                    <strong>${escapeHtml(kpi.value)}</strong>
+                    <small>${escapeHtml(kpi.note || '')}</small>
+                  </article>
+                `
+              )
+              .join('')}
+          </div>
+          <p class="ops-shadow-lift">影子上线后预计额外改善量级：约 ${escapeHtml(
+            String(centers.operations.estimatedShadowLiftYuan ?? '—')
+          )} 元（口径示意，不等于已实现收益）</p>
+        </section>
+
+        <section class="evolution-center" id="governanceCenter" aria-labelledby="governanceCenterTitle">
+          <div class="section-heading">
+            <div>
+              <span class="hero-kicker">04</span>
+              <h2 id="governanceCenterTitle">${escapeHtml(centers.governance.title)}</h2>
+            </div>
+          </div>
+          <div class="governance-policy">
+            <span>禁止自动上线</span>
+            <span>必须影子通过</span>
+            <span>必须人工审批</span>
+            <span>禁止自动申报</span>
+          </div>
+          ${
+            queue
+              ? `
+                <article class="governance-queue" id="governanceQueue" data-queue-status="${escapeHtml(queue.status)}">
+                  <header>
+                    <strong>${escapeHtml(queue.title)}</strong>
+                    <span class="queue-status is-${escapeHtml(queue.status)}">${escapeHtml(queue.status)}</span>
+                  </header>
+                  <p>${escapeHtml(queue.expectedLift)}</p>
+                  <ul class="prerequisite-list">
+                    ${queue.prerequisites
+                      .map(
+                        (item) => `
+                          <li class="${item.met ? 'is-met' : 'is-open'}">
+                            <span>${item.met ? '✓' : '○'}</span>
+                            ${escapeHtml(item.label)}
+                          </li>
+                        `
+                      )
+                      .join('')}
+                  </ul>
+                  <div class="governance-actions">
+                    <button type="button" class="primary-action" data-evolution-action="${escapeHtml(primary.id || queue.actionId)}">${escapeHtml(primary.label || '审批上线')}</button>
+                    <button type="button" class="secondary-action" data-evolution-action="${escapeHtml(secondary.id || centers.governance.rollback.actionId)}">${escapeHtml(secondary.label || centers.governance.rollback.label)}</button>
+                  </div>
+                </article>
+              `
+              : ''
+          }
+          <div class="governance-audit" id="governanceAudit">
+            <h3>治理审计轨迹</h3>
+            <ol>
+              ${centers.governance.auditTrail
+                .slice(0, 6)
+                .map(
+                  (event) => `
+                    <li>
+                      <time>${escapeHtml(event.at || '')}</time>
+                      <strong>${escapeHtml(event.type)}</strong>
+                      <span>${escapeHtml(event.detail)}</span>
+                    </li>
+                  `
+                )
+                .join('')}
+            </ol>
+          </div>
+        </section>
+      </div>
+      <p class="evolution-footnote">策略进化只改变候选/现役版本与审计状态；未经人工复核，系统不会自动提交任何申报或交易。</p>
+    </section>
+  `;
+}
+
 export function renderWorkbenchMarkup(payload, options = {}) {
   const mode = options.mode === 'review' ? 'review' : 'operation';
   const activeStage = options.activeStage || payload.currentStage || 'connect';
   const evidenceOpen = options.evidenceOpen !== false;
+  const mainContent =
+    mode === 'review'
+      ? reviewPanel(payload)
+      : activeStage === 'evolve'
+        ? renderStrategyEvolutionDashboard(payload)
+        : renderDeclarationDashboard(payload, { activeStage });
   return `
     <div class="workbench-shell dashboard-shell">
       ${payload.demoMode ? `<div class="demo-banner" role="status">${escapeHtml(payload.demoLabel)} · 仅用于界面测试，不用于交易</div>` : ''}
       ${dashboardSidebar(payload, activeStage)}
       <main class="workbench-main dashboard-main">
         ${dashboardTopbar(payload, mode)}
-        ${mode === 'review' ? reviewPanel(payload) : renderDeclarationDashboard(payload, { activeStage })}
+        ${mainContent}
       </main>
       ${evidenceDrawer(payload, evidenceOpen)}
     </div>
@@ -1346,21 +1642,35 @@ async function loadWorkbench(date = '') {
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
-    const [strategyValidation, declarationRecommendation, costStrategy] = await Promise.all([
-      fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
-      fetch(
-        `/api/declaration-optimizer/recommendation?date=${encodeURIComponent(selectedDate)}`,
-        { cache: 'no-store' }
-      ).then(responseJson),
-      fetch(`/api/cost-strategy?date=${encodeURIComponent(selectedDate)}`, {
-        cache: 'no-store',
-      })
-        .then(responseJson)
-        .catch(() => null),
-    ]);
+    const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
+      await Promise.all([
+        fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
+        fetch(
+          `/api/declaration-optimizer/recommendation?date=${encodeURIComponent(selectedDate)}`,
+          { cache: 'no-store' }
+        ).then(responseJson),
+        fetch(`/api/cost-strategy?date=${encodeURIComponent(selectedDate)}`, {
+          cache: 'no-store',
+        })
+          .then(responseJson)
+          .catch(() => null),
+        fetch(
+          `/api/strategy-evolution?date=${encodeURIComponent(selectedDate)}`,
+          { cache: 'no-store' }
+        )
+          .then(responseJson)
+          .catch(() => null),
+      ]);
     browserState.payload.strategyValidation = strategyValidation;
     browserState.payload.declarationRecommendation = declarationRecommendation;
     browserState.payload.costStrategy = costStrategy;
+    browserState.payload.strategyEvolution =
+      strategyEvolution ||
+      buildStrategyEvolution({
+        date: selectedDate,
+        strategyValidation,
+        declarationRecommendation,
+      });
   } catch (error) {
     browserState.error = `今日数据核对失败：${error.message}`;
   } finally {
@@ -1374,11 +1684,31 @@ async function runPrimaryAction(actionId) {
   browserState.actionMessage = '';
   const demoResult = buildDemoActionResult(browserState.payload, actionId);
   if (demoResult.handled) {
-    browserState.mode = demoResult.mode;
+    browserState.mode = demoResult.mode || browserState.mode;
+    if (demoResult.activeStage) browserState.activeStage = demoResult.activeStage;
     browserState.evidenceOpen = demoResult.evidenceOpen;
     browserState.actionMessage = demoResult.message;
+    if (demoResult.payloadPatch) {
+      browserState.payload = {
+        ...browserState.payload,
+        ...demoResult.payloadPatch,
+      };
+    }
     renderBrowser();
     return;
+  }
+  if (actionId === 'approve_challenger' || actionId === 'rollback_champion') {
+    const result = applyStrategyEvolutionAction(
+      browserState.payload.strategyEvolution,
+      actionId
+    );
+    if (result.handled) {
+      browserState.payload.strategyEvolution = result.evolution;
+      browserState.activeStage = 'evolve';
+      browserState.actionMessage = result.message;
+      renderBrowser();
+      return;
+    }
   }
   if (actionId === 'collect_today_data') {
     browserState.actionMessage = '正在打开数据窗口并采集当前页面…';
@@ -1451,13 +1781,22 @@ function bindBrowserEvents() {
       browserState.activeStage =
         destination === 'validate'
           ? 'validate'
-          : dashboardNav.dataset.stage || 'connect';
+          : destination === 'evolution'
+            ? 'evolve'
+            : dashboardNav.dataset.stage || 'connect';
       renderBrowser();
       if (destination === 'curve') {
         requestAnimationFrame(() => {
           document
             .querySelector('#declarationCurveTitle')
             ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      }
+      if (destination === 'evolution') {
+        requestAnimationFrame(() => {
+          document
+            .querySelector('#strategyEvolutionTitle')
+            ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
         });
       }
       return;
@@ -1480,6 +1819,12 @@ function bindBrowserEvents() {
         browserState.evidenceOpen = false;
         renderBrowser();
       }
+      return;
+    }
+    const evolutionButton = event.target.closest('[data-evolution-action]');
+    if (evolutionButton) {
+      evolutionButton.disabled = true;
+      await runPrimaryAction(evolutionButton.dataset.evolutionAction);
       return;
     }
     const primaryButton = event.target.closest('[data-primary-action]');

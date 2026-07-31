@@ -20,7 +20,7 @@ async function readExpectedStandardSummary() {
   };
 }
 
-async function startServer() {
+async function startServer(options = {}) {
   const port = 7200 + Math.floor(Math.random() * 1000);
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-server-'));
   const auditPath = path.join(temp, 'audit-log.ndjson');
@@ -30,7 +30,11 @@ async function startServer() {
     ['server.mjs', '--port', String(port), '--audit', auditPath, '--visible-snapshot', visibleSnapshotPath],
     {
       cwd: systemRoot,
-      env: { ...process.env, JSPEC_MANAGED_BROWSER_DISABLED: '1' },
+      env: {
+        ...process.env,
+        JSPEC_MANAGED_BROWSER_DISABLED: '1',
+        ...(options.host ? { HOST: options.host } : {}),
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     }
   );
@@ -42,7 +46,7 @@ async function startServer() {
     });
     server.stdout.on('data', (chunk) => {
       const text = chunk.toString('utf8');
-      if (text.includes(`http://127.0.0.1:${port}`)) {
+      if (text.includes('Trading AI System running at')) {
         resolve();
       }
     });
@@ -53,7 +57,7 @@ async function startServer() {
 
   await ready;
   return {
-    baseUrl: `http://127.0.0.1:${port}`,
+    baseUrl: `http://${options.clientHost || '127.0.0.1'}:${port}`,
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
@@ -61,6 +65,47 @@ async function startServer() {
     },
   };
 }
+
+function nonLoopbackIpv4() {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .find((address) => address?.family === 'IPv4' && !address.internal)?.address;
+}
+
+test('HOST=0.0.0.0 allows the production server to accept non-loopback traffic', async (context) => {
+  const clientHost = nonLoopbackIpv4();
+  if (!clientHost) {
+    context.skip('当前测试环境没有非回环 IPv4 地址');
+    return;
+  }
+  const server = await startServer({ host: '0.0.0.0', clientHost });
+
+  try {
+    const response = await fetch(`${server.baseUrl}/api/health`);
+    const health = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(health.ok, true);
+  } finally {
+    await server.close();
+  }
+});
+
+test('the production server remains loopback-only when HOST is unset', async (context) => {
+  const clientHost = nonLoopbackIpv4();
+  if (!clientHost) {
+    context.skip('当前测试环境没有非回环 IPv4 地址');
+    return;
+  }
+  const server = await startServer({ clientHost });
+
+  try {
+    await assert.rejects(
+      fetch(`${server.baseUrl}/api/health`, { signal: AbortSignal.timeout(1500) })
+    );
+  } finally {
+    await server.close();
+  }
+});
 
 test('local server exposes the P0 system loop', async () => {
   const expectedStandardSummary = await readExpectedStandardSummary();

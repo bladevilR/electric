@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "title": "电力交易 AI · 策略自进化参赛演示",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationMs": 124480,
+  "segments": [
+    {
+      "id": "intro",
+      "title": "电力交易 AI · 策略自进化",
+      "narration": "电力交易 AI：发现衰减，实验评估，影子验证，人工审批上线，异常一键回滚。",
+      "durationMs": 10000,
+      "startMs": 0,
+      "endMs": 11081,
+      "status": "completed"
+    },
+    {
+      "id": "opening",
+      "title": "策略自进化中枢",
+      "narration": "系统不只给一条建议，而是把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。",
+      "durationMs": 6200,
+      "startMs": 11081,
+      "endMs": 18939,
+      "status": "completed"
+    },
+    {
+      "id": "core-metrics",
+      "title": "现役策略表现",
+      "narration": "首屏看现役策略的偏差改善、日胜率和可信度，指标来自真实回测，不是写死的演示数字。",
+      "durationMs": 5600,
+      "startMs": 18939,
+      "endMs": 27051,
+      "status": "completed"
+    },
+    {
+      "id": "open-evolution",
+      "title": "进入策略进化",
+      "narration": "进入策略进化中枢。系统发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。",
+      "durationMs": 6500,
+      "startMs": 27052,
+      "endMs": 37622,
+      "status": "completed"
+    },
+    {
+      "id": "champion-challenger",
+      "title": "冠军与挑战者",
+      "narration": "进化中心对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。",
+      "durationMs": 6200,
+      "startMs": 37622,
+      "endMs": 46299,
+      "status": "completed"
+    },
+    {
+      "id": "experiment-lab",
+      "title": "智能实验",
+      "narration": "实验中心完成漂移诊断、参数搜索和滚动回测，候选策略带着证据进入影子运行。",
+      "durationMs": 6000,
+      "startMs": 46299,
+      "endMs": 54712,
+      "status": "completed"
+    },
+    {
+      "id": "ops-and-governance",
+      "title": "运营与治理",
+      "narration": "运营盯住漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线与自动申报。",
+      "durationMs": 6800,
+      "startMs": 54713,
+      "endMs": 63953,
+      "status": "completed"
+    },
+    {
+      "id": "approve-challenger",
+      "title": "人工审批上线",
+      "narration": "人工审批挑战者上线，只切换策略版本，不会自动向交易平台提交申报。",
+      "durationMs": 5500,
+      "startMs": 63953,
+      "endMs": 73440,
+      "status": "completed"
+    },
+    {
+      "id": "return-declaration",
+      "title": "回到申报优化",
+      "narration": "回到申报优化主视图。九十六点曲线和人工复核仍在，进化中枢与日常决策共用证据链。",
+      "durationMs": 5500,
+      "startMs": 73440,
+      "endMs": 82924,
+      "status": "completed"
+    },
+    {
+      "id": "curve",
+      "title": "96 点申报曲线",
+      "narration": "逐点比较历史申报与人工智能建议，标出关键调整窗口，让上调下调都有时段依据。",
+      "durationMs": 5600,
+      "startMs": 82925,
+      "endMs": 91039,
+      "status": "completed"
+    },
+    {
+      "id": "human-loop",
+      "title": "人工在环",
+      "narration": "人工智能只生成并解释建议；进入申报前必须人工复核，系统不会自动提交交易。",
+      "durationMs": 5200,
+      "startMs": 91039,
+      "endMs": 97851,
+      "status": "completed"
+    },
+    {
+      "id": "audit-mode",
+      "title": "审计复核",
+      "narration": "审计模式复核模型、执行、结算与成本是否同一主体、同一交易日。",
+      "durationMs": 5600,
+      "startMs": 97851,
+      "endMs": 107486,
+      "status": "completed"
+    },
+    {
+      "id": "outro",
+      "title": "可进化、可解释、敢落地",
+      "narration": "从衰减预警到候选策略，从影子运行到人工上线，再到统计与回滚，系统会进化，也守住人工在环。未经复核，不会自动提交。",
+      "durationMs": 15000,
+      "startMs": 107486,
+      "endMs": 124019,
+      "status": "completed"
+    }
+  ],
+  "pageUrl": "http://127.0.0.1:5203/?demo=reviewable",
+  "status": "completed",
+  "startedAt": "2026-07-31T13:41:41.953Z",
+  "completedAt": "2026-07-31T13:43:49.358Z",
+  "rawMedia": {
+    "streams": [
+      {
+        "index": 0,
+        "codec_name": "vp8",
+        "codec_long_name": "On2 VP8",
+        "profile": "0",
+        "codec_type": "video",
+        "codec_tag_string": "[0][0][0][0]",
+        "codec_tag": "0x0000",
+        "mime_codec_string": "vp8",
+        "width": 1920,
+        "height": 1080,
+        "coded_width": 1920,
+        "coded_height": 1080,
+        "has_b_frames": 0,
+        "sample_aspect_ratio": "1:1",
+        "display_aspect_ratio": "16:9",
+        "pix_fmt": "yuv420p",
+        "level": -99,
+        "chroma_location": "center",
+        "field_order": "progressive",
+        "r_frame_rate": "25/1",
+        "avg_frame_rate": "25/1",
+        "time_base": "1/1000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "disposition": {
+          "default": 1,
+          "dub": 0,
+          "original": 0,
+          "comment": 0,
+          "lyrics": 0,
+          "karaoke": 0,
+          "forced": 0,
+          "hearing_impaired": 0,
+          "visual_impaired": 0,
+          "clean_effects": 0,
+          "attached_pic": 0,
+          "timed_thumbnails": 0,
+          "non_diegetic": 0,
+          "captions": 0,
+          "descriptions": 0,
+          "metadata": 0,
+          "dependent": 0,
+          "still_image": 0,
+          "multilayer": 0
+        },
+        "tags": {
+          "language": "eng",
+          "ENCODER": "Lavc61.3.100 libvpx",
+          "DURATION": "00:02:04.480000000"
+        }
+      }
+    ],
+    "format": {
+      "filename": "/Users/r/Documents/electric/trading-ai-system/output/video/raw/browser-recording.webm",
+      "nb_streams": 1,
+      "nb_programs": 0,
+      "nb_stream_groups": 0,
+      "format_name": "matroska,webm",
+      "format_long_name": "Matroska / WebM",
+      "start_time": "0.000000",
+      "duration": "124.480000",
+      "size": "11848673",
+      "bit_rate": "761482",
+      "probe_score": 100,
+      "tags": {
+        "ENCODER": "Lavf61.1.100"
+      }
+    }
+  }
+}
