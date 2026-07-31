@@ -1,3 +1,5 @@
+import { buildDeclarationDashboardView } from './lib/declaration-dashboard-view.mjs';
+
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
 });
@@ -674,61 +676,394 @@ export function buildDemoActionResult(payload, actionId) {
   return { handled: false };
 }
 
+function dashboardSidebar(payload, activeStage) {
+  const navItems = [
+    { id: 'curve', stage: 'connect', label: 'AI申报优化', icon: '⌁' },
+    { id: 'validate', stage: 'validate', label: '申报总览', icon: '▦' },
+    { id: 'curve', stage: 'execute', label: '曲线对比', icon: '⌁' },
+    { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
+  ];
+  const activeNavigation =
+    activeStage === 'validate'
+      ? 'validate'
+      : activeStage === 'settle'
+        ? 'review'
+        : 'primary';
+  return `
+    <aside class="dashboard-sidebar">
+      <div class="dashboard-brand">
+        <span class="brand-mark" aria-hidden="true">ϟ</span>
+        <div class="brand-copy">
+          <strong>电力交易 AI</strong>
+          <small>智能申报决策</small>
+        </div>
+      </div>
+      <nav class="dashboard-nav" aria-label="AI 申报工作区">
+        ${navItems
+          .map(
+            (item) => `
+              <button
+                type="button"
+                class="${
+                  (activeNavigation === 'primary' && item.stage === 'connect') ||
+                  (activeNavigation === item.id && item.stage !== 'connect')
+                    ? 'is-active'
+                    : ''
+                }"
+                data-dashboard-nav="${escapeHtml(item.id)}"
+                data-stage="${escapeHtml(item.stage)}"
+              >
+                <span class="nav-icon" aria-hidden="true">${escapeHtml(item.icon)}</span>
+                <span class="nav-label">${escapeHtml(item.label)}</span>
+              </button>
+            `
+          )
+          .join('')}
+      </nav>
+      <a
+        class="dashboard-guide-link"
+        href="./一分钟上手.html"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <span class="nav-icon" aria-hidden="true">?</span>
+        <span class="nav-label">一分钟上手</span>
+      </a>
+      <div class="dashboard-model-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div class="brand-copy">
+          <small>AI 模型状态</small>
+          <strong>${payload.strategyValidation?.declarationOptimizer?.status === 'validated' ? '验证通过' : '等待验证'}</strong>
+        </div>
+      </div>
+      <button class="sidebar-evidence-button" type="button" data-action="open-evidence">
+        <span aria-hidden="true">◎</span>
+        <span class="nav-label">证据与审计</span>
+      </button>
+    </aside>
+  `;
+}
+
+function dashboardTopbar(payload, mode) {
+  return `
+    <header class="dashboard-topbar">
+      <div class="dashboard-date-control">
+        <span>交易日</span>
+        <input type="date" value="${escapeHtml(payload.date)}" data-date-input>
+      </div>
+      <div class="dashboard-freshness ${payload.dataFreshness?.status === 'ready' ? 'is-ready' : 'is-stale'}">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>${payload.dataFreshness?.status === 'ready' ? '数据已就绪' : '数据待更新'}</span>
+      </div>
+      <div class="mode-switch dashboard-mode-switch" role="group" aria-label="工作模式">
+        <button type="button" data-mode="operation" class="${mode === 'operation' ? 'is-active' : ''}">决策</button>
+        <button type="button" data-mode="review" class="${mode === 'review' ? 'is-active' : ''}">审计</button>
+      </div>
+    </header>
+  `;
+}
+
+function dashboardHero(payload, view) {
+  const recommendationReady = view.recommendation.status === 'ready';
+  return `
+    <section class="dashboard-hero" aria-labelledby="declarationDashboardTitle">
+      <div class="dashboard-hero-copy">
+        <span class="hero-kicker">POWER DECLARATION INTELLIGENCE</span>
+        <h1 id="declarationDashboardTitle"><span>AI</span>申报优化</h1>
+        <p>基于历史申报与实际负荷偏差，生成可解释建议并交由人工复核</p>
+      </div>
+      <ol class="dashboard-progress" aria-label="申报优化流程">
+        <li class="${view.optimizerStatus === 'validated' ? 'is-complete' : 'is-current'}">
+          <b>1</b><span><strong>AI 生成建议</strong><small>${recommendationReady ? '已完成' : '待生成'}</small></span>
+        </li>
+        <li class="${payload.execution?.reviewed ? 'is-complete' : 'is-current'}">
+          <b>2</b><span><strong>人工复核</strong><small>${payload.execution?.reviewed ? '已完成' : '待处理'}</small></span>
+        </li>
+        <li>
+          <b>3</b><span><strong>提交申报</strong><small>待提交</small></span>
+        </li>
+      </ol>
+    </section>
+  `;
+}
+
+function dashboardMetrics(view) {
+  const metrics = [
+    {
+      label: '偏差改善',
+      value: view.metrics.improvement.display,
+      detail: '相对默认申报基线',
+      tone: 'blue',
+      icon: '↗',
+    },
+    {
+      label: '交易日胜率',
+      value: view.metrics.winRate.display,
+      detail: '独立留出集验证',
+      tone: 'green',
+      icon: '✓',
+    },
+    {
+      label: '优化规模',
+      value: view.metrics.coverage.display,
+      detail: '覆盖申报点 / 交易日',
+      tone: 'violet',
+      icon: '∿',
+    },
+    {
+      label: '决策可信度',
+      value: view.metrics.confidence.display,
+      detail: '真实数据综合评分',
+      tone: 'amber',
+      icon: '★',
+    },
+  ];
+  return `
+    <section class="dashboard-metrics" aria-label="申报优化核心指标">
+      ${metrics
+        .map(
+          (metric) => `
+            <article class="dashboard-metric is-${metric.tone}">
+              <span class="metric-icon" aria-hidden="true">${metric.icon}</span>
+              <div>
+                <span>${escapeHtml(metric.label)}</span>
+                <strong>${escapeHtml(metric.value)}</strong>
+                <small>${escapeHtml(metric.detail)}</small>
+              </div>
+            </article>
+          `
+        )
+        .join('')}
+    </section>
+  `;
+}
+
+function renderCurveGrid(geometry) {
+  const horizontal = [0.12, 0.34, 0.56, 0.78, 1];
+  return horizontal
+    .map((ratio) => {
+      const y =
+        geometry.padding.top +
+        ratio *
+          (geometry.height - geometry.padding.top - geometry.padding.bottom);
+      return `<line x1="${geometry.padding.left}" y1="${y.toFixed(2)}" x2="${geometry.width - geometry.padding.right}" y2="${y.toFixed(2)}"></line>`;
+    })
+    .join('');
+}
+
+function declarationCurve(view) {
+  const geometry = view.curve.geometry;
+  const rows = view.curve.rows;
+  const points = geometry.points
+    .map(
+      (point) => `
+        <g class="curve-point" tabindex="0" data-curve-point="${escapeHtml(point.row.pointIndex)}"
+           aria-label="${escapeHtml(`${point.row.timePoint || `第 ${point.row.pointIndex} 点`}：基线 ${point.row.baselinePowerMw} MWh，AI 建议 ${point.row.recommendedPowerMw} MWh`)}">
+          <circle class="curve-hit" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="10"></circle>
+          <circle class="curve-dot" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="3.5"></circle>
+          <title>${escapeHtml(`${point.row.timePoint || point.row.pointIndex} · AI ${point.row.recommendedPowerMw} MWh · 基线 ${point.row.baselinePowerMw} MWh`)}</title>
+        </g>
+      `
+    )
+    .join('');
+  return `
+    <section class="declaration-curve-panel" aria-labelledby="declarationCurveTitle">
+      <div class="curve-heading">
+        <div>
+          <span class="hero-kicker">REAL 96-POINT EVIDENCE</span>
+          <h2 id="declarationCurveTitle">96 点申报曲线对比</h2>
+        </div>
+        <div class="curve-legend" aria-label="曲线图例">
+          <span class="is-baseline">历史申报</span>
+          <span class="is-ai">AI 建议申报</span>
+        </div>
+      </div>
+      ${
+        rows.length
+          ? `
+            <div class="curve-canvas">
+              <svg viewBox="0 0 ${geometry.width} ${geometry.height}" role="img" aria-label="历史申报与 AI 建议申报曲线">
+                <g class="curve-grid">${renderCurveGrid(geometry)}</g>
+                <path class="curve-area" d="${escapeHtml(`${geometry.recommendedPath} L ${geometry.points.at(-1).x.toFixed(2)} ${geometry.height - geometry.padding.bottom} L ${geometry.points[0].x.toFixed(2)} ${geometry.height - geometry.padding.bottom} Z`)}"></path>
+                <path class="curve-baseline" d="${escapeHtml(geometry.baselinePath)}"></path>
+                <path class="curve-recommended" d="${escapeHtml(geometry.recommendedPath)}"></path>
+                ${points}
+              </svg>
+            </div>
+            <div class="curve-axis">
+              <span>${escapeHtml(rows[0]?.timePoint || '第 1 点')}</span>
+              <span>时段（15 分钟 / 点）</span>
+              <span>${escapeHtml(rows.at(-1)?.timePoint || `第 ${rows.at(-1)?.pointIndex || 96} 点`)}</span>
+            </div>
+          `
+          : `
+            <div class="curve-empty" role="status">
+              <span aria-hidden="true">∿</span>
+              <strong>96 点曲线等待真实数据</strong>
+              <p>补齐目标日默认申报与最近实际负荷后，系统将在这里生成可复核建议。</p>
+            </div>
+          `
+      }
+      <div class="curve-insight">
+        <span aria-hidden="true">✦</span>
+        <p>${view.windows.length ? `识别到 ${view.windows.length} 个连续调整窗口，所有点位均可追溯。` : '当前没有可展示的调整窗口，系统不会虚构曲线或收益。'}</p>
+        <button type="button" data-action="open-evidence">查看偏差分析 <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+  `;
+}
+
+function recommendationPanel(payload, view) {
+  const recommendation = payload.declarationRecommendation || {};
+  const optimizer = payload.strategyValidation?.declarationOptimizer || {};
+  const model = optimizer.selectedModel || {};
+  const currentState =
+    recommendation.status === 'ready'
+      ? `已生成 ${recommendation.coverage?.recommendedPointCount || 0} 点复核建议`
+      : recommendation.status === 'baseline_ready'
+        ? '默认申报基线可复核'
+        : '当前回退默认申报';
+  const recovery =
+    recommendation.status === 'missing_baseline'
+      ? '补齐目标日 96 点默认申报'
+      : recommendation.status === 'stale_inputs'
+        ? '刷新最近实际负荷后重新计算'
+        : recommendation.status === 'ready'
+          ? '进入人工复核后方可采用'
+          : '优化失败时保留默认申报';
+  const actionId = view.recommendation.canReview
+    ? 'review_strategy'
+    : payload.primaryAction?.id || 'collect_today_data';
+  const actionLabel = view.recommendation.canReview
+    ? '进入人工复核'
+    : payload.primaryAction?.label || '采集并校验当日数据';
+  const windows = view.windows.slice(0, 5);
+  return `
+    <aside class="recommendation-panel" aria-labelledby="recommendationTitle">
+      <div class="recommendation-heading">
+        <div>
+          <span class="hero-kicker">DECISION BRIEF</span>
+          <h2 id="recommendationTitle">AI 优化建议</h2>
+        </div>
+        <span class="recommendation-state">${view.recommendation.status === 'ready' ? '已生成' : '待数据'}</span>
+      </div>
+      <section class="recommendation-impact">
+        <span>预计偏差改善</span>
+        <strong>${escapeHtml(view.metrics.improvement.display)}</strong>
+        <small>${model.windowDays ? `${escapeHtml(model.windowDays)} 日同点位均值模型` : '依据真实历史回测结果'}</small>
+      </section>
+      <section class="recommendation-windows">
+        <div>
+          <span>关键调整时段</span>
+          <small>影响 TOP ${windows.length || '—'}</small>
+        </div>
+        ${
+          windows.length
+            ? windows
+                .map(
+                  (window) => `
+                    <article>
+                      <span>${escapeHtml(window.label)}</span>
+                      <i class="is-${window.direction}"><b style="width:${Math.min(100, 30 + window.pointCount * 12)}%"></b></i>
+                      <strong class="is-${window.direction}">${window.direction === 'up' ? '上调' : '下调'}</strong>
+                    </article>
+                  `
+                )
+                .join('')
+            : '<p class="recommendation-empty">等待 96 点建议生成后展示调整窗口。</p>'
+        }
+      </section>
+      <section class="recommendation-safety">
+        <span>当前运行状态</span>
+        <strong>${escapeHtml(currentState)}</strong>
+        <small>${escapeHtml(recovery)}</small>
+      </section>
+      <div class="recommendation-actions">
+        <button type="button" class="secondary-action" data-action="open-evidence">查看详情</button>
+        <button type="button" class="primary-action" data-primary-action="${escapeHtml(actionId)}">${escapeHtml(actionLabel)}</button>
+      </div>
+      <p class="recommendation-footnote">偏差改善不等于已实现人民币节省；未经人工复核不会提交申报。</p>
+    </aside>
+  `;
+}
+
+function optimizationFlow(payload, view) {
+  const flow = [
+    ['▣', '数据准备', payload.execution?.dataReady ? '已完成' : '待补齐'],
+    ['⌘', 'AI 建模预测', view.optimizerStatus === 'validated' ? '已验证' : '待验证'],
+    ['◷', '生成优化建议', view.recommendation.status === 'ready' ? '已完成' : '待生成'],
+    ['♙', '人工复核', payload.execution?.reviewed ? '已完成' : '待处理'],
+    ['➤', '提交申报', '待提交'],
+  ];
+  return `
+    <section class="optimization-flow" aria-labelledby="optimizationFlowTitle">
+      <div class="flow-heading">
+        <span class="hero-kicker">HUMAN-IN-THE-LOOP</span>
+        <h2 id="optimizationFlowTitle">优化流程</h2>
+      </div>
+      <ol>
+        ${flow
+          .map(
+            ([icon, label, state], index) => `
+              <li class="${state === '已完成' || state === '已验证' ? 'is-complete' : index === 3 ? 'is-current' : ''}">
+                <span class="flow-icon" aria-hidden="true">${icon}</span>
+                <div><strong>${label}</strong><small>${state}</small></div>
+              </li>
+              ${index < flow.length - 1 ? '<b class="flow-arrow" aria-hidden="true">→</b>' : ''}
+            `
+          )
+          .join('')}
+      </ol>
+    </section>
+  `;
+}
+
+export function renderDeclarationDashboard(payload, options = {}) {
+  const view = buildDeclarationDashboardView(payload);
+  const activeStage = options.activeStage || payload.currentStage || 'connect';
+  return `
+    <section class="declaration-dashboard">
+      ${dashboardHero(payload, view)}
+      ${dashboardMetrics(view)}
+      ${
+        activeStage === 'validate'
+          ? `<section class="dashboard-context-alert"><strong>执行前数据质量校验</strong><span>${payload.execution?.dataReady ? '关键数据已通过校验' : '仍有数据缺口，当前禁止下发'}</span></section>`
+          : ''
+      }
+      <div class="dashboard-primary-grid">
+        ${declarationCurve(view)}
+        ${recommendationPanel(payload, view)}
+      </div>
+      ${optimizationFlow(payload, view)}
+      <details class="dashboard-audit-summary">
+        <summary>展开历史策略验证与执行门禁</summary>
+        <nav class="decision-flow" aria-label="当日决策逻辑">
+          <span>成本机会</span><b aria-hidden="true">→</b>
+          <span>策略依据</span><b aria-hidden="true">→</b>
+          <span>风险约束</span><b aria-hidden="true">→</b>
+          <span>可执行动作</span>
+        </nav>
+        ${payload.status === 'blocked' ? blockedDecisionGate(payload).replace(/<div class="primary-action-row">[\s\S]*?<\/div>/, '') : savingsHero(payload)}
+        ${strategyValidationPanel(payload)}
+        ${declarationOptimizerPanel(payload)}
+        ${activeStage === 'validate' ? validationPanel(payload) : ''}
+        ${blockersPanel(payload, { showAction: false })}
+      </details>
+    </section>
+  `;
+}
+
 export function renderWorkbenchMarkup(payload, options = {}) {
   const mode = options.mode === 'review' ? 'review' : 'operation';
   const activeStage = options.activeStage || payload.currentStage || 'connect';
   const evidenceOpen = options.evidenceOpen !== false;
-  const heading = operationHeading(activeStage);
   return `
-    <div class="workbench-shell">
+    <div class="workbench-shell dashboard-shell">
       ${payload.demoMode ? `<div class="demo-banner" role="status">${escapeHtml(payload.demoLabel)} · 仅用于界面测试，不用于交易</div>` : ''}
-      <header class="app-topbar">
-        <div class="product-lockup">
-          <img src="./assets/app-icon.png" alt="">
-          <div>
-            <strong>电力交易智能决策平台</strong>
-            <span>成本优化 · 风险控制 · 结算验证</span>
-          </div>
-        </div>
-        <div class="topbar-context">
-          <label>
-            <span>交易日</span>
-            <input type="date" value="${escapeHtml(payload.date)}" data-date-input>
-          </label>
-          <div class="freshness ${payload.dataFreshness?.status === 'ready' ? 'is-ready' : 'is-stale'}">
-            <span>数据截至</span>
-            <strong>${escapeHtml(formatDateTime(payload.dataFreshness?.generatedAt))}${payload.dataFreshness?.status === 'stale' ? ' · 已过期' : ''}</strong>
-          </div>
-          <div class="mode-switch" role="group" aria-label="工作模式">
-            <button type="button" data-mode="operation" class="${mode === 'operation' ? 'is-active' : ''}">决策</button>
-            <button type="button" data-mode="review" class="${mode === 'review' ? 'is-active' : ''}">审计</button>
-          </div>
-        </div>
-      </header>
-      <aside class="process-sidebar">
-        <div class="sidebar-intro">
-          <span>全流程决策闭环</span>
-          <strong>${escapeHtml(payload.date)}</strong>
-        </div>
-        ${stageNavigation(payload, activeStage)}
-        <a href="./一分钟上手.html" target="_blank" rel="noreferrer" class="help-link">操作指引</a>
-      </aside>
-      <main class="workbench-main">
-        ${
-          mode === 'review'
-            ? reviewPanel(payload)
-            : `
-              <div class="page-heading">
-                <div>
-                  <span class="eyebrow">${escapeHtml(heading.eyebrow)}</span>
-                  <h1>${escapeHtml(heading.title)}</h1>
-                  <p>${escapeHtml(heading.description)}</p>
-                </div>
-                <span class="trading-status">${escapeHtml(statusText(payload.status))}</span>
-              </div>
-              ${operationContent(payload, activeStage)}
-            `
-        }
+      ${dashboardSidebar(payload, activeStage)}
+      <main class="workbench-main dashboard-main">
+        ${dashboardTopbar(payload, mode)}
+        ${mode === 'review' ? reviewPanel(payload) : renderDeclarationDashboard(payload, { activeStage })}
       </main>
       ${evidenceDrawer(payload, evidenceOpen)}
     </div>
@@ -739,7 +1074,7 @@ const browserState = {
   payload: null,
   mode: 'operation',
   activeStage: null,
-  evidenceOpen: typeof window === 'undefined' ? true : window.innerWidth > 1100,
+  evidenceOpen: false,
   loading: true,
   actionMessage: '',
   error: '',
@@ -813,15 +1148,21 @@ async function loadWorkbench(date = '') {
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
-    const [strategyValidation, declarationRecommendation] = await Promise.all([
+    const [strategyValidation, declarationRecommendation, costStrategy] = await Promise.all([
       fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
       fetch(
         `/api/declaration-optimizer/recommendation?date=${encodeURIComponent(selectedDate)}`,
         { cache: 'no-store' }
       ).then(responseJson),
+      fetch(`/api/cost-strategy?date=${encodeURIComponent(selectedDate)}`, {
+        cache: 'no-store',
+      })
+        .then(responseJson)
+        .catch(() => null),
     ]);
     browserState.payload.strategyValidation = strategyValidation;
     browserState.payload.declarationRecommendation = declarationRecommendation;
+    browserState.payload.costStrategy = costStrategy;
   } catch (error) {
     browserState.error = `今日数据核对失败：${error.message}`;
   } finally {
@@ -897,6 +1238,30 @@ function bindBrowserEvents() {
     if (modeButton) {
       browserState.mode = modeButton.dataset.mode;
       renderBrowser();
+      return;
+    }
+    const dashboardNav = event.target.closest('[data-dashboard-nav]');
+    if (dashboardNav) {
+      const destination = dashboardNav.dataset.dashboardNav;
+      if (destination === 'review') {
+        browserState.mode = 'review';
+        browserState.activeStage = dashboardNav.dataset.stage || 'settle';
+        renderBrowser();
+        return;
+      }
+      browserState.mode = 'operation';
+      browserState.activeStage =
+        destination === 'validate'
+          ? 'validate'
+          : dashboardNav.dataset.stage || 'connect';
+      renderBrowser();
+      if (destination === 'curve') {
+        requestAnimationFrame(() => {
+          document
+            .querySelector('#declarationCurveTitle')
+            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      }
       return;
     }
     const stageButton = event.target.closest('[data-stage]');

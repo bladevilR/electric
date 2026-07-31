@@ -221,3 +221,74 @@ test('selecting the validation stage changes the main task to the data checklist
   assert.doesNotMatch(html, /<h1>当日交易决策中心<\/h1>/);
   assert.equal([...html.matchAll(/data-primary-action=/g)].length, 1);
 });
+
+test('decision mode renders the AI declaration dashboard as the primary theme', () => {
+  const payload = blockedPayload();
+  payload.declarationRecommendation = {
+    status: 'ready',
+    coverage: {
+      recommendedPointCount: 2,
+      requiredPointCount: 2,
+      optimizerPointCount: 2,
+      fallbackPointCount: 0,
+    },
+    rows: [
+      {
+        pointIndex: 1,
+        timePoint: '00:15',
+        baselinePowerMw: 10,
+        recommendedPowerMw: 12,
+        deltaPowerMw: 2,
+      },
+      {
+        pointIndex: 2,
+        timePoint: '00:30',
+        baselinePowerMw: 11,
+        recommendedPowerMw: 9,
+        deltaPowerMw: -2,
+      },
+    ],
+  };
+  payload.costStrategy = { dataConfidence: { score: 88 } };
+  payload.execution = {
+    dataReady: true,
+    reviewed: false,
+    allowed: false,
+  };
+
+  const html = renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /AI申报优化/);
+  assert.match(html, /96 点申报曲线对比/);
+  assert.match(html, /\+9\.64%/);
+  assert.match(html, /88\/100/);
+  assert.match(html, /进入人工复核/);
+  assert.match(html, /data-curve-point="1"/);
+  assert.doesNotMatch(html, /立即下单|自动提交/);
+});
+
+test('decision dashboard never invents savings or confidence', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /待校验/);
+  assert.doesNotMatch(html, /92\/100|¥3,215,600/);
+});
+
+test('dashboard exposes only functional navigation actions', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /data-dashboard-nav="curve"/);
+  assert.match(html, /data-dashboard-nav="validate"/);
+  assert.match(html, /data-dashboard-nav="review"/);
+  assert.match(html, /data-action="open-evidence"/);
+  assert.doesNotMatch(html, /href="#"/);
+});
