@@ -33,7 +33,7 @@
 - Consumes: `buildDemoWorkbenchScenario(payload, scenario)` 的 `settled` 演示场景。
 - Produces: `buildSavingsProjection(dailyYuan, { monthlyTradingDays, annualTradingDays })`，返回 `{ dailyYuan, monthlyYuan, annualYuan, monthlyTradingDays, annualTradingDays }`；`savingsHero(payload)` 展示三个金额和演示口径。
 
-- [ ] **Step 1: 写金额公式和展示的失败测试**
+- [x] **Step 1: 写金额公式和展示的失败测试**
 
 在 `test/workbench-ui.test.mjs` 增加断言：
 
@@ -69,13 +69,13 @@ assert.match(html, /¥6,336,000/);
 assert.match(html, /演示交易规模等比例测算/);
 ```
 
-- [ ] **Step 2: 运行测试确认旧明细失败**
+- [x] **Step 2: 运行测试确认旧明细失败**
 
 Run: `node --test test/workbench-ui.test.mjs`
 
 Expected: FAIL，旧场景五项明细复算为 14,000 元，且没有月度/年度 projection。
 
-- [ ] **Step 3: 实现金额投影和自洽演示数据**
+- [x] **Step 3: 实现金额投影和自洽演示数据**
 
 在 `workbench.js` 导出：
 
@@ -98,11 +98,11 @@ export function buildSavingsProjection(
 
 将 `settled` 场景的 `actualSettlementCostYuan` 改为 `1_258_520`，由五项明细复算 `realizedNetYuan`，并写入 `savings.projection`。在 `savingsHero` 中加入单日、月度、年度三项视觉层级和“演示交易规模等比例测算，非已实现生产收益”标签；在证据链保留五项公式。
 
-- [ ] **Step 4: 增加聚焦成本结果的样式**
+- [x] **Step 4: 增加聚焦成本结果的样式**
 
 在 `workbench.css` 增加 `.savings-projection-grid`、`.savings-projection-item`、`.savings-scope-note`，确保 1920×1080 录制时三项金额同屏且不被底部字幕遮挡。
 
-- [ ] **Step 5: 运行测试并提交**
+- [x] **Step 5: 运行测试并提交**
 
 Run: `node --test test/workbench-ui.test.mjs test/savings-workbench.test.mjs`
 

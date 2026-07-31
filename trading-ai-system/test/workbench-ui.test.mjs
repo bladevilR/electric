@@ -197,6 +197,41 @@ test('demo scenarios are visibly labeled and never replace the default payload s
   });
 });
 
+test('settled contest demo keeps savings math consistent and shows bounded projections', async () => {
+  const module = await import('../workbench.js');
+  const settled = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'settled'
+  );
+  const costs = settled.savings.costs;
+  const recomputed =
+    costs.baselineCostYuan -
+    costs.actualSettlementCostYuan -
+    costs.transactionFeesYuan -
+    costs.deviationCostYuan -
+    costs.systemOperatingCostYuan;
+
+  assert.equal(recomputed, 24_000);
+  assert.equal(settled.savings.realizedNetYuan, recomputed);
+  assert.deepEqual(settled.savings.projection, {
+    dailyYuan: 24_000,
+    monthlyYuan: 528_000,
+    annualYuan: 6_336_000,
+    monthlyTradingDays: 22,
+    annualTradingDays: 264,
+  });
+
+  const html = module.renderWorkbenchMarkup(settled, {
+    mode: 'operation',
+    activeStage: 'settle',
+    evidenceOpen: false,
+  });
+  assert.match(html, /¥24,000/);
+  assert.match(html, /¥528,000/);
+  assert.match(html, /¥6,336,000/);
+  assert.match(html, /演示交易规模等比例测算/);
+});
+
 test('standalone reviewable demo does not depend on external standard data', async () => {
   const module = await import('../workbench.js');
 

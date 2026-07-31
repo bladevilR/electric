@@ -493,6 +493,47 @@ button {
   line-height: 1.6;
 }
 
+.savings-projection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.savings-projection-item {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.savings-projection-item.is-primary {
+  border-color: rgba(13, 148, 136, 0.26);
+  background: var(--teal-100);
+}
+
+.savings-projection-item span,
+.savings-projection-item small {
+  display: block;
+  color: var(--ink-500);
+  font-size: 11px;
+}
+
+.savings-projection-item strong {
+  display: block;
+  margin: 5px 0 3px;
+  color: var(--ink-950);
+  font-size: clamp(18px, 1.8vw, 28px);
+  letter-spacing: -0.03em;
+}
+
+.savings-hero .savings-scope-note {
+  margin-top: 9px;
+  color: var(--amber-700);
+  font-weight: 700;
+}
+
 .decision-state {
   align-self: center;
   padding-left: 28px;
