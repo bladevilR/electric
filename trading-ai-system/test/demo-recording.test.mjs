@@ -21,6 +21,13 @@ function validPlan() {
         id: 'opening',
         title: 'AI 申报优化',
         narration: '系统首先展示申报优化的核心结论。',
+        camera: {
+          scale: 1,
+          focus: [{ type: 'css', value: '#declarationDashboardTitle' }],
+          enterMs: 800,
+          exit: 'reset',
+          motionBlur: 0,
+        },
         action: {
           type: 'show',
           locators: [{ type: 'css', value: '#declarationDashboardTitle' }],
@@ -37,6 +44,13 @@ function validPlan() {
         id: 'open-evidence',
         title: '可审计证据链',
         narration: '每个结论都能追溯到数据与计算依据。',
+        camera: {
+          scale: 1.18,
+          focus: [{ type: 'css', value: '#evidenceTitle' }],
+          enterMs: 900,
+          exit: 'connect',
+          motionBlur: 0.12,
+        },
         action: {
           type: 'click',
           locators: [{ type: 'css', value: '[data-action="open-evidence"]' }],

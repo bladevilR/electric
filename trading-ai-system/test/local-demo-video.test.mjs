@@ -4,6 +4,11 @@ import test from 'node:test';
 import * as browserRecording from '../recording/local/record-browser-video.mjs';
 import * as videoProduction from '../recording/local/lib/video-production.mjs';
 import {
+  cameraTransformCss,
+  computeCameraTransform,
+  normalizeCameraSpec,
+} from '../recording/local/lib/cinematic-camera.mjs';
+import {
   buildEdgeTtsArgs,
   buildFfmpegArgs,
   buildNarrationMixArgs,
@@ -415,4 +420,33 @@ test('镜头停留预算会扣除点击滚动耗时而不是重复叠加', () =>
   assert.equal(typeof browserRecording.remainingHoldMs, 'function');
   assert.equal(browserRecording.remainingHoldMs(16_000, 3_800), 12_200);
   assert.equal(browserRecording.remainingHoldMs(4_000, 5_200), 0);
+});
+
+test('电影化摄影机配置有硬边界并可确定性聚焦页面区域', () => {
+  const camera = normalizeCameraSpec(
+    {
+      scale: 1.18,
+      focus: [{ type: 'css', value: '.savings-projection-grid' }],
+      enterMs: 900,
+      exit: 'connect',
+      motionBlur: 0.16,
+    },
+    'savings.camera'
+  );
+  assert.equal(camera.scale, 1.18);
+  assert.equal(camera.enterMs, 900);
+  assert.throws(
+    () => normalizeCameraSpec({ scale: 1.3, focus: [] }, 'bad.camera'),
+    /bad\.camera/
+  );
+
+  const transform = computeCameraTransform({
+    viewportWidth: 1920,
+    viewportHeight: 1080,
+    focusRect: { x: 1200, y: 240, width: 400, height: 260 },
+    scale: 1.2,
+  });
+  assert.equal(transform.scale, 1.2);
+  assert.ok(transform.x <= 0 && transform.y <= 0);
+  assert.match(cameraTransformCss(transform), /translate3d\(.+\) scale\(1\.2\)/);
 });

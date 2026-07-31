@@ -1,3 +1,5 @@
+import { normalizeCameraSpec } from '../local/lib/cinematic-camera.mjs';
+
 const COMPETITION_LIMIT_MS = 300_000;
 const ALLOWED_ACTIONS = new Set(['show', 'click', 'scroll']);
 const ALLOWED_LOCATORS = new Set(['css', 'text']);
@@ -79,6 +81,7 @@ function normalizeStep(rawStep, index) {
         ? step.narrationChapter.trim()
         : `chapter-${id}`,
     chapter: typeof step.chapter === 'string' ? step.chapter.trim() : '',
+    camera: normalizeCameraSpec(step.camera, `${id}.camera`),
     action: {
       type: actionType,
       locators: actionLocators,
