@@ -22,11 +22,14 @@ function validPlan() {
         title: 'AI 申报优化',
         narration: '系统首先展示申报优化的核心结论。',
         camera: {
-          scale: 1,
-          focus: [{ type: 'css', value: '#declarationDashboardTitle' }],
-          enterMs: 800,
+          beats: [{
+            at: 0.1,
+            scale: 1.3,
+            focus: [{ type: 'css', value: '#declarationDashboardTitle' }],
+            durationMs: 900,
+            motionBlur: 0.08,
+          }],
           exit: 'reset',
-          motionBlur: 0,
         },
         action: {
           type: 'show',
@@ -45,11 +48,14 @@ function validPlan() {
         title: '可审计证据链',
         narration: '每个结论都能追溯到数据与计算依据。',
         camera: {
-          scale: 1.18,
-          focus: [{ type: 'css', value: '#evidenceTitle' }],
-          enterMs: 900,
+          beats: [{
+            at: 0.1,
+            scale: 1.68,
+            focus: [{ type: 'css', value: '#evidenceTitle' }],
+            durationMs: 760,
+            motionBlur: 0.12,
+          }],
           exit: 'connect',
-          motionBlur: 0.12,
         },
         action: {
           type: 'click',
@@ -146,14 +152,17 @@ test('the shipped competition plan centers AI cost savings and leaves failure he
   assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
-  assert.ok(plan.steps.every((step) => step.camera.focus.length > 0));
-  assert.ok(plan.steps.every((step) => step.camera.scale <= 1.26));
-  const cameraMoves = plan.steps.filter((step) => step.camera.scale > 1);
-  assert.ok(cameraMoves.length >= 10 && cameraMoves.length <= 14);
+  const cameraBeats = plan.steps.flatMap((step) => step.camera.beats);
+  assert.ok(cameraBeats.every((beat) => beat.focus.length > 0));
+  assert.ok(cameraBeats.every((beat) => beat.scale <= 1.9));
+  assert.ok(cameraBeats.length >= 16 && cameraBeats.length <= 20);
+  assert.ok(cameraBeats.filter((beat) => beat.scale >= 1.6).length >= 6);
   let consecutiveCloseups = 0;
   for (const step of plan.steps) {
-    consecutiveCloseups = step.camera.scale > 1 ? consecutiveCloseups + 1 : 0;
-    assert.ok(consecutiveCloseups <= 2);
+    for (const beat of step.camera.beats) {
+      consecutiveCloseups = beat.scale >= 1.6 ? consecutiveCloseups + 1 : 0;
+      assert.ok(consecutiveCloseups <= 2);
+    }
     if (step.camera.exit === 'reset') consecutiveCloseups = 0;
   }
   assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 4);

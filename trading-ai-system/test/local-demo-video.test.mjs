@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import * as browserRecording from '../recording/local/record-browser-video.mjs';
@@ -428,19 +429,41 @@ test('镜头停留预算会扣除点击滚动耗时而不是重复叠加', () =>
 test('电影化摄影机配置有硬边界并可确定性聚焦页面区域', () => {
   const camera = normalizeCameraSpec(
     {
-      scale: 1.18,
-      focus: [{ type: 'css', value: '.savings-projection-grid' }],
-      enterMs: 900,
+      beats: [
+        {
+          at: 0,
+          scale: 1.35,
+          focus: [{ type: 'css', value: '.savings-projection-grid' }],
+          durationMs: 1200,
+          motionBlur: 0.12,
+        },
+        {
+          at: 0.45,
+          scale: 1.9,
+          focus: [{ type: 'css', value: '#savingsValue' }],
+          durationMs: 750,
+          motionBlur: 0.18,
+        },
+      ],
       exit: 'connect',
-      motionBlur: 0.16,
     },
     'savings.camera'
   );
-  assert.equal(camera.scale, 1.18);
-  assert.equal(camera.enterMs, 900);
+  assert.equal(camera.beats[1].scale, 1.9);
+  assert.equal(camera.beats[0].durationMs, 1200);
   assert.throws(
-    () => normalizeCameraSpec({ scale: 1.3, focus: [] }, 'bad.camera'),
-    /bad\.camera/
+    () => normalizeCameraSpec({ beats: [{ at: 0, scale: 1.91, focus: [], durationMs: 800 }], exit: 'reset' }, 'bad.camera'),
+    /1\.9/
+  );
+  assert.throws(
+    () => normalizeCameraSpec({
+      beats: [
+        { at: 0.5, scale: 1.2, focus: [{ type: 'css', value: '#a' }], durationMs: 800 },
+        { at: 0.4, scale: 1.3, focus: [{ type: 'css', value: '#b' }], durationMs: 800 },
+      ],
+      exit: 'reset',
+    }, 'bad-order.camera'),
+    /递增/
   );
 
   const transform = computeCameraTransform({
@@ -492,6 +515,7 @@ test('真实录制脚本使用固定的大字号电影感字幕层', () => {
   assert.match(source, /bottom:\s*50px/);
   assert.match(source, /local-demo-caption-keyword/);
   assert.match(source, /#workbenchRoot/);
+  assert.doesNotMatch(source, /AI 解说/);
 });
 
 test('真实录制脚本在主体层执行连续运镜且目标缺失会明确失败', () => {
@@ -507,11 +531,23 @@ test('真实录制脚本在主体层执行连续运镜且目标缺失会明确�
       chapter: '测试章节',
       holdMs: 8000,
       camera: {
-        scale: 1.2,
-        focus: [{ type: 'css', value: '#savingsValue' }],
-        enterMs: 900,
+        beats: [
+          {
+            at: 0.1,
+            scale: 1.45,
+            focus: [{ type: 'css', value: '.savings-projection-grid' }],
+            durationMs: 1200,
+            motionBlur: 0.12,
+          },
+          {
+            at: 0.55,
+            scale: 1.9,
+            focus: [{ type: 'css', value: '#savingsValue' }],
+            durationMs: 750,
+            motionBlur: 0.18,
+          },
+        ],
         exit: 'connect',
-        motionBlur: 0.12,
       },
     }
   );
@@ -519,6 +555,25 @@ test('真实录制脚本在主体层执行连续运镜且目标缺失会明确�
   assert.match(source, /workbenchRoot\.animate/);
   assert.match(source, /transformOrigin\s*=\s*['"]0 0['"]/);
   assert.match(source, /exit === ['"]connect['"]/);
+  assert.match(source, /for \(const beat of step\.camera\.beats\)/);
+});
+
+test('真实录制使用无灰边 1080p 源并在成片阶段统一尺寸', async () => {
+  const source = await readFile(
+    new URL('../recording/local/record-browser-video.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.doesNotMatch(source, /deviceScaleFactor:\s*2/);
+  assert.match(source, /video-start['"],\s*rawVideo,\s*['"]--size['"],\s*['"]1920x1080/);
+
+  const args = buildFfmpegArgs({
+    rawVideo: 'raw.webm',
+    narrationAudio: 'narration.wav',
+    finalVideo: 'final.mp4',
+    durationSeconds: 120,
+    maxDurationSeconds: 300,
+  });
+  assert.ok(args.includes('scale=1920:1080:flags=lanczos,fps=30'));
 });
 
 test('真实 TTS 时长反推镜头预算并把章尾空白控制在 1.2 秒内', () => {

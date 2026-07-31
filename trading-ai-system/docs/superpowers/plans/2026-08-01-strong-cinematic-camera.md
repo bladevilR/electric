@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 交付一支 4K 源录制、具有 16–20 个明显多级运镜节拍、无“AI 解说”标签并完成真实播放验收的最终参赛视频。
+**Goal:** 交付一支具有 16–20 个明显多级运镜节拍、无“AI 解说”标签并完成真实播放验收的最终参赛视频。
 
-**Architecture:** 保持 1920×1080 CSS 视口，通过 CDP 设备像素比 2 录制 3840×2160；摄影机配置由单目标升级为按时间执行的 beats。页面主体接受变换，字幕层保持固定，最终缩放为 1080p。
+**Architecture:** 摄影机配置由单目标升级为按时间执行的 beats。页面主体接受变换，字幕层保持固定，使用经 smoke 实测无灰边的 1920×1080 原生录制。
 
 **Tech Stack:** Node.js、Playwright CLI、Chrome CDP、Web Animations API、FFmpeg、Qwen3-TTS。
 
 ## Global Constraints
 
-- 原始视频必须经 ffprobe 证明为 3840×2160，否则停止制作。
+- 原始视频必须经 ffprobe 证明为无灰边 1920×1080；出现信箱或灰边则停止制作。
 - 摄影机缩放范围 1.0–1.9；全片 16–20 个节拍，至少 6 个节拍不低于 1.6。
 - 字幕不得出现“AI 解说”，正文最终尺寸不小于 36px、最多两行。
 - 不改变交易业务逻辑、旁白金额口径或四章 Serena 音频。
@@ -35,7 +35,7 @@
 - [ ] **Step 3: 实现 beats 校验**：每步 1–3 个 beat，`at` 取 0–0.9，`durationMs` 取 600–1400，focus 必填，exit 为 connect/reset。
 - [ ] **Step 4: 运行测试并提交**：预期相关测试通过。
 
-### Task 2: 4K 源录制与连续镜头执行
+### Task 2: 源录制规格实验与连续镜头执行
 
 **Files:**
 - Modify: `recording/local/record-browser-video.mjs`
@@ -44,13 +44,13 @@
 - Test: `test/local-demo-video.test.mjs`
 
 **Interfaces:**
-- Consumes: 1920×1080 CSS 视口、2× deviceScaleFactor、camera beats。
-- Produces: 3840×2160 VP8 原始视频、逐 beat 的时间线证据、1920×1080 最终 MP4。
+- Consumes: 1920×1080 CSS 视口、camera beats。
+- Produces: 无灰边 1920×1080 VP8 原始视频、逐 beat 的时间线证据、1920×1080 最终 MP4。
 
-- [ ] **Step 1: 写失败测试**：生成脚本必须包含 `Emulation.setDeviceMetricsOverride`、`deviceScaleFactor: 2`、3840×2160 和 beat 调度。
+- [x] **Step 1: 写失败测试**：生成脚本必须包含 beat 调度和无灰边录制规格。
 - [ ] **Step 2: 运行测试确认失败**。
-- [ ] **Step 3: 实现 4K 录制和 beat 循环**：按 `at * holdMs` 等待并执行变换，记录每次实际开始、结束和 transform。
-- [ ] **Step 4: 跑 4K smoke**：`node recording/local/produce-video.mjs --smoke`，ffprobe 必须返回 3840×2160。
+- [x] **Step 3: 实现 beat 循环**：按 `at * holdMs` 等待并执行变换，记录每次实际开始、结束和 transform。
+- [x] **Step 4: 跑录制规格 smoke**：4K 实验发现右侧灰区后拒绝该方案，改回 1920×1080 原生录制。
 - [ ] **Step 5: 抽取 smoke 连续帧检查推拉和横移后提交**。
 
 ### Task 3: 正式分镜与无标签字幕
@@ -80,7 +80,7 @@
 - Modify: `../STATUS.md`
 
 **Interfaces:**
-- Consumes: 4K 原始录屏、四章 Serena WAV、最终镜头计划。
+- Consumes: 1080p 原生录屏、四章 Serena WAV、最终镜头计划。
 - Produces: 可直接审片的 1080p 最终 MP4 与中文验收证据。
 
 - [ ] **Step 1: 录制全片并复用四章旁白混音**。

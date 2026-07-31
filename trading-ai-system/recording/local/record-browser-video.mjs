@@ -103,7 +103,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
             position: fixed; z-index: 2147483646; left: 50%; bottom: 50px;
             width: min(1440px, calc(100vw - 240px)); max-width: 1440px;
             transform: translate(-50%, 8px); opacity: 0;
-            padding: 24px 34px 25px; border-radius: 18px;
+            padding: 18px 34px 19px; border-radius: 18px;
             color: #fff; background: rgba(7,25,48,.92);
             border: 1px solid rgba(112,196,255,.28);
             box-shadow: 0 24px 70px rgba(0,18,42,.34);
@@ -113,10 +113,6 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
             transition: opacity .18s ease, transform .22s ease;
           }
           #local-demo-caption.visible { opacity: 1; transform: translate(-50%, 0); }
-          #local-demo-caption strong {
-            display: block; margin: 0 0 7px; color: #7fc5ff; font-size: 15px;
-            letter-spacing: .16em; line-height: 1.2;
-          }
           .local-demo-caption-keyword {
             color: #7ce7d8; font-weight: 800;
             text-shadow: 0 0 24px rgba(58,221,199,.28);
@@ -220,9 +216,6 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           ui.caption.classList.remove('visible');
           setTimeout(() => {
             ui.caption.replaceChildren();
-            const label = document.createElement('strong');
-            label.textContent = 'AI 解说';
-            ui.caption.appendChild(label);
             const copy = document.createElement('span');
             let remaining = cue.text;
             while (remaining) {
@@ -296,12 +289,12 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         ui.camera.transform = { scale: 1, x: 0, y: 0 };
       });
     };
-    const applyCamera = async (camera) => {
+    const applyCamera = async (beat) => {
       let focus;
       try {
-        focus = await resolveLocator(camera.focus);
+        focus = await resolveLocator(beat.focus);
       } catch (error) {
-        throw new Error('camera target not found: ' + JSON.stringify(camera.focus));
+        throw new Error('camera target not found: ' + JSON.stringify(beat.focus));
       }
       await focus.waitFor({ state: 'visible', timeout: step.timeoutMs });
       await focus.evaluate((element) => {
@@ -312,7 +305,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
       if (!box || box.width <= 0 || box.height <= 0) {
         throw new Error('camera target not found: empty bounding box');
       }
-      return page.evaluate(async ({ camera, box }) => {
+      return page.evaluate(async ({ beat, box }) => {
         const ui = window.__localDemoVideo;
         const workbenchRoot = document.querySelector('#workbenchRoot');
         if (!workbenchRoot) throw new Error('camera target not found: #workbenchRoot');
@@ -325,33 +318,33 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         };
         const focusX = natural.x + natural.width / 2;
         const focusY = natural.y + natural.height / 2;
-        const rawX = innerWidth / 2 - focusX * camera.scale;
-        const rawY = innerHeight / 2 - focusY * camera.scale;
+        const rawX = innerWidth / 2 - focusX * beat.scale;
+        const rawY = innerHeight / 2 - focusY * beat.scale;
         const next = {
-          scale: camera.scale,
-          x: Math.min(0, Math.max(innerWidth - innerWidth * camera.scale, rawX)),
-          y: Math.min(0, Math.max(innerHeight - innerHeight * camera.scale, rawY)),
+          scale: beat.scale,
+          x: Math.min(0, Math.max(innerWidth - innerWidth * beat.scale, rawX)),
+          y: Math.min(0, Math.max(innerHeight - innerHeight * beat.scale, rawY)),
         };
         const css = (value) =>
           'translate3d(' + value.x + 'px,' + value.y + 'px,0) scale(' + value.scale + ')';
         workbenchRoot.style.transformOrigin = '0 0';
         workbenchRoot.style.willChange = 'transform, filter';
-        const blurPx = Math.min(1, camera.motionBlur * 4);
+        const blurPx = Math.min(1, beat.motionBlur * 4);
         const animation = workbenchRoot.animate(
           [
             { transform: css(current), filter: 'blur(0px)' },
             { offset: .55, filter: 'blur(' + blurPx + 'px)' },
             { transform: css(next), filter: 'blur(0px)' },
           ],
-          { duration: camera.enterMs, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
+          { duration: beat.durationMs, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
         );
         await animation.finished;
         workbenchRoot.style.transform = css(next);
         workbenchRoot.style.filter = 'none';
         animation.cancel();
-        ui.camera = { transform: next, exit: camera.exit };
-        return { ...next, focus: camera.focus, enterMs: camera.enterMs, exit: camera.exit };
-      }, { camera, box });
+        ui.camera.transform = next;
+        return { ...next, focus: beat.focus, durationMs: beat.durationMs, at: beat.at };
+      }, { beat, box });
     };
 
     await ensureOverlay();
@@ -414,7 +407,16 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         await page.waitForTimeout(850);
       }
     }
-    const camera = await applyCamera(step.camera);
+    const camera = [];
+    for (const beat of step.camera.beats) {
+      const dueAt = segmentStartedAt + Math.round(holdMs * beat.at);
+      const waitMs = Math.max(0, dueAt - Date.now());
+      if (waitMs > 0) await page.waitForTimeout(waitMs);
+      camera.push(await applyCamera(beat));
+    }
+    await page.evaluate((exit) => {
+      window.__localDemoVideo.camera.exit = exit;
+    }, step.camera.exit);
     await waitForRemainingHold();
     return { id: segment.id, status: 'completed', camera };
   }`;

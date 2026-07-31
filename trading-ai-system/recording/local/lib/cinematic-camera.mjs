@@ -6,7 +6,7 @@
  * This module is a clean-room, framework-free implementation for browser capture.
  */
 
-export const MAX_CAMERA_SCALE = 1.26;
+export const MAX_CAMERA_SCALE = 1.9;
 
 const LOCATOR_TYPES = new Set(['css', 'text']);
 const EXIT_MODES = new Set(['connect', 'reset']);
@@ -43,28 +43,50 @@ export function normalizeCameraSpec(raw, label = 'camera') {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error(`${label} 必须是对象`);
   }
-  const scale = finiteNumber(raw.scale, `${label}.scale`);
-  if (scale < 1 || scale > MAX_CAMERA_SCALE) {
-    throw new Error(`${label}.scale 必须在 1 到 ${MAX_CAMERA_SCALE} 之间`);
-  }
-  const enterMs = finiteNumber(raw.enterMs, `${label}.enterMs`);
-  if (!Number.isInteger(enterMs) || enterMs < 750 || enterMs > 1100) {
-    throw new Error(`${label}.enterMs 必须是 750 到 1100 的整数毫秒`);
+  if (!Array.isArray(raw.beats) || raw.beats.length === 0 || raw.beats.length > 3) {
+    throw new Error(`${label}.beats 必须包含 1 到 3 个运镜节点`);
   }
   const exit = raw.exit;
   if (!EXIT_MODES.has(exit)) {
     throw new Error(`${label}.exit 必须是 connect 或 reset`);
   }
-  const motionBlur = finiteNumber(raw.motionBlur ?? 0, `${label}.motionBlur`);
-  if (motionBlur < 0 || motionBlur > 0.25) {
-    throw new Error(`${label}.motionBlur 必须在 0 到 0.25 之间`);
-  }
+  let previousAt = -1;
+  const beats = raw.beats.map((rawBeat, index) => {
+    const beatLabel = `${label}.beats[${index}]`;
+    if (!rawBeat || typeof rawBeat !== 'object' || Array.isArray(rawBeat)) {
+      throw new Error(`${beatLabel} 必须是对象`);
+    }
+    const at = finiteNumber(rawBeat.at, `${beatLabel}.at`);
+    if (at < 0 || at > 0.9) {
+      throw new Error(`${beatLabel}.at 必须在 0 到 0.9 之间`);
+    }
+    if (at <= previousAt) {
+      throw new Error(`${label}.beats 必须按 at 严格递增`);
+    }
+    previousAt = at;
+    const scale = finiteNumber(rawBeat.scale, `${beatLabel}.scale`);
+    if (scale < 1 || scale > MAX_CAMERA_SCALE) {
+      throw new Error(`${beatLabel}.scale 必须在 1 到 ${MAX_CAMERA_SCALE} 之间`);
+    }
+    const durationMs = finiteNumber(rawBeat.durationMs, `${beatLabel}.durationMs`);
+    if (!Number.isInteger(durationMs) || durationMs < 600 || durationMs > 1400) {
+      throw new Error(`${beatLabel}.durationMs 必须是 600 到 1400 的整数毫秒`);
+    }
+    const motionBlur = finiteNumber(rawBeat.motionBlur ?? 0, `${beatLabel}.motionBlur`);
+    if (motionBlur < 0 || motionBlur > 0.25) {
+      throw new Error(`${beatLabel}.motionBlur 必须在 0 到 0.25 之间`);
+    }
+    return {
+      at,
+      scale,
+      focus: normalizeFocus(rawBeat.focus, beatLabel),
+      durationMs,
+      motionBlur,
+    };
+  });
   return {
-    scale,
-    focus: normalizeFocus(raw.focus, label),
-    enterMs,
+    beats,
     exit,
-    motionBlur,
   };
 }
 
