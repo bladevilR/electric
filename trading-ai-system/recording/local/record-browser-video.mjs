@@ -202,7 +202,14 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         const card = document.createElement('div');
         card.id = 'local-demo-card';
         document.body.append(badge, chapter, caption, cursor, card);
-        window.__localDemoVideo = { badge, chapter, caption, cursor, card };
+        window.__localDemoVideo = {
+          badge,
+          chapter,
+          caption,
+          cursor,
+          card,
+          camera: { transform: { scale: 1, x: 0, y: 0 }, exit: 'reset' },
+        };
       });
     };
     const showText = async () => {
@@ -253,7 +260,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         const intro = kind === 'intro';
         ui.card.innerHTML = intro
           ? '<div class="inner"><div class="eyebrow">AI ELECTRICITY TRADING COPILOT</div><h1>让每一次申报，更接近真实需求</h1><p>AI协助交易员完成数据校验、预测、九十六点申报优化、人工复核和结算回流。</p><div class="impact">¥6,336,000<small>年度节约潜力 · 按当前演示交易规模等比例测算</small></div><div class="flow"><span>减少申报偏差</span><span>降低交易成本</span><span>每笔节约可核算</span></div></div>'
-          : '<div class="inner"><div class="eyebrow">MEASURABLE SAVINGS · HUMAN IN THE LOOP</div><h1>让每一笔节约，都有依据</h1><p>从预测真实需求，到优化每一个申报时点，再到复盘每一笔偏差成本，AI帮助交易员做出更可靠的决策。</p><div class="impact">¥24,000 / 日<small>演示回放已核验净成本优化额 · 非生产收益承诺</small></div><div class="flow"><span>可解释</span><span>可复核</span><span>可追溯</span><span>可回滚</span></div></div>';
+          : '<div class="inner"><div class="eyebrow">AI COMPUTES · HUMAN DECIDES</div><h1>让每一次申报，更省、更稳、更有依据</h1><p>AI负责计算与解释，交易员负责最终决策。所有建议都保留数据来源、成本口径、人工审批与版本回滚记录。</p><div class="flow"><span>可执行</span><span>可解释</span><span>可复核</span><span>可追溯</span></div></div>';
         ui.card.classList.add('visible');
         ui.cursor.style.transform = 'translate(-80px,-80px)';
       }, { kind });
@@ -266,6 +273,85 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         if (await candidate.count()) return candidate;
       }
       throw new Error('未找到目标元素：' + JSON.stringify(locators));
+    };
+    const resetCameraIfNeeded = async () => {
+      await page.evaluate(async () => {
+        const ui = window.__localDemoVideo;
+        const workbenchRoot = document.querySelector('#workbenchRoot');
+        if (!workbenchRoot) throw new Error('camera target not found: #workbenchRoot');
+        const shouldConnect = ui.camera.exit === 'connect';
+        if (shouldConnect) return;
+        const current = ui.camera.transform;
+        if (current.scale === 1 && current.x === 0 && current.y === 0) return;
+        const from = 'translate3d(' + current.x + 'px,' + current.y + 'px,0) scale(' + current.scale + ')';
+        const to = 'translate3d(0px,0px,0) scale(1)';
+        workbenchRoot.style.transformOrigin = '0 0';
+        const animation = workbenchRoot.animate(
+          [{ transform: from }, { transform: to }],
+          { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
+        );
+        await animation.finished;
+        workbenchRoot.style.transform = to;
+        animation.cancel();
+        ui.camera.transform = { scale: 1, x: 0, y: 0 };
+      });
+    };
+    const applyCamera = async (camera) => {
+      let focus;
+      try {
+        focus = await resolveLocator(camera.focus);
+      } catch (error) {
+        throw new Error('camera target not found: ' + JSON.stringify(camera.focus));
+      }
+      await focus.waitFor({ state: 'visible', timeout: step.timeoutMs });
+      await focus.evaluate((element) => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      });
+      await page.waitForTimeout(500);
+      const box = await focus.boundingBox();
+      if (!box || box.width <= 0 || box.height <= 0) {
+        throw new Error('camera target not found: empty bounding box');
+      }
+      return page.evaluate(async ({ camera, box }) => {
+        const ui = window.__localDemoVideo;
+        const workbenchRoot = document.querySelector('#workbenchRoot');
+        if (!workbenchRoot) throw new Error('camera target not found: #workbenchRoot');
+        const current = ui.camera.transform;
+        const natural = {
+          x: (box.x - current.x) / current.scale,
+          y: (box.y - current.y) / current.scale,
+          width: box.width / current.scale,
+          height: box.height / current.scale,
+        };
+        const focusX = natural.x + natural.width / 2;
+        const focusY = natural.y + natural.height / 2;
+        const rawX = innerWidth / 2 - focusX * camera.scale;
+        const rawY = innerHeight / 2 - focusY * camera.scale;
+        const next = {
+          scale: camera.scale,
+          x: Math.min(0, Math.max(innerWidth - innerWidth * camera.scale, rawX)),
+          y: Math.min(0, Math.max(innerHeight - innerHeight * camera.scale, rawY)),
+        };
+        const css = (value) =>
+          'translate3d(' + value.x + 'px,' + value.y + 'px,0) scale(' + value.scale + ')';
+        workbenchRoot.style.transformOrigin = '0 0';
+        workbenchRoot.style.willChange = 'transform, filter';
+        const blurPx = Math.min(1, camera.motionBlur * 4);
+        const animation = workbenchRoot.animate(
+          [
+            { transform: css(current), filter: 'blur(0px)' },
+            { offset: .55, filter: 'blur(' + blurPx + 'px)' },
+            { transform: css(next), filter: 'blur(0px)' },
+          ],
+          { duration: camera.enterMs, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
+        );
+        await animation.finished;
+        workbenchRoot.style.transform = css(next);
+        workbenchRoot.style.filter = 'none';
+        animation.cancel();
+        ui.camera = { transform: next, exit: camera.exit };
+        return { ...next, focus: camera.focus, enterMs: camera.enterMs, exit: camera.exit };
+      }, { camera, box });
     };
 
     await ensureOverlay();
@@ -280,6 +366,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
     }
 
     await page.evaluate(() => window.__localDemoVideo.card.classList.remove('visible'));
+    await resetCameraIfNeeded();
     if (replayWorkbenchMotion) {
       await page.evaluate(async () => {
         const root = document.querySelector('#workbenchRoot');
@@ -327,8 +414,9 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         await page.waitForTimeout(850);
       }
     }
+    const camera = await applyCamera(step.camera);
     await waitForRemainingHold();
-    return { id: segment.id, status: 'completed' };
+    return { id: segment.id, status: 'completed', camera };
   }`;
 }
 
@@ -400,6 +488,7 @@ export async function recordBrowserVideo({
         startMs: segmentStart,
         endMs: null,
         status: 'running',
+        camera: step?.camera || null,
       };
       timeline.segments.push(record);
       await writeFile(timelineFile, `${JSON.stringify(timeline, null, 2)}\n`);

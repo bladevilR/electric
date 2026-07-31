@@ -492,3 +492,30 @@ test('真实录制脚本使用固定的大字号电影感字幕层', () => {
   assert.match(source, /local-demo-caption-keyword/);
   assert.match(source, /#workbenchRoot/);
 });
+
+test('真实录制脚本在主体层执行连续运镜且目标缺失会明确失败', () => {
+  const source = browserRecording.buildRunCodeForTest(
+    {
+      id: 'camera-runtime-test',
+      narration: '聚焦成本证据。',
+      startMs: 0,
+      endMs: 8000,
+      durationMs: 8000,
+    },
+    {
+      chapter: '测试章节',
+      holdMs: 8000,
+      camera: {
+        scale: 1.2,
+        focus: [{ type: 'css', value: '#savingsValue' }],
+        enterMs: 900,
+        exit: 'connect',
+        motionBlur: 0.12,
+      },
+    }
+  );
+  assert.match(source, /camera target not found/i);
+  assert.match(source, /workbenchRoot\.animate/);
+  assert.match(source, /transformOrigin\s*=\s*['"]0 0['"]/);
+  assert.match(source, /exit === ['"]connect['"]/);
+});

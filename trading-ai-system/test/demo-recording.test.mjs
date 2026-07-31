@@ -146,6 +146,16 @@ test('the shipped competition plan centers AI cost savings and leaves failure he
   assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
+  assert.ok(plan.steps.every((step) => step.camera.focus.length > 0));
+  assert.ok(plan.steps.every((step) => step.camera.scale <= 1.26));
+  const cameraMoves = plan.steps.filter((step) => step.camera.scale > 1);
+  assert.ok(cameraMoves.length >= 10 && cameraMoves.length <= 14);
+  let consecutiveCloseups = 0;
+  for (const step of plan.steps) {
+    consecutiveCloseups = step.camera.scale > 1 ? consecutiveCloseups + 1 : 0;
+    assert.ok(consecutiveCloseups <= 2);
+    if (step.camera.exit === 'reset') consecutiveCloseups = 0;
+  }
   assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 4);
   assert.ok(plan.steps.some((step) => /24,000|2\.4\s*万/.test(step.narration)));
   assert.ok(plan.steps.some((step) => /6,336,000|633\.6\s*万/.test(step.narration)));
