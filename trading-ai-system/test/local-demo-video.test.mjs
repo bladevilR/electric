@@ -18,7 +18,9 @@ import {
   buildOutputPaths,
   buildProductionStages,
   buildSrt,
+  buildTimedCaptionCues,
   buildTimelineSkeleton,
+  splitCaptionCues,
   validateProductionConfig,
 } from '../recording/local/lib/video-production.mjs';
 
@@ -449,4 +451,44 @@ test('电影化摄影机配置有硬边界并可确定性聚焦页面区域', ()
   assert.equal(transform.scale, 1.2);
   assert.ok(transform.x <= 0 && transform.y <= 0);
   assert.match(cameraTransformCss(transform), /translate3d\(.+\) scale\(1\.2\)/);
+});
+
+test('长旁白拆为最多两行的醒目短句字幕并按镜头时间切换', () => {
+  const cues = splitCaptionCues(
+    '候选优化策略先经过历史回测，再使用同一交易日数据进行实时并行验证，只对比结果，不参与真实申报。指标确认领先后仍须人工审批。',
+    { maxCharsPerLine: 24, maxLines: 2 }
+  );
+  assert.ok(cues.length >= 2);
+  assert.ok(cues.every((cue) => cue.lines.length <= 2));
+  assert.ok(
+    cues.every((cue) => cue.lines.every((line) => Array.from(line).length <= 24))
+  );
+
+  const timed = buildTimedCaptionCues({
+    narration: cues.map((cue) => cue.text).join(''),
+    durationMs: 12_000,
+  });
+  assert.ok(timed.length >= 2);
+  assert.equal(timed[0].startMs, 0);
+  assert.equal(timed.at(-1).endMs, 12_000);
+  assert.ok(timed.every((cue) => cue.endMs - cue.startMs >= 1200));
+});
+
+test('真实录制脚本使用固定的大字号电影感字幕层', () => {
+  assert.equal(typeof browserRecording.buildRunCodeForTest, 'function');
+  const source = browserRecording.buildRunCodeForTest(
+    {
+      id: 'camera-caption-test',
+      narration: '年度节约潜力约633.6万元，并保留人工审批。',
+      startMs: 0,
+      endMs: 8000,
+      durationMs: 8000,
+    },
+    { chapter: '测试章节', holdMs: 8000 }
+  );
+  assert.match(source, /font:\s*650 36px\/1\.42/);
+  assert.match(source, /1440px/);
+  assert.match(source, /bottom:\s*50px/);
+  assert.match(source, /local-demo-caption-keyword/);
+  assert.match(source, /#workbenchRoot/);
 });

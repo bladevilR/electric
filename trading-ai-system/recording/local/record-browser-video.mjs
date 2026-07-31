@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildTimedCaptionCues } from './lib/video-production.mjs';
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -52,6 +53,12 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
   const payload = JSON.stringify({
     segment,
     step,
+    captionCues: buildTimedCaptionCues({
+      ...segment,
+      durationMs: smoke
+        ? Math.min(1200, segment.endMs - segment.startMs)
+        : step?.holdMs ?? segment.endMs - segment.startMs,
+    }, { minimumCueMs: smoke ? 1 : 1200 }),
     replayWorkbenchMotion: shouldReplayWorkbenchMotion(segment.id),
     holdMs: smoke
       ? Math.min(1200, segment.endMs - segment.startMs)
@@ -59,7 +66,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
   });
   return `async (page) => {
     const payload = ${payload};
-    const { segment, step, holdMs, replayWorkbenchMotion } = payload;
+    const { segment, step, captionCues, holdMs, replayWorkbenchMotion } = payload;
     const segmentStartedAt = Date.now();
     const waitForRemainingHold = async () => {
       const remaining = Math.max(0, holdMs - (Date.now() - segmentStartedAt));
@@ -93,19 +100,26 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           }
           #local-demo-chapter.visible { opacity: 1; transform: translate(-50%, 0); }
           #local-demo-caption {
-            position: fixed; z-index: 2147483646; left: 50%; bottom: 30px;
-            width: min(1280px, calc(100vw - 180px)); transform: translateX(-50%);
-            padding: 17px 26px 18px; border-radius: 16px;
-            color: #fff; background: rgba(5,24,46,.88);
-            border: 1px solid rgba(132,196,255,.24);
-            box-shadow: 0 18px 48px rgba(0,14,34,.28);
-            font: 600 22px/1.55 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-            letter-spacing: .01em; text-align: center;
-            pointer-events: none; backdrop-filter: blur(16px);
+            position: fixed; z-index: 2147483646; left: 50%; bottom: 50px;
+            width: min(1440px, calc(100vw - 240px)); max-width: 1440px;
+            transform: translate(-50%, 8px); opacity: 0;
+            padding: 24px 34px 25px; border-radius: 18px;
+            color: #fff; background: rgba(7,25,48,.92);
+            border: 1px solid rgba(112,196,255,.28);
+            box-shadow: 0 24px 70px rgba(0,18,42,.34);
+            font: 650 36px/1.42 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: .01em; text-align: center; white-space: normal;
+            pointer-events: none; backdrop-filter: blur(24px) saturate(1.15);
+            transition: opacity .18s ease, transform .22s ease;
           }
+          #local-demo-caption.visible { opacity: 1; transform: translate(-50%, 0); }
           #local-demo-caption strong {
-            margin-right: 13px; color: #7fc5ff; font-size: 14px;
-            letter-spacing: .12em; vertical-align: 2px;
+            display: block; margin: 0 0 7px; color: #7fc5ff; font-size: 15px;
+            letter-spacing: .16em; line-height: 1.2;
+          }
+          .local-demo-caption-keyword {
+            color: #7ce7d8; font-weight: 800;
+            text-shadow: 0 0 24px rgba(58,221,199,.28);
           }
           #local-demo-cursor {
             position: fixed; z-index: 2147483647; left: 0; top: 0;
@@ -192,15 +206,46 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
       });
     };
     const showText = async () => {
-      await page.evaluate(({ segment, step }) => {
+      await page.evaluate(({ captionCues, step }) => {
         const ui = window.__localDemoVideo;
-        ui.caption.innerHTML = '<strong>AI 解说</strong>' + segment.narration;
+        const keywords = ['633.6万元', '2.4万元', '52.8万元', '96 点', '九十六点', '人工审批', '实时并行验证', '不参与真实申报'];
+        const renderCue = (cue) => {
+          ui.caption.classList.remove('visible');
+          setTimeout(() => {
+            ui.caption.replaceChildren();
+            const label = document.createElement('strong');
+            label.textContent = 'AI 解说';
+            ui.caption.appendChild(label);
+            const copy = document.createElement('span');
+            let remaining = cue.text;
+            while (remaining) {
+              const matches = keywords
+                .map((keyword) => ({ keyword, index: remaining.indexOf(keyword) }))
+                .filter((item) => item.index >= 0)
+                .sort((a, b) => a.index - b.index || b.keyword.length - a.keyword.length);
+              const match = matches[0];
+              if (!match) {
+                copy.appendChild(document.createTextNode(remaining));
+                break;
+              }
+              if (match.index > 0) copy.appendChild(document.createTextNode(remaining.slice(0, match.index)));
+              const mark = document.createElement('span');
+              mark.className = 'local-demo-caption-keyword';
+              mark.textContent = match.keyword;
+              copy.appendChild(mark);
+              remaining = remaining.slice(match.index + match.keyword.length);
+            }
+            ui.caption.appendChild(copy);
+            ui.caption.classList.add('visible');
+          }, 180);
+        };
+        for (const cue of captionCues) setTimeout(() => renderCue(cue), cue.startMs);
         if (step?.chapter) {
           ui.chapter.textContent = step.chapter;
           ui.chapter.classList.add('visible');
           setTimeout(() => ui.chapter.classList.remove('visible'), 1800);
         }
-      }, { segment, step });
+      }, { captionCues, step });
     };
     const showCard = async (kind) => {
       await page.evaluate(({ kind }) => {
@@ -285,6 +330,10 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
     await waitForRemainingHold();
     return { id: segment.id, status: 'completed' };
   }`;
+}
+
+export function buildRunCodeForTest(segment, step, options = {}) {
+  return buildRunCode(segment, step, options);
 }
 
 async function cli(wrapper, session, args, options) {

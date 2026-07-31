@@ -4,6 +4,103 @@ const DEFAULT_WIDTH = 1920;
 const DEFAULT_HEIGHT = 1080;
 const DEFAULT_FPS = 30;
 
+function chineseLength(value) {
+  return Array.from(value).length;
+}
+
+function hardWrapText(text, limit) {
+  const characters = Array.from(text);
+  const chunks = [];
+  for (let index = 0; index < characters.length; index += limit) {
+    chunks.push(characters.slice(index, index + limit).join(''));
+  }
+  return chunks;
+}
+
+function splitLongSentence(sentence, maxCueChars) {
+  if (chineseLength(sentence) <= maxCueChars) return [sentence];
+  const phrases = sentence.match(/[^，、：,]+[，、：,]?/gu) || [sentence];
+  const chunks = [];
+  let current = '';
+  for (const phrase of phrases) {
+    if (chineseLength(phrase) > maxCueChars) {
+      if (current) chunks.push(current);
+      chunks.push(...hardWrapText(phrase, maxCueChars));
+      current = '';
+      continue;
+    }
+    if (current && chineseLength(current + phrase) > maxCueChars) {
+      chunks.push(current);
+      current = phrase;
+    } else {
+      current += phrase;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
+export function splitCaptionCues(
+  text,
+  { maxCharsPerLine = 24, maxLines = 2 } = {}
+) {
+  if (!Number.isInteger(maxCharsPerLine) || maxCharsPerLine < 8) {
+    throw new Error('maxCharsPerLine 必须是至少 8 的整数');
+  }
+  if (!Number.isInteger(maxLines) || maxLines < 1 || maxLines > 2) {
+    throw new Error('maxLines 必须是 1 或 2');
+  }
+  const normalized = String(text || '').replace(/\s+/gu, '').trim();
+  if (!normalized) return [];
+  const maxCueChars = maxCharsPerLine * maxLines;
+  const sentences = normalized.match(/[^。！？；]+[。！？；]?/gu) || [normalized];
+  return sentences
+    .flatMap((sentence) => splitLongSentence(sentence, maxCueChars))
+    .filter(Boolean)
+    .map((cueText) => ({
+      text: cueText,
+      lines: hardWrapText(cueText, maxCharsPerLine),
+    }));
+}
+
+export function buildTimedCaptionCues(
+  segment,
+  { minimumCueMs = 1200, maxCharsPerLine = 24, maxLines = 2 } = {}
+) {
+  const durationMs = Math.round(
+    Number(segment.durationMs) || Number(segment.endMs) - Number(segment.startMs)
+  );
+  if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    throw new Error('字幕镜头缺少有效时长');
+  }
+  const cues = splitCaptionCues(segment.narration, {
+    maxCharsPerLine,
+    maxLines,
+  });
+  if (cues.length === 0) return [];
+  if (cues.length * minimumCueMs > durationMs) {
+    throw new Error(`字幕短句过密：${cues.length} 条无法放入 ${durationMs}ms`);
+  }
+  const weights = cues.map((cue) => Math.max(1, chineseLength(cue.text)));
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+  const flexibleMs = durationMs - cues.length * minimumCueMs;
+  let cursorMs = 0;
+  let consumedWeight = 0;
+  return cues.map((cue, index) => {
+    const startMs = cursorMs;
+    consumedWeight += weights[index];
+    const endMs =
+      index === cues.length - 1
+        ? durationMs
+        : Math.round(
+            (index + 1) * minimumCueMs +
+              (consumedWeight / weightTotal) * flexibleMs
+          );
+    cursorMs = endMs;
+    return { ...cue, startMs, endMs };
+  });
+}
+
 export function buildProductionStages(stage = 'all', { smoke = false } = {}) {
   if (smoke) return ['record'];
   if (stage === 'all') return ['record', 'tts', 'final'];
