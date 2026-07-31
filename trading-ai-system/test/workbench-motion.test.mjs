@@ -80,3 +80,34 @@ test('starting motion twice kills the previous timeline', async () => {
   assert.equal(first.timeline.killed, true);
   stopWorkbenchMotion();
 });
+
+test('metric parser preserves prefix decimals and suffix', async () => {
+  const { parseMetricText } = await import('../workbench-motion.js');
+
+  assert.deepEqual(parseMetricText('+9.64%'), {
+    prefix: '+',
+    value: 9.64,
+    decimals: 2,
+    suffix: '%',
+  });
+  assert.deepEqual(parseMetricText('4,128 点 / 43 日'), {
+    prefix: '',
+    value: 4128,
+    decimals: 0,
+    suffix: ' 点 / 43 日',
+  });
+  assert.equal(parseMetricText('待验证'), null);
+});
+
+test('workbench schedules motion only after dashboard markup is rendered', async () => {
+  const source = await readFile(new URL('../workbench.js', import.meta.url), 'utf8');
+
+  assert.match(
+    source,
+    /import \{ scheduleWorkbenchMotion \} from ['"]\.\/workbench-motion\.js['"]/ 
+  );
+  const markupAssignment = source.indexOf('root.innerHTML = `');
+  const motionSchedule = source.indexOf('scheduleWorkbenchMotion(root)');
+  assert.ok(markupAssignment >= 0);
+  assert.ok(motionSchedule > markupAssignment);
+});

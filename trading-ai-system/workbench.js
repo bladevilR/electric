@@ -1,4 +1,5 @@
 import { buildDeclarationDashboardView } from './lib/declaration-dashboard-view.mjs';
+import { scheduleWorkbenchMotion } from './workbench-motion.js';
 
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -1315,6 +1316,7 @@ function renderBrowser() {
         : ''
     }
   `;
+  scheduleWorkbenchMotion(root);
 }
 
 async function responseJson(response) {
