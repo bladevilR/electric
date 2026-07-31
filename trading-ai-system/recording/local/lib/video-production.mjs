@@ -101,6 +101,78 @@ export function buildNarrationSegments(
     });
 }
 
+export function buildNarrationChapters(timeline) {
+  const chapters = [];
+  for (const segment of timeline.segments.filter((item) => item.narration)) {
+    const chapterId = segment.narrationChapter || segment.id;
+    let chapter = chapters.at(-1);
+    if (!chapter || chapter.id !== chapterId) {
+      if (chapters.some((item) => item.id === chapterId)) {
+        throw new Error(`旁白章节必须连续：${chapterId}`);
+      }
+      chapter = {
+        id: chapterId,
+        text: '',
+        sourceSegmentIds: [],
+        sourceSegments: [],
+        startMs: segment.startMs,
+        endMs: segment.endMs,
+      };
+      chapters.push(chapter);
+    }
+    chapter.sourceSegmentIds.push(segment.id);
+    chapter.sourceSegments.push({
+      id: segment.id,
+      text: segment.narration,
+    });
+    chapter.text += segment.narration;
+    chapter.endMs = segment.endMs;
+  }
+  return chapters;
+}
+
+export function buildChapterCaptionSegments(
+  chapter,
+  durationMs,
+  { leadingPaddingMs = 500, trailingPaddingMs = 500 } = {}
+) {
+  const audioDurationMs = Math.ceil(Number(durationMs));
+  if (!Number.isFinite(audioDurationMs) || audioDurationMs <= 0) {
+    throw new Error(`${chapter.id} 缺少有效旁白时长`);
+  }
+  const availableMs =
+    chapter.endMs - chapter.startMs - leadingPaddingMs - trailingPaddingMs;
+  if (audioDurationMs > availableMs) {
+    throw new Error(
+      `${chapter.id} 旁白超过章节安全区：${audioDurationMs}ms > ${availableMs}ms`
+    );
+  }
+  const weights = chapter.sourceSegments.map((segment) =>
+    Math.max(1, Array.from(segment.text).length)
+  );
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+  const audioStartMs = chapter.startMs + leadingPaddingMs;
+  let consumedWeight = 0;
+  return chapter.sourceSegments.map((segment, index) => {
+    const startMs =
+      audioStartMs + Math.round((consumedWeight / totalWeight) * audioDurationMs);
+    consumedWeight += weights[index];
+    const endMs =
+      index === chapter.sourceSegments.length - 1
+        ? audioStartMs + audioDurationMs
+        : audioStartMs +
+          Math.round((consumedWeight / totalWeight) * audioDurationMs);
+    return {
+      id: segment.id,
+      text: segment.text,
+      startMs,
+      endMs,
+      durationMs: endMs - startMs,
+      chapterId: chapter.id,
+    };
+  });
+}
+
 function formatSrtTimestamp(milliseconds) {
   const value = Math.max(0, Math.round(milliseconds));
   const hours = Math.floor(value / 3_600_000);
@@ -254,6 +326,7 @@ export function buildEdgeTtsArgs({
 }
 
 export function buildQwenTtsManifest(timeline, narrationDirectory) {
+  const chapters = buildNarrationChapters(timeline);
   return {
     modelDirectory:
       '/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice',
@@ -263,18 +336,19 @@ export function buildQwenTtsManifest(timeline, narrationDirectory) {
     seed: 20260731,
     instruct:
       '同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。',
-    segments: timeline.segments
-      .filter((segment) => segment.narration)
-      .map((segment) => ({
-        id: segment.id,
-        text: segment.narration,
-        output: path.join(narrationDirectory, `${segment.id}.wav`),
+    segments: chapters.map((chapter) => ({
+        id: chapter.id,
+        text: chapter.text,
+        output: path.join(narrationDirectory, `${chapter.id}.wav`),
+        sourceSegmentIds: chapter.sourceSegmentIds,
+        startMs: chapter.startMs,
+        endMs: chapter.endMs,
       })),
   };
 }
 
 export function buildSpeechFitArgs({ input, output, speedFactor }) {
-  if (!Number.isFinite(speedFactor) || speedFactor < 1 || speedFactor > 2) {
+  if (!Number.isFinite(speedFactor) || speedFactor < 1 || speedFactor > 1.15) {
     throw new Error(`无效旁白适配倍率：${speedFactor}`);
   }
   return [

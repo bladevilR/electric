@@ -7,6 +7,8 @@ import {
   buildEdgeTtsArgs,
   buildFfmpegArgs,
   buildNarrationMixArgs,
+  buildNarrationChapters,
+  buildChapterCaptionSegments,
   buildNarrationSegments,
   buildOutputPaths,
   buildSrt,
@@ -257,17 +259,25 @@ test('神经网络旁白固定使用晓晓声线并允许按镜头提速', () =>
   );
 });
 
-test('本地 Qwen 旁白清单固定使用 Serena 中文声线并逐段输出 WAV', () => {
+test('本地 Qwen 旁白清单固定使用 Serena 中文声线并按连续章节输出 WAV', () => {
   assert.equal(typeof videoProduction.buildQwenTtsManifest, 'function');
 
   const manifest = videoProduction.buildQwenTtsManifest(
     {
       segments: [
         {
+          id: 'intro',
+          narrationChapter: 'chapter-cost',
+          narration: '电力交易的偏差会形成真实成本。',
+          startMs: 0,
+          endMs: 7000,
+        },
+        {
           id: 'opening',
-          narration: '这是一段测试旁白。',
-          startMs: 1000,
-          endMs: 9000,
+          narrationChapter: 'chapter-cost',
+          narration: 'AI帮助交易员减少偏差。',
+          startMs: 7000,
+          endMs: 14000,
         },
       ],
     },
@@ -284,12 +294,39 @@ test('本地 Qwen 旁白清单固定使用 Serena 中文声线并逐段输出 WA
       '同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。',
     segments: [
       {
-        id: 'opening',
-        text: '这是一段测试旁白。',
-        output: '/tmp/narration/opening.wav',
+        id: 'chapter-cost',
+        text: '电力交易的偏差会形成真实成本。AI帮助交易员减少偏差。',
+        output: '/tmp/narration/chapter-cost.wav',
+        sourceSegmentIds: ['intro', 'opening'],
+        startMs: 0,
+        endMs: 14000,
       },
     ],
   });
+});
+
+test('五个连续章节保留源镜头并按实际音频时长生成章内字幕', () => {
+  const timeline = {
+    segments: [
+      { id: 'intro', narrationChapter: 'chapter-cost', narration: '成本问题。', startMs: 0, endMs: 6000 },
+      { id: 'opening', narrationChapter: 'chapter-cost', narration: '降本目标。', startMs: 6000, endMs: 12000 },
+      { id: 'data', narrationChapter: 'chapter-data', narration: '数据校验。', startMs: 12000, endMs: 20000 },
+      { id: 'optimize', narrationChapter: 'chapter-optimize', narration: '申报优化。', startMs: 20000, endMs: 30000 },
+      { id: 'review', narrationChapter: 'chapter-review', narration: '人工复核。', startMs: 30000, endMs: 40000 },
+      { id: 'outro', narrationChapter: 'chapter-outro', narration: '结果回流。', startMs: 40000, endMs: 50000 },
+    ],
+  };
+
+  const chapters = buildNarrationChapters(timeline);
+  assert.equal(chapters.length, 5);
+  assert.deepEqual(chapters[0].sourceSegmentIds, ['intro', 'opening']);
+  assert.equal(chapters[0].text, '成本问题。降本目标。');
+
+  const captions = buildChapterCaptionSegments(chapters[0], 9000);
+  assert.deepEqual(captions.map((item) => item.id), ['intro', 'opening']);
+  assert.equal(captions[0].startMs, 500);
+  assert.equal(captions.at(-1).endMs, 9500);
+  assert.ok(captions[0].endMs <= captions[1].startMs);
 });
 
 test('Qwen 旁白轻微超时使用高质量时长适配且保留 WAV', () => {
@@ -313,6 +350,16 @@ test('Qwen 旁白轻微超时使用高质量时长适配且保留 WAV', () => {
       'pcm_s16le',
       '/tmp/opening.fit.wav',
     ]
+  );
+
+  assert.throws(
+    () =>
+      videoProduction.buildSpeechFitArgs({
+        input: '/tmp/opening.wav',
+        output: '/tmp/opening.fit.wav',
+        speedFactor: 1.151,
+      }),
+    /无效旁白适配倍率/
   );
 });
 

@@ -184,7 +184,7 @@ Commit: `git commit -am "feat: support award-length contest video output"`
 - Consumes: 时间线 segment 的 `narrationChapter`、`narration`、`startMs`、`endMs`。
 - Produces: `buildNarrationChapters(timeline)`，每章包含 `{ id, text, sourceSegments, startMs, endMs }`；Qwen manifest 恰好五个输出 WAV；字幕按章内句子字符权重分配时间。
 
-- [ ] **Step 1: 写五章清单和字幕时间失败测试**
+- [x] **Step 1: 写五章清单和字幕时间失败测试**
 
 构造含五个 `narrationChapter` 的时间线并断言：
 
@@ -199,21 +199,21 @@ assert.equal(manifest.segments[0].output, '/tmp/narration/chapter-cost.wav');
 
 增加 `buildChapterCaptionSegments(chapter, durationMs)` 断言：字幕首尾不越过章节音频，并保留原句顺序。
 
-- [ ] **Step 2: 运行测试确认旧逐镜头 manifest 失败**
+- [x] **Step 2: 运行测试确认旧逐镜头 manifest 失败**
 
 Run: `node --test test/local-demo-video.test.mjs`
 
 Expected: FAIL，旧 manifest 仍按每个 segment 输出 WAV。
 
-- [ ] **Step 3: 实现章节分组、混音和字幕**
+- [x] **Step 3: 实现章节分组、混音和字幕**
 
 `buildNarrationChapters` 按连续的 `narrationChapter` 分组；同章文本使用中文句号连接。`renderNarration` 只生成和混入五个章节 WAV，并使用章节实际时长生成章内字幕。每章音频安全区覆盖该章首个镜头开始到末个镜头结束。
 
-- [ ] **Step 4: 限制提速并记录质量元数据**
+- [x] **Step 4: 限制提速并记录质量元数据**
 
 将允许提速上限从 `1.45` 降为 `1.15`。`metadata.json` 为每章记录 `seed`、`speaker`、`durationMs`、`speedFactor`、`sourceSegmentIds`；未提速时 `speedFactor` 为 `1`。
 
-- [ ] **Step 5: 运行测试并提交**
+- [x] **Step 5: 运行测试并提交**
 
 Run: `node --test test/local-demo-video.test.mjs`
 

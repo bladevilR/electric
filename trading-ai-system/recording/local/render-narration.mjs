@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import {
   buildNarrationMixArgs,
-  buildNarrationSegments,
+  buildNarrationChapters,
+  buildChapterCaptionSegments,
   buildQwenTtsManifest,
   buildSpeechFitArgs,
   buildSrt,
@@ -105,12 +106,9 @@ async function generateQwenSpeech({
   );
 
   const speech = [];
-  for (const segment of timeline.segments) {
-    if (!segment.narration) continue;
-    let output = path.join(
-      paths.narrationDirectory,
-      `${segment.id}.wav`
-    );
+  for (const segment of manifest.segments) {
+    let output = segment.output;
+    let speedFactorApplied = 1;
     let durationMs = await probeDurationMs(output, {
       cwd: projectRoot,
       log,
@@ -122,13 +120,14 @@ async function generateQwenSpeech({
     );
     if (durationMs > availableMs) {
       let speedFactor = (durationMs / availableMs) * 1.01;
-      // 允许为贴合镜头适度提速；超过 1.45 仍拒绝
-      if (speedFactor > 1.45) {
+      // 只允许轻微时长适配，超过 1.15 会显著破坏自然声线。
+      if (speedFactor > 1.15) {
         throw new Error(
           `${segment.id} Qwen 旁白超时过多，拒绝强行提速：${durationMs}ms > ${availableMs}ms`
         );
       }
-      speedFactor = Math.min(1.45, Math.max(1.01, speedFactor));
+      speedFactor = Math.min(1.15, Math.max(1.01, speedFactor));
+      speedFactorApplied *= speedFactor;
       const fittedOutput = path.join(
         paths.narrationDirectory,
         `${segment.id}.fit.wav`
@@ -150,9 +149,10 @@ async function generateQwenSpeech({
       // atempo 有舍入误差时再补一次精确贴合
       if (durationMs > availableMs) {
         const secondFactor = Math.min(
-          1.45,
+          1.15,
           Math.max(1.01, (durationMs / availableMs) * 1.005)
         );
+        speedFactorApplied *= secondFactor;
         await run(
           'ffmpeg',
           buildSpeechFitArgs({
@@ -181,7 +181,12 @@ async function generateQwenSpeech({
       model: manifest.modelDirectory,
       voice: manifest.speaker,
       instruct: manifest.instruct,
+      seed: manifest.seed,
       durationMs,
+      speedFactor: Number(speedFactorApplied.toFixed(4)),
+      sourceSegmentIds: segment.sourceSegmentIds,
+      startMs: segment.startMs,
+      endMs: segment.endMs,
     });
   }
   return speech;
@@ -203,9 +208,9 @@ export async function renderNarration({
   const durationsById = Object.fromEntries(
     speech.map((item) => [item.id, item.durationMs])
   );
-  const narrationSegments = buildNarrationSegments(
-    timeline,
-    durationsById
+  const chapters = buildNarrationChapters(timeline);
+  const narrationSegments = chapters.flatMap((chapter) =>
+    buildChapterCaptionSegments(chapter, durationsById[chapter.id])
   );
   await writeFile(paths.subtitles, buildSrt(narrationSegments), 'utf8');
   await writeFile(
@@ -213,9 +218,9 @@ export async function renderNarration({
     `${JSON.stringify(speech, null, 2)}\n`,
     'utf8'
   );
-  const audioInputs = narrationSegments.map((segment) => ({
-    file: speech.find((item) => item.id === segment.id).file,
-    startMs: segment.startMs,
+  const audioInputs = chapters.map((chapter) => ({
+    file: speech.find((item) => item.id === chapter.id).file,
+    startMs: chapter.startMs + 500,
   }));
   await run(
     'ffmpeg',
