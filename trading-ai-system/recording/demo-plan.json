@@ -1,323 +1,176 @@
 {
   "version": 1,
-  "title": "电力交易 AI · 策略自进化参赛演示",
-  "url": "/?demo=reviewable",
+  "title": "电力交易 AI · 智能交易副驾驶参赛演示",
+  "url": "/?demo=settled",
   "maxDurationMs": 270000,
+  "intro": {
+    "title": "电力交易 AI · 让每一次申报更接近真实需求",
+    "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
+    "narrationChapter": "chapter-cost"
+  },
+  "outro": {
+    "title": "让每一笔节约都有依据",
+    "narration": "从预测真实需求，到优化每一个申报时点，再到复盘每一笔偏差成本，AI让每一笔节约都有依据，让每一次决策都可复核。按当前演示规模测算，年度节约潜力约六百三十三点六万元。",
+    "narrationChapter": "chapter-outro"
+  },
   "steps": [
     {
       "id": "opening",
-      "title": "策略自进化中枢",
-      "chapter": "01 · 不是一次性建议",
-      "narration": "系统把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。",
-      "action": {
-        "type": "show",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#declarationDashboardTitle"
-          },
-          {
-            "type": "text",
-            "value": "AI申报优化",
-            "exact": false
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#declarationDashboardTitle"
-          }
-        ]
-      },
+      "title": "AI 电力交易副驾驶",
+      "chapter": "01 · 先看能省多少钱",
+      "narrationChapter": "chapter-cost",
+      "narration": "这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。",
+      "action": { "type": "show", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "networkIdleMs": 900,
-      "holdMs": 6200,
+      "holdMs": 16000,
       "timeoutMs": 30000
     },
     {
-      "id": "core-metrics",
-      "title": "现役策略表现",
-      "narration": "首屏看偏差改善、日胜率和可信度，指标来自真实回测，不是写死演示数字。",
-      "action": {
-        "type": "scroll",
-        "align": "center",
-        "locators": [
-          {
-            "type": "css",
-            "value": ".dashboard-metrics"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": ".dashboard-metrics"
-          }
-        ]
-      },
+      "id": "savings-impact",
+      "title": "成本优化结果",
+      "narrationChapter": "chapter-cost",
+      "narration": "在当前演示交易规模下，单日净成本优化额为2.4万元；按二十二个交易日测算，月度约52.8万元；按二百六十四个交易日测算，年度节约潜力约633.6万元。所有金额都可以继续展开核算。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#savingsValue" }] },
       "networkIdleMs": 700,
-      "holdMs": 5600,
+      "holdMs": 18000,
       "timeoutMs": 20000
     },
     {
-      "id": "open-evolution",
-      "title": "进入策略进化",
-      "chapter": "02 · 四中心闭环",
-      "narration": "进入策略进化中枢。发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。",
-      "action": {
-        "type": "click",
-        "locators": [
-          {
-            "type": "css",
-            "value": "[data-dashboard-nav=\"evolution\"]"
-          },
-          {
-            "type": "text",
-            "value": "策略进化",
-            "exact": true
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#strategyEvolutionTitle"
-          }
-        ]
-      },
-      "networkIdleMs": 800,
-      "holdMs": 6500,
-      "timeoutMs": 25000
-    },
-    {
-      "id": "champion-challenger",
-      "title": "冠军与挑战者",
-      "narration": "对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。",
-      "action": {
-        "type": "scroll",
-        "align": "center",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#evolutionComparison"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#evolutionCenter"
-          }
-        ]
-      },
-      "networkIdleMs": 600,
-      "holdMs": 6200,
-      "timeoutMs": 20000
-    },
-    {
-      "id": "experiment-lab",
-      "title": "智能实验",
-      "narration": "实验中心完成漂移诊断、参数搜索和滚动回测，候选策略进入影子运行。",
-      "action": {
-        "type": "scroll",
-        "align": "center",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#experimentCenter"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#experimentCenterTitle"
-          }
-        ]
-      },
-      "networkIdleMs": 600,
-      "holdMs": 6000,
-      "timeoutMs": 20000
-    },
-    {
-      "id": "ops-and-governance",
-      "title": "运营与治理",
-      "chapter": "03 · 敢落地的治理",
-      "narration": "运营盯漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线申报。",
-      "action": {
-        "type": "scroll",
-        "align": "center",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#governanceQueue"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#governanceCenter"
-          }
-        ]
-      },
-      "networkIdleMs": 600,
-      "holdMs": 6800,
-      "timeoutMs": 20000
-    },
-    {
-      "id": "approve-challenger",
-      "title": "人工审批上线",
-      "narration": "人工审批挑战者上线，只切换策略版本，不会自动提交申报。",
-      "action": {
-        "type": "click",
-        "locators": [
-          {
-            "type": "css",
-            "value": "[data-evolution-action=\"approve_challenger\"]"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "[data-queue-status=\"approved\"], .queue-status.is-approved, #governanceQueue"
-          }
-        ]
-      },
+      "id": "data-quality",
+      "title": "数据接入与质量门禁",
+      "chapter": "02 · AI先保证输入可信",
+      "narrationChapter": "chapter-data",
+      "narration": "节约成本的第一步，不是立即给出交易量，而是先确认数据是否可信。系统统一检查市场价格、负荷预测、持仓、交易限额和数据新鲜度；任何关键数据缺失或过期，都会明确阻断后续决策。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"validate\"]" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".dashboard-context-alert" }] },
       "networkIdleMs": 700,
-      "holdMs": 5500,
-      "timeoutMs": 25000
+      "holdMs": 15000,
+      "timeoutMs": 20000
     },
     {
-      "id": "return-declaration",
-      "title": "回到申报优化",
-      "chapter": "04 · 申报证据仍在",
-      "narration": "回到申报优化主视图。九十六点曲线和人工复核仍在，与进化中枢共用证据链。",
-      "action": {
-        "type": "click",
-        "locators": [
-          {
-            "type": "css",
-            "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]"
-          },
-          {
-            "type": "text",
-            "value": "AI申报优化",
-            "exact": true
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#declarationDashboardTitle"
-          }
-        ]
-      },
+      "id": "validation-evidence",
+      "title": "执行前数据校验",
+      "narrationChapter": "chapter-data",
+      "narration": "校验结果不是一个模糊的绿灯。每一类数据都显示来源、数量、更新时间和是否满足执行条件，让交易员知道系统为什么允许继续，或者为什么必须暂停。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#validationTitle" }] },
+      "networkIdleMs": 600,
+      "holdMs": 16000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "prediction-proof",
+      "title": "预测效果验证",
+      "narrationChapter": "chapter-data",
+      "narration": "数据通过后，AI结合历史负荷、价格和时段特征形成预测。系统同时保留留出集误差、交易日胜率和基线对比，只有真正优于基线的模型，才可以进入申报优化。",
+      "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
+      "networkIdleMs": 600,
+      "holdMs": 16000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "return-curve",
+      "title": "回到 AI 申报优化",
+      "chapter": "03 · 把预测变成省钱的申报方案",
+      "narrationChapter": "chapter-optimize",
+      "narration": "预测本身不会自动省钱。系统需要把负荷和价格判断继续转化为每个交易时点的申报动作，并在市场约束和风险边界内寻找更低成本的方案。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 5500,
+      "holdMs": 16000,
       "timeoutMs": 20000
     },
     {
       "id": "curve",
       "title": "96 点申报曲线",
-      "narration": "逐点比较历史申报与人工智能建议，标出关键调整窗口。",
-      "action": {
-        "type": "scroll",
-        "align": "center",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#declarationCurveTitle"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#declarationCurveTitle"
-          }
-        ]
-      },
+      "narrationChapter": "chapter-optimize",
+      "narration": "这里逐点比较历史申报和AI建议。系统识别成本影响最大的窗口，告诉交易员哪些时段应该上调、哪些时段应该下调，同时保留完整的九十六点曲线，而不是只给一句笼统结论。",
+      "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 5600,
+      "holdMs": 18000,
       "timeoutMs": 20000
     },
     {
-      "id": "human-loop",
-      "title": "人工在环",
-      "narration": "人工智能只生成建议，进入申报前必须人工复核，不会自动提交。",
-      "action": {
-        "type": "show",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#optimizationFlowTitle"
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": "#optimizationFlowTitle"
-          }
-        ]
-      },
+      "id": "recommendation",
+      "title": "AI 优化建议",
+      "narrationChapter": "chapter-optimize",
+      "narration": "右侧建议把预计偏差改善、关键调整时段和运行状态集中呈现。交易员可以快速看出方案为什么更省钱、收益来自哪里，以及当前是否具备进入人工复核的条件。",
+      "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
+      "networkIdleMs": 600,
+      "holdMs": 16000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "open-evidence",
+      "title": "打开成本优化证据链",
+      "chapter": "04 · 每一笔节约都能复核",
+      "narrationChapter": "chapter-review",
+      "narration": "为了避免把预测价差直接当成收益，系统为建议建立成本证据链。交易员可以核对输入来源、计算公式、数据新鲜度和最近操作记录，确认数字与当前交易日采用同一口径。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"open-evidence\"]" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evidenceTitle" }] },
+      "networkIdleMs": 600,
+      "holdMs": 16000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "close-evidence",
+      "title": "完成证据核对",
+      "narrationChapter": "chapter-review",
+      "narration": "证据核对完成后，返回主流程。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"close-evidence\"]" }] },
+      "ready": { "state": "hidden", "locators": [{ "type": "css", "value": ".evidence-drawer" }] },
+      "networkIdleMs": 300,
+      "holdMs": 4000,
+      "timeoutMs": 10000
+    },
+    {
+      "id": "human-review",
+      "title": "人工复核保留最终决定权",
+      "narrationChapter": "chapter-review",
+      "narration": "AI负责汇总、预测、计算和解释，交易员保留最终决定权。进入真实申报前，人员必须复核关键时段、风险边界和成本依据；未经复核，系统不会自动提交交易。",
+      "action": { "type": "show", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "networkIdleMs": 500,
-      "holdMs": 5200,
+      "holdMs": 14000,
       "timeoutMs": 20000
     },
     {
       "id": "audit-mode",
-      "title": "审计复核",
-      "chapter": "05 · 可追溯",
-      "narration": "审计模式复核模型、执行、结算是否同一主体、同一交易日。",
-      "action": {
-        "type": "click",
-        "locators": [
-          {
-            "type": "css",
-            "value": "[data-mode=\"review\"]"
-          },
-          {
-            "type": "text",
-            "value": "审计",
-            "exact": true
-          }
-        ]
-      },
-      "ready": {
-        "state": "visible",
-        "locators": [
-          {
-            "type": "css",
-            "value": ".review-workspace"
-          }
-        ]
-      },
+      "title": "结算统计与审计回流",
+      "narrationChapter": "chapter-review",
+      "narration": "交易完成后，执行与结算结果回流系统。单日2.4万元净成本优化额，来自基准成本减去实际结算、手续费、偏差成本和系统运行成本；五项明细完整相减，结果正好一致。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-mode=\"review\"]" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".review-workspace" }] },
       "networkIdleMs": 700,
-      "holdMs": 5600,
+      "holdMs": 13000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "open-evolution",
+      "title": "AI 持续改进策略",
+      "chapter": "05 · 结果继续反哺下一次交易",
+      "narrationChapter": "chapter-outro",
+      "narration": "结果不仅用于报表，也会继续反哺下一次决策。当历史效果下降时，系统产生候选策略，用滚动回测和影子运行证明它是否真的更好，再交给人员审批。",
+      "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"evolution\"]" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyEvolutionTitle" }] },
+      "networkIdleMs": 700,
+      "holdMs": 10000,
+      "timeoutMs": 20000
+    },
+    {
+      "id": "evolution-proof",
+      "title": "候选策略只是持续学习的证据",
+      "narrationChapter": "chapter-outro",
+      "narration": "挑战者不是系统的主角，它只是证明AI能够根据实际结果持续学习。新版本不会自动上线，也不会自动申报，始终保留人工审批和回滚能力。",
+      "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#evolutionComparison" }] },
+      "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evolutionCenter" }] },
+      "networkIdleMs": 500,
+      "holdMs": 8000,
       "timeoutMs": 20000
     }
   ]

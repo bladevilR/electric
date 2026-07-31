@@ -6,8 +6,8 @@ const DEFAULT_FPS = 30;
 
 export function validateProductionConfig(config) {
   const parsedUrl = new URL(config.baseUrl);
-  if (parsedUrl.searchParams.get('demo') !== 'reviewable') {
-    throw new Error('录制入口必须包含 demo=reviewable 演示标识');
+  if (!['reviewable', 'settled'].includes(parsedUrl.searchParams.get('demo'))) {
+    throw new Error('录制入口必须包含 demo=reviewable 或 demo=settled 演示标识');
   }
   if (
     config.width !== DEFAULT_WIDTH ||
@@ -38,9 +38,11 @@ export function buildTimelineSkeleton(
 
   append({
     id: 'intro',
-    title: '电力交易 AI · 策略自进化',
+    title: plan.intro?.title || '电力交易 AI · 智能交易副驾驶',
     narration:
-      '电力交易 AI：发现衰减，实验评估，影子验证，人工审批，异常回滚。',
+      plan.intro?.narration ||
+      '电力交易中，每一次申报偏差都会形成真实成本。',
+    narrationChapter: plan.intro?.narrationChapter || 'chapter-cost',
     durationMs: introMs,
   });
   for (const step of plan.steps) {
@@ -48,14 +50,17 @@ export function buildTimelineSkeleton(
       id: step.id,
       title: step.title,
       narration: step.narration,
+      narrationChapter: step.narrationChapter || step.id,
       durationMs: step.holdMs,
     });
   }
   append({
     id: 'outro',
-    title: '可进化、可解释、敢落地',
+    title: plan.outro?.title || '让每一笔节约都有依据',
     narration:
-      '从衰减预警到候选上线，再到统计与回滚，系统会进化，也守住人工在环。未经复核，不会自动提交。',
+      plan.outro?.narration ||
+      'AI帮助交易员降低偏差成本，让每一次决策可解释、可复核。',
+    narrationChapter: plan.outro?.narrationChapter || 'chapter-outro',
     durationMs: outroMs,
   });
 

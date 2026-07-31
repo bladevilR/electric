@@ -19,17 +19,29 @@ import {
 const demoPlan = {
   title: '电力交易 AI · 申报优化比赛演示',
   url: '/?demo=reviewable',
+  intro: {
+    title: '成本优化开场',
+    narration: '开场成本旁白。',
+    narrationChapter: 'chapter-cost',
+  },
+  outro: {
+    title: '价值收束',
+    narration: '结尾价值旁白。',
+    narrationChapter: 'chapter-outro',
+  },
   steps: [
     {
       id: 'opening',
       title: 'AI 申报优化',
       narration: '第一段旁白。',
+      narrationChapter: 'chapter-cost',
       holdMs: 6500,
     },
     {
       id: 'curve',
       title: '96 点申报曲线',
       narration: '第二段旁白。',
+      narrationChapter: 'chapter-optimize',
       holdMs: 7500,
     },
   ],
@@ -48,6 +60,16 @@ test('拒绝不带 reviewable 演示标识的录制入口', () => {
   );
 });
 
+test('允许 settled 演示入口用于录制已核验成本证据', () => {
+  const config = validateProductionConfig({
+    baseUrl: 'http://127.0.0.1:5177/?demo=settled',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+  });
+  assert.match(config.baseUrl, /demo=settled/);
+});
+
 test('生成 1920x1080、30 帧且带开场结尾的连续时间线', () => {
   const timeline = buildTimelineSkeleton(demoPlan, {
     introMs: 10000,
@@ -57,6 +79,11 @@ test('生成 1920x1080、30 帧且带开场结尾的连续时间线', () => {
   assert.equal(timeline.width, 1920);
   assert.equal(timeline.height, 1080);
   assert.equal(timeline.fps, 30);
+  assert.equal(timeline.segments[0].title, '成本优化开场');
+  assert.equal(timeline.segments[0].narration, '开场成本旁白。');
+  assert.equal(timeline.segments[0].narrationChapter, 'chapter-cost');
+  assert.equal(timeline.segments.at(-1).title, '价值收束');
+  assert.equal(timeline.segments.at(-1).narrationChapter, 'chapter-outro');
   assert.deepEqual(
     timeline.segments.map(({ id, startMs, endMs }) => ({
       id,

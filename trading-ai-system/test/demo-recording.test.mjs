@@ -118,18 +118,27 @@ test('builds narration and subtitles from actual step timing instead of planned 
   assert.match(assets.ssml, /<speak version="1\.0"/);
 });
 
-test('the shipped competition plan is safe and leaves failure headroom', async () => {
+test('the shipped competition plan centers AI cost savings and leaves failure headroom', async () => {
   const raw = await readFile(
     new URL('../recording/demo-plan.json', import.meta.url),
     'utf8'
   );
   const plan = validateDemoPlan(JSON.parse(raw));
 
-  assert.equal(plan.url, '/?demo=reviewable');
-  assert.ok(plan.steps.length >= 8);
-  assert.ok(plan.totalHoldMs < 180_000);
+  assert.equal(plan.url, '/?demo=settled');
+  assert.match(plan.title, /智能交易副驾驶/);
+  assert.ok(plan.steps.length >= 12);
+  assert.ok(plan.totalHoldMs >= 190_000);
+  assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
+  assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 5);
+  assert.ok(plan.steps.some((step) => /24,000|2\.4\s*万/.test(step.narration)));
+  assert.ok(plan.steps.some((step) => /6,336,000|633\.6\s*万/.test(step.narration)));
+  const evolutionHoldMs = plan.steps
+    .filter((step) => step.id.includes('evolution'))
+    .reduce((sum, step) => sum + step.holdMs, 0);
+  assert.ok(evolutionHoldMs / plan.totalHoldMs <= 0.1);
 });
 
 test('the tour command validates the shipped plan without launching a browser', () => {
@@ -147,8 +156,8 @@ test('the tour command validates the shipped plan without launching a browser', 
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
   assert.equal(output.ok, true);
-  assert.equal(output.stepCount, 11);
-  assert.equal(output.totalHoldMs, 64700);
+  assert.ok(output.stepCount >= 12);
+  assert.ok(output.totalHoldMs >= 190000);
 });
 
 test('the TTS command writes script, SSML, and SRT from a real timeline file', async () => {
@@ -196,7 +205,7 @@ test('the TTS command writes script, SSML, and SRT from a real timeline file', a
     assert.equal(result.status, 0, result.stderr);
     assert.match(
       await readFile(path.join(outputDirectory, '解说稿.txt'), 'utf8'),
-      /不是只给一条申报建议|策略自进化|衰减发现/
+      /降低交易成本|单日净成本优化额|九十六个交易时点/
     );
     assert.match(
       await readFile(path.join(outputDirectory, '字幕.srt'), 'utf8'),
@@ -231,7 +240,7 @@ test('the PowerShell controller validates the plan without starting recording', 
   );
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Recording plan validated: 11 steps, 64700 ms/);
+  assert.match(result.stdout, /Recording plan validated: 14 steps, 196000 ms/);
 });
 
 test('the TTS mux controller accepts a separate video and WAV without overwriting either', async () => {

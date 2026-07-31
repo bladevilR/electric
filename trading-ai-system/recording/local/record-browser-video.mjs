@@ -139,6 +139,16 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
             margin: 28px 0 0; max-width: 1000px; color: #355d83;
             font: 520 25px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
           }
+          #local-demo-card .impact {
+            margin-top: 28px; color: #087c70;
+            font: 800 52px/1.1 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: -.035em;
+          }
+          #local-demo-card .impact small {
+            display: block; margin-top: 8px; color: #53728f;
+            font: 650 15px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: .04em;
+          }
           #local-demo-card .flow {
             display: flex; gap: 14px; margin-top: 38px; flex-wrap: wrap;
           }
@@ -184,8 +194,8 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         const ui = window.__localDemoVideo;
         const intro = kind === 'intro';
         ui.card.innerHTML = intro
-          ? '<div class="inner"><div class="eyebrow">ELECTRICITY TRADING AI</div><h1>电力交易 AI · 智能申报决策</h1><p>把数据校验、AI 申报优化、人工复核和审计证据，整合为一条可追溯的决策闭环。</p><div class="flow"><span>数据校验</span><span>模型优化</span><span>人工复核</span><span>审计留痕</span></div></div>'
-          : '<div class="inner"><div class="eyebrow">DECISION SUPPORT · HUMAN IN THE LOOP</div><h1>数据、模型、建议、复核、审计</h1><p>用可解释、可复核、可追溯的方式提升申报质量。系统只提供决策支持，未经人工复核不会自动提交。</p><div class="flow"><span>标准样本演示</span><span>不会自动交易</span><span>完整证据链</span></div></div>';
+          ? '<div class="inner"><div class="eyebrow">AI ELECTRICITY TRADING COPILOT</div><h1>让每一次申报，更接近真实需求</h1><p>AI协助交易员完成数据校验、预测、九十六点申报优化、人工复核和结算回流。</p><div class="impact">¥6,336,000<small>年度节约潜力 · 按当前演示交易规模等比例测算</small></div><div class="flow"><span>减少申报偏差</span><span>降低交易成本</span><span>每笔节约可核算</span></div></div>'
+          : '<div class="inner"><div class="eyebrow">MEASURABLE SAVINGS · HUMAN IN THE LOOP</div><h1>让每一笔节约，都有依据</h1><p>从预测真实需求，到优化每一个申报时点，再到复盘每一笔偏差成本，AI帮助交易员做出更可靠的决策。</p><div class="impact">¥24,000 / 日<small>演示回放已核验净成本优化额 · 非生产收益承诺</small></div><div class="flow"><span>可解释</span><span>可复核</span><span>可追溯</span><span>可回滚</span></div></div>';
         ui.card.classList.add('visible');
         ui.cursor.style.transform = 'translate(-80px,-80px)';
       }, { kind });

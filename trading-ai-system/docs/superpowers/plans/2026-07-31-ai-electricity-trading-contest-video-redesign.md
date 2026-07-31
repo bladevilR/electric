@@ -236,7 +236,7 @@ Commit: `git commit -am "feat: render narration as five consistent chapters"`
 - Consumes: 现有可观察 DOM 定位器和 `/?demo=reviewable`、`/?demo=settled` 演示入口。
 - Produces: 七章业务分镜、五个 `narrationChapter`、总展示预算 215–235 秒。
 
-- [ ] **Step 1: 写 shipped plan 的失败断言**
+- [x] **Step 1: 写 shipped plan 的失败断言**
 
 断言计划：
 
@@ -253,13 +253,13 @@ const evolutionHoldMs = plan.steps
 assert.ok(evolutionHoldMs / plan.totalHoldMs <= 0.1);
 ```
 
-- [ ] **Step 2: 运行测试确认旧策略中心叙事失败**
+- [x] **Step 2: 运行测试确认旧策略中心叙事失败**
 
 Run: `node --test test/demo-recording.test.mjs test/local-demo-video.test.mjs`
 
 Expected: FAIL，旧计划仅 64.7 秒展示预算且策略进化占比过高。
 
-- [ ] **Step 3: 重写七章镜头和旁白**
+- [x] **Step 3: 重写七章镜头和旁白**
 
 将计划改为以下镜头序列，所有动作继续使用可观察 `ready` 条件：
 
@@ -273,13 +273,13 @@ Expected: FAIL，旧计划仅 64.7 秒展示预算且策略进化占比过高。
 
 删除 `produce-video.mjs` 中覆盖 JSON 文案的 `LOCAL_NARRATION`，保证文案只有 `demo-plan.json` 一个来源。开场和结尾文案由 `buildTimelineSkeleton` 从计划的 `intro`、`outro` 字段读取，不再硬编码旧“策略自进化”文案。
 
-- [ ] **Step 4: 验证计划安全性和时长**
+- [x] **Step 4: 验证计划安全性和时长**
 
 Run: `node recording/run-demo-tour.mjs --validate-only --plan recording/demo-plan.json`
 
 Expected: `ok: true`，展示预算 190–210 秒，所有步骤都有可观察 ready 条件，且不存在自动申报定位器。
 
-- [ ] **Step 5: 运行测试并提交**
+- [x] **Step 5: 运行测试并提交**
 
 Run: `node --test test/demo-recording.test.mjs test/local-demo-video.test.mjs test/workbench-ui.test.mjs`
 

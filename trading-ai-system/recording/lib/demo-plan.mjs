@@ -74,6 +74,10 @@ function normalizeStep(rawStep, index) {
     id,
     title: requireText(step.title, `${id}.title`),
     narration: requireText(step.narration, `${id}.narration`),
+    narrationChapter:
+      typeof step.narrationChapter === 'string' && step.narrationChapter.trim()
+        ? step.narrationChapter.trim()
+        : `chapter-${id}`,
     chapter: typeof step.chapter === 'string' ? step.chapter.trim() : '',
     action: {
       type: actionType,
@@ -131,6 +135,8 @@ export function validateDemoPlan(rawPlan) {
     version: 1,
     title: requireText(plan.title, 'title'),
     url: requireText(plan.url, 'url'),
+    intro: plan.intro || null,
+    outro: plan.outro || null,
     maxDurationMs,
     totalHoldMs,
     steps,
