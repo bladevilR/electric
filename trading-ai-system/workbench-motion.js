@@ -53,6 +53,13 @@ function elements(root, selector) {
   return Array.from(root?.querySelectorAll?.(selector) || []);
 }
 
+function animateFrom(timeline, targets, vars, position) {
+  if (targets.length) {
+    timeline.from(targets, vars, position);
+  }
+  return timeline;
+}
+
 function settleRoot(root) {
   root?.classList?.remove('is-motion-running');
   root?.classList?.add('motion-ready', 'motion-settled');
@@ -136,81 +143,97 @@ export function startWorkbenchMotion(root, options = {}) {
   });
 
   if (!fullSequence) {
-    timeline
-      .from(elements(root, '.dashboard-primary-grid'), {
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-primary-grid'),
+      {
         y: 8,
         opacity: 0,
         duration: 0.32,
-      })
-      .from(
-        elements(root, '.dashboard-metric strong, .recommendation-impact strong'),
-        { y: 5, opacity: 0, duration: 0.24, stagger: 0.025 },
-        '<+0.04'
-      );
+      }
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-metric strong, .recommendation-impact strong'),
+      { y: 5, opacity: 0, duration: 0.24, stagger: 0.025 },
+      '<+0.04'
+    );
   } else {
-    timeline
-      .from(elements(root, '.dashboard-sidebar'), {
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-sidebar'),
+      {
         x: -18,
         opacity: 0,
         duration: 0.45,
-      })
-      .from(
-        elements(root, '.dashboard-hero-copy > *'),
-        { y: 18, opacity: 0, duration: 0.42, stagger: 0.08 },
-        0.16
-      )
-      .from(
-        elements(root, '.dashboard-progress li'),
-        { x: 12, opacity: 0, duration: 0.38, stagger: 0.08 },
-        0.28
-      )
-      .from(
-        elements(root, '.dashboard-metric'),
-        { y: 20, opacity: 0, duration: 0.46, stagger: 0.08 },
-        0.48
-      )
-      .from(
-        elements(root, '.declaration-curve-panel'),
-        { y: 18, opacity: 0, duration: 0.5 },
-        0.72
-      )
-      .from(
-        elements(root, '.recommendation-panel'),
-        { x: 18, opacity: 0, duration: 0.5 },
-        0.82
-      )
-      .from(
-        elements(root, '.curve-area'),
-        { opacity: 0, duration: 0.7 },
-        0.98
-      )
-      .from(
-        elements(root, '.curve-dot'),
-        {
-          scale: 0,
-          opacity: 0,
-          transformOrigin: 'center',
-          duration: 0.34,
-          stagger: 0.035,
-          ease: 'back.out(1.8)',
-        },
-        1.34
-      )
-      .from(
-        elements(root, '.recommendation-windows i b'),
-        {
-          scaleX: 0,
-          transformOrigin: 'left center',
-          duration: 0.5,
-          stagger: 0.06,
-        },
-        1.42
-      )
-      .from(
-        elements(root, '.optimization-flow li'),
-        { y: 10, opacity: 0, duration: 0.34, stagger: 0.07 },
-        1.72
-      );
+      }
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-hero-copy > *'),
+      { y: 18, opacity: 0, duration: 0.42, stagger: 0.08 },
+      0.16
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-progress li'),
+      { x: 12, opacity: 0, duration: 0.38, stagger: 0.08 },
+      0.28
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.dashboard-metric'),
+      { y: 20, opacity: 0, duration: 0.46, stagger: 0.08 },
+      0.48
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.declaration-curve-panel'),
+      { y: 18, opacity: 0, duration: 0.5 },
+      0.72
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.recommendation-panel'),
+      { x: 18, opacity: 0, duration: 0.5 },
+      0.82
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.curve-area'),
+      { opacity: 0, duration: 0.7 },
+      0.98
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.curve-dot'),
+      {
+        scale: 0,
+        opacity: 0,
+        transformOrigin: 'center',
+        duration: 0.34,
+        stagger: 0.035,
+        ease: 'back.out(1.8)',
+      },
+      1.34
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.recommendation-windows i b'),
+      {
+        scaleX: 0,
+        transformOrigin: 'left center',
+        duration: 0.5,
+        stagger: 0.06,
+      },
+      1.42
+    );
+    animateFrom(
+      timeline,
+      elements(root, '.optimization-flow li'),
+      { y: 10, opacity: 0, duration: 0.34, stagger: 0.07 },
+      1.72
+    );
 
     elements(root, '.dashboard-metric strong').forEach((element, index) => {
       animateMetric(timeline, element, 0.62 + index * 0.08);

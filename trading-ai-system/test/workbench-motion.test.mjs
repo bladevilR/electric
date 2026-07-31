@@ -29,21 +29,27 @@ function createMotionRoot() {
 
 function createFakeGsap() {
   const timelines = [];
+  const calls = [];
   return {
     timelines,
+    calls,
     timeline() {
       const timeline = {
         killed: false,
-        from() {
+        from(targets) {
+          calls.push({ method: 'from', targets });
           return this;
         },
-        fromTo() {
+        fromTo(targets) {
+          calls.push({ method: 'fromTo', targets });
           return this;
         },
-        to() {
+        to(targets) {
+          calls.push({ method: 'to', targets });
           return this;
         },
-        set() {
+        set(targets) {
+          calls.push({ method: 'set', targets });
           return this;
         },
         kill() {
@@ -119,4 +125,20 @@ test('motion css includes reduced-motion final-state fallback', async () => {
   assert.match(css, /animation-duration:\s*0\.01ms/);
   assert.match(css, /\.recommendation-panel::after/);
   assert.match(css, /\.dashboard-metric:hover/);
+});
+
+test('motion timeline skips selectors that have no matching targets', async () => {
+  const { startWorkbenchMotion, stopWorkbenchMotion } = await import(
+    '../workbench-motion.js'
+  );
+  const fakeGsap = createFakeGsap();
+
+  startWorkbenchMotion(createMotionRoot(), {
+    gsap: fakeGsap,
+    reducedMotion: false,
+    fullSequence: true,
+  });
+
+  assert.equal(fakeGsap.calls.length, 0);
+  stopWorkbenchMotion();
 });
