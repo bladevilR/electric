@@ -273,7 +273,7 @@ test('the PowerShell controller validates the plan without starting recording', 
   );
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Recording plan validated: 14 steps, 191000 ms/);
+  assert.match(result.stdout, /Recording plan validated: 14 steps, 203348 ms/);
 });
 
 test('the TTS mux controller accepts a separate video and WAV without overwriting either', async () => {

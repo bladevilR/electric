@@ -16,6 +16,7 @@ import {
   buildChapterCaptionSegments,
   buildNarrationSegments,
   buildOutputPaths,
+  pacePlanFromSpeech,
   buildProductionStages,
   buildSrt,
   buildTimedCaptionCues,
@@ -518,4 +519,26 @@ test('真实录制脚本在主体层执行连续运镜且目标缺失会明确�
   assert.match(source, /workbenchRoot\.animate/);
   assert.match(source, /transformOrigin\s*=\s*['"]0 0['"]/);
   assert.match(source, /exit === ['"]connect['"]/);
+});
+
+test('真实 TTS 时长反推镜头预算并把章尾空白控制在 1.2 秒内', () => {
+  const pacingPlan = {
+    intro: { narration: '价值开场。', narrationChapter: 'chapter-value' },
+    outro: { narration: '价值收束。', narrationChapter: 'chapter-close' },
+    steps: [
+      { id: 'value', narration: '节约价值。', narrationChapter: 'chapter-value' },
+      { id: 'data', narration: '数据校验。', narrationChapter: 'chapter-data' },
+      { id: 'decision', narration: '优化决策。', narrationChapter: 'chapter-decision' },
+      { id: 'close', narration: '策略验证。', narrationChapter: 'chapter-close' },
+    ],
+  };
+  const paced = pacePlanFromSpeech(pacingPlan, [
+    { id: 'chapter-value', durationMs: 42_000 },
+    { id: 'chapter-data', durationMs: 39_000 },
+    { id: 'chapter-decision', durationMs: 66_000 },
+    { id: 'chapter-close', durationMs: 42_000 },
+  ]);
+  assert.ok(paced.durationMs >= 195_000 && paced.durationMs <= 210_000);
+  assert.ok(paced.chapters.every((chapter) => chapter.trailingSilenceMs <= 1200));
+  assert.ok(paced.plan.steps.every((step) => step.holdMs >= 6500));
 });

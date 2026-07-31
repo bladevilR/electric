@@ -125,8 +125,10 @@ export function validateProductionConfig(config) {
 
 export function buildTimelineSkeleton(
   plan,
-  { introMs = 10000, outroMs = 15000 } = {}
+  options = {}
 ) {
+  const introMs = options.introMs ?? plan.intro?.durationMs ?? 10000;
+  const outroMs = options.outroMs ?? plan.outro?.durationMs ?? 15000;
   let cursorMs = 0;
   const segments = [];
   const append = (segment) => {
@@ -176,6 +178,135 @@ export function buildTimelineSkeleton(
     fps: DEFAULT_FPS,
     durationMs: cursorMs,
     segments,
+  };
+}
+
+function allocateDurations(items, totalMs, minimumMs) {
+  const remaining = items.map((item) => ({
+    ...item,
+    weight: Math.max(1, Array.from(item.text || '').length),
+    durationMs: null,
+  }));
+  let availableMs = totalMs;
+  let availableWeight = remaining.reduce((sum, item) => sum + item.weight, 0);
+  while (remaining.some((item) => item.durationMs === null)) {
+    let fixedAny = false;
+    for (const item of remaining) {
+      if (item.durationMs !== null) continue;
+      const proportional = (availableMs * item.weight) / availableWeight;
+      if (proportional < minimumMs) {
+        item.durationMs = minimumMs;
+        availableMs -= minimumMs;
+        availableWeight -= item.weight;
+        fixedAny = true;
+      }
+    }
+    if (!fixedAny) break;
+  }
+  const flexible = remaining.filter((item) => item.durationMs === null);
+  let assigned = 0;
+  for (let index = 0; index < flexible.length; index += 1) {
+    const item = flexible[index];
+    item.durationMs =
+      index === flexible.length - 1
+        ? availableMs - assigned
+        : Math.round((availableMs * item.weight) / availableWeight);
+    assigned += item.durationMs;
+  }
+  return remaining;
+}
+
+export function pacePlanFromSpeech(
+  plan,
+  speech,
+  {
+    minimumSegmentMs = 6500,
+    leadingPaddingMs = 500,
+    trailingPaddingMs = 500,
+    minimumDurationMs = 195_000,
+    maximumDurationMs = 270_000,
+  } = {}
+) {
+  const sources = [
+    { id: 'intro', ...plan.intro },
+    ...plan.steps.map((step) => ({
+      id: step.id,
+      narration: step.narration,
+      narrationChapter: step.narrationChapter,
+    })),
+    { id: 'outro', ...plan.outro },
+  ];
+  const speechById = new Map(speech.map((item) => [item.id, item]));
+  const chapters = [];
+  for (const source of sources) {
+    const id = source.narrationChapter || source.id;
+    let chapter = chapters.at(-1);
+    if (!chapter || chapter.id !== id) {
+      if (chapters.some((item) => item.id === id)) {
+        throw new Error(`旁白章节必须连续：${id}`);
+      }
+      const audio = speechById.get(id);
+      if (!audio || !Number.isFinite(Number(audio.durationMs))) {
+        throw new Error(`${id} 缺少真实 TTS 时长`);
+      }
+      chapter = { id, speechDurationMs: Math.ceil(Number(audio.durationMs)), sources: [] };
+      chapters.push(chapter);
+    }
+    chapter.sources.push({ id: source.id, text: source.narration || '' });
+  }
+
+  const basePaddingMs = leadingPaddingMs + trailingPaddingMs;
+  let durationMs = chapters.reduce(
+    (sum, chapter) => sum + chapter.speechDurationMs + basePaddingMs,
+    0
+  );
+  if (durationMs < minimumDurationMs) {
+    let extraMs = minimumDurationMs - durationMs;
+    for (const chapter of chapters) {
+      const capacity = Math.max(0, 1200 - trailingPaddingMs);
+      const addition = Math.min(capacity, Math.ceil(extraMs / (chapters.length - chapters.indexOf(chapter))));
+      chapter.extraPaddingMs = addition;
+      extraMs -= addition;
+    }
+    if (extraMs > 0) throw new Error('自然旁白过短，无法在不制造空停的情况下达到目标时长');
+    durationMs = minimumDurationMs;
+  }
+  if (durationMs > maximumDurationMs) {
+    throw new Error(`自然旁白成片时长 ${durationMs}ms 超过上限 ${maximumDurationMs}ms`);
+  }
+
+  const durationBySource = new Map();
+  for (const chapter of chapters) {
+    const chapterDurationMs =
+      chapter.speechDurationMs + basePaddingMs + (chapter.extraPaddingMs || 0);
+    const minimumTotal = chapter.sources.length * minimumSegmentMs;
+    if (chapterDurationMs < minimumTotal) {
+      throw new Error(`${chapter.id} 镜头过密，无法保证每镜头 ${minimumSegmentMs}ms`);
+    }
+    const allocation = allocateDurations(
+      chapter.sources,
+      chapterDurationMs,
+      minimumSegmentMs
+    );
+    for (const item of allocation) durationBySource.set(item.id, item.durationMs);
+    chapter.durationMs = chapterDurationMs;
+    chapter.trailingSilenceMs = trailingPaddingMs + (chapter.extraPaddingMs || 0);
+    delete chapter.sources;
+    delete chapter.extraPaddingMs;
+  }
+
+  return {
+    plan: {
+      ...plan,
+      steps: plan.steps.map((step) => ({
+        ...step,
+        holdMs: durationBySource.get(step.id),
+      })),
+    },
+    introMs: durationBySource.get('intro'),
+    outroMs: durationBySource.get('outro'),
+    durationMs,
+    chapters,
   };
 }
 

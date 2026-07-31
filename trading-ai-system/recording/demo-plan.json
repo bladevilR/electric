@@ -6,12 +6,14 @@
   "intro": {
     "title": "电力交易 AI · 让每一次申报更接近真实需求",
     "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
-    "narrationChapter": "chapter-value"
+    "narrationChapter": "chapter-value",
+    "durationMs": 15380
   },
   "outro": {
     "title": "让每一次申报更省、更稳、更有依据",
     "narration": "AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
-    "narrationChapter": "chapter-close"
+    "narrationChapter": "chapter-close",
+    "durationMs": 8632
   },
   "steps": [
     {
@@ -24,7 +26,7 @@
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "networkIdleMs": 900,
-      "holdMs": 16000,
+      "holdMs": 16800,
       "timeoutMs": 30000
     },
     {
@@ -36,7 +38,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#savingsValue" }] },
       "networkIdleMs": 700,
-      "holdMs": 18000,
+      "holdMs": 21060,
       "timeoutMs": 20000
     },
     {
@@ -49,7 +51,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"validate\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".dashboard-context-alert" }] },
       "networkIdleMs": 700,
-      "holdMs": 13000,
+      "holdMs": 18015,
       "timeoutMs": 20000
     },
     {
@@ -61,7 +63,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#validationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 14000,
+      "holdMs": 14584,
       "timeoutMs": 20000
     },
     {
@@ -73,7 +75,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 15000,
+      "holdMs": 15441,
       "timeoutMs": 20000
     },
     {
@@ -86,7 +88,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 16000,
+      "holdMs": 12927,
       "timeoutMs": 20000
     },
     {
@@ -98,7 +100,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 18000,
+      "holdMs": 16472,
       "timeoutMs": 20000
     },
     {
@@ -110,7 +112,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 16000,
+      "holdMs": 14804,
       "timeoutMs": 20000
     },
     {
@@ -123,7 +125,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"open-evidence\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evidenceTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 16000,
+      "holdMs": 15846,
       "timeoutMs": 20000
     },
     {
@@ -135,7 +137,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"close-evidence\"]" }] },
       "ready": { "state": "hidden", "locators": [{ "type": "css", "value": ".evidence-drawer" }] },
       "networkIdleMs": 300,
-      "holdMs": 4000,
+      "holdMs": 6500,
       "timeoutMs": 10000
     },
     {
@@ -147,7 +149,7 @@
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "networkIdleMs": 500,
-      "holdMs": 14000,
+      "holdMs": 15011,
       "timeoutMs": 20000
     },
     {
@@ -159,7 +161,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-mode=\"review\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".review-workspace" }] },
       "networkIdleMs": 700,
-      "holdMs": 13000,
+      "holdMs": 17490,
       "timeoutMs": 20000
     },
     {
@@ -167,24 +169,24 @@
       "title": "AI 持续改进策略",
       "chapter": "04 · 结果反哺下一次交易",
       "narrationChapter": "chapter-close",
-      "narration": "交易与结算结果不会停留在报表里，而会进入下一轮模型评估。系统识别偏差与成本变化，形成候选优化策略，并把每次版本变化纳入可追溯的验证流程。",
+      "narration": "结算结果进入下一轮模型评估，系统据此形成可追溯的候选优化策略。",
       "camera": { "scale": 1, "focus": [{ "type": "css", "value": "#strategyEvolutionTitle" }], "enterMs": 850, "exit": "reset", "motionBlur": 0 },
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"evolution\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyEvolutionTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 10000,
+      "holdMs": 7041,
       "timeoutMs": 20000
     },
     {
       "id": "evolution-proof",
       "title": "候选优化策略的安全验证流程",
       "narrationChapter": "chapter-close",
-      "narration": "候选优化策略先经过历史回测，再使用同一交易日数据进行实时并行验证，只对比结果，不参与真实申报。指标确认领先后仍须人工审批，审批启用后持续统计，出现异常可以随时回滚。",
+      "narration": "候选策略先经历史回测和实时并行验证，只比较结果、不参与真实申报；指标领先后仍须人工审批，异常可回滚。",
       "camera": { "scale": 1.2, "focus": [{ "type": "css", "value": "#evolutionComparison" }], "enterMs": 1000, "exit": "reset", "motionBlur": 0.14 },
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#evolutionComparison" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evolutionCenter" }] },
       "networkIdleMs": 500,
-      "holdMs": 8000,
+      "holdMs": 11357,
       "timeoutMs": 20000
     }
   ]
