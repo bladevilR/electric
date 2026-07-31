@@ -3,17 +3,18 @@
   "title": "电力交易 AI · 智能交易副驾驶参赛演示",
   "url": "/?demo=settled",
   "maxDurationMs": 270000,
+  "controllerOverheadMs": 1150,
   "intro": {
     "title": "电力交易 AI · 让每一次申报更接近真实需求",
     "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
     "narrationChapter": "chapter-value",
-    "durationMs": 15380
+    "durationMs": 14230
   },
   "outro": {
     "title": "让每一次申报更省、更稳、更有依据",
     "narration": "AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
     "narrationChapter": "chapter-close",
-    "durationMs": 8632
+    "durationMs": 7482
   },
   "steps": [
     {
@@ -26,7 +27,7 @@
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "networkIdleMs": 900,
-      "holdMs": 16800,
+      "holdMs": 15650,
       "timeoutMs": 30000
     },
     {
@@ -38,7 +39,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#savingsValue" }] },
       "networkIdleMs": 700,
-      "holdMs": 21060,
+      "holdMs": 19910,
       "timeoutMs": 20000
     },
     {
@@ -51,7 +52,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"validate\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".dashboard-context-alert" }] },
       "networkIdleMs": 700,
-      "holdMs": 18015,
+      "holdMs": 16865,
       "timeoutMs": 20000
     },
     {
@@ -63,7 +64,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#validationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 14584,
+      "holdMs": 13434,
       "timeoutMs": 20000
     },
     {
@@ -75,7 +76,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyValidationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 15441,
+      "holdMs": 14291,
       "timeoutMs": 20000
     },
     {
@@ -88,7 +89,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 12927,
+      "holdMs": 11777,
       "timeoutMs": 20000
     },
     {
@@ -100,7 +101,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 16472,
+      "holdMs": 15322,
       "timeoutMs": 20000
     },
     {
@@ -112,7 +113,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 14804,
+      "holdMs": 13654,
       "timeoutMs": 20000
     },
     {
@@ -125,7 +126,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"open-evidence\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evidenceTitle" }] },
       "networkIdleMs": 600,
-      "holdMs": 15846,
+      "holdMs": 14696,
       "timeoutMs": 20000
     },
     {
@@ -137,7 +138,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"close-evidence\"]" }] },
       "ready": { "state": "hidden", "locators": [{ "type": "css", "value": ".evidence-drawer" }] },
       "networkIdleMs": 300,
-      "holdMs": 6500,
+      "holdMs": 5350,
       "timeoutMs": 10000
     },
     {
@@ -149,7 +150,7 @@
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "networkIdleMs": 500,
-      "holdMs": 15011,
+      "holdMs": 13861,
       "timeoutMs": 20000
     },
     {
@@ -161,7 +162,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-mode=\"review\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".review-workspace" }] },
       "networkIdleMs": 700,
-      "holdMs": 17490,
+      "holdMs": 16340,
       "timeoutMs": 20000
     },
     {
@@ -174,7 +175,7 @@
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"evolution\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyEvolutionTitle" }] },
       "networkIdleMs": 700,
-      "holdMs": 7041,
+      "holdMs": 5891,
       "timeoutMs": 20000
     },
     {
@@ -186,7 +187,7 @@
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#evolutionComparison" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evolutionCenter" }] },
       "networkIdleMs": 500,
-      "holdMs": 11357,
+      "holdMs": 10207,
       "timeoutMs": 20000
     }
   ]

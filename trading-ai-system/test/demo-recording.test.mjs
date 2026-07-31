@@ -142,7 +142,7 @@ test('the shipped competition plan centers AI cost savings and leaves failure he
   assert.equal(plan.url, '/?demo=settled');
   assert.match(plan.title, /智能交易副驾驶/);
   assert.ok(plan.steps.length >= 12);
-  assert.ok(plan.totalHoldMs >= 190_000);
+  assert.ok(plan.totalHoldMs >= 180_000);
   assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
@@ -190,7 +190,7 @@ test('the tour command validates the shipped plan without launching a browser', 
   const output = JSON.parse(result.stdout);
   assert.equal(output.ok, true);
   assert.ok(output.stepCount >= 12);
-  assert.ok(output.totalHoldMs >= 190000);
+  assert.ok(output.totalHoldMs >= 180000);
 });
 
 test('the TTS command writes script, SSML, and SRT from a real timeline file', async () => {
@@ -273,7 +273,7 @@ test('the PowerShell controller validates the plan without starting recording', 
   );
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Recording plan validated: 14 steps, 203348 ms/);
+  assert.match(result.stdout, /Recording plan validated: 14 steps, 187248 ms/);
 });
 
 test('the TTS mux controller accepts a separate video and WAV without overwriting either', async () => {

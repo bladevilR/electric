@@ -139,10 +139,10 @@ async function main() {
   const skeleton = buildTimelineSkeleton(plan);
   if (
     !args.smoke &&
-    (skeleton.durationMs < 215_000 || skeleton.durationMs > 235_000)
+    (skeleton.durationMs < 195_000 || skeleton.durationMs > 235_000)
   ) {
     throw new Error(
-      `计划时长必须在 3:35–3:55：${skeleton.durationMs}ms`
+      `扣除录制控制开销后的计划时长必须在 3:15–3:55：${skeleton.durationMs}ms`
     );
   }
 

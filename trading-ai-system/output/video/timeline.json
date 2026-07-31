@@ -4,173 +4,343 @@
   "width": 1920,
   "height": 1080,
   "fps": 30,
-  "durationMs": 236000,
+  "durationMs": 229640,
   "segments": [
     {
       "id": "intro",
       "title": "电力交易 AI · 让每一次申报更接近真实需求",
       "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
-      "narrationChapter": "chapter-cost",
-      "durationMs": 10000,
+      "narrationChapter": "chapter-value",
+      "durationMs": 14230,
       "startMs": 0,
-      "endMs": 11069,
-      "status": "completed"
+      "endMs": 15793,
+      "status": "completed",
+      "camera": null
     },
     {
       "id": "opening",
       "title": "AI 电力交易副驾驶",
       "narration": "这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。",
-      "narrationChapter": "chapter-cost",
-      "durationMs": 16000,
-      "startMs": 11069,
-      "endMs": 28201,
-      "status": "completed"
+      "narrationChapter": "chapter-value",
+      "durationMs": 15650,
+      "startMs": 15794,
+      "endMs": 32971,
+      "status": "completed",
+      "camera": {
+        "scale": 1.08,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationDashboardTitle"
+          }
+        ],
+        "enterMs": 900,
+        "exit": "connect",
+        "motionBlur": 0.08
+      }
     },
     {
       "id": "savings-impact",
       "title": "成本优化结果",
       "narration": "在当前演示交易规模下，单日净成本优化额为2.4万元；按二十二个交易日测算，月度约52.8万元；按二百六十四个交易日测算，年度节约潜力约633.6万元。所有金额都可以继续展开核算。",
-      "narrationChapter": "chapter-cost",
-      "durationMs": 18000,
-      "startMs": 28201,
-      "endMs": 47309,
-      "status": "completed"
+      "narrationChapter": "chapter-value",
+      "durationMs": 19910,
+      "startMs": 32971,
+      "endMs": 54407,
+      "status": "completed",
+      "camera": {
+        "scale": 1.22,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".savings-projection-grid"
+          }
+        ],
+        "enterMs": 1000,
+        "exit": "reset",
+        "motionBlur": 0.16
+      }
     },
     {
       "id": "data-quality",
       "title": "数据接入与质量门禁",
       "narration": "节约成本的第一步，不是立即给出交易量，而是先确认数据是否可信。系统统一检查市场价格、负荷预测、持仓、交易限额和数据新鲜度；任何关键数据缺失或过期，都会明确阻断后续决策。",
       "narrationChapter": "chapter-data",
-      "durationMs": 13000,
-      "startMs": 47309,
-      "endMs": 61410,
-      "status": "completed"
+      "durationMs": 16865,
+      "startMs": 54407,
+      "endMs": 72520,
+      "status": "completed",
+      "camera": {
+        "scale": 1,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".dashboard-context-alert"
+          }
+        ],
+        "enterMs": 800,
+        "exit": "reset",
+        "motionBlur": 0
+      }
     },
     {
       "id": "validation-evidence",
       "title": "执行前数据校验",
       "narration": "校验结果不是一个模糊的绿灯。每一类数据都显示来源、数量、更新时间和是否满足执行条件，让交易员知道系统为什么允许继续，或者为什么必须暂停。",
       "narrationChapter": "chapter-data",
-      "durationMs": 14000,
-      "startMs": 61411,
-      "endMs": 76559,
-      "status": "completed"
+      "durationMs": 13434,
+      "startMs": 72521,
+      "endMs": 87514,
+      "status": "completed",
+      "camera": {
+        "scale": 1.16,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#validationTitle"
+          }
+        ],
+        "enterMs": 900,
+        "exit": "connect",
+        "motionBlur": 0.1
+      }
     },
     {
       "id": "prediction-proof",
       "title": "预测效果验证",
       "narration": "数据通过后，AI结合历史负荷、价格和时段特征形成预测。系统同时保留留出集误差、交易日胜率和基线对比，只有真正优于基线的模型，才可以进入申报优化。",
       "narrationChapter": "chapter-data",
-      "durationMs": 15000,
-      "startMs": 76559,
-      "endMs": 92652,
-      "status": "completed"
+      "durationMs": 14291,
+      "startMs": 87514,
+      "endMs": 103009,
+      "status": "completed",
+      "camera": {
+        "scale": 1.18,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#strategyValidationTitle"
+          }
+        ],
+        "enterMs": 1000,
+        "exit": "reset",
+        "motionBlur": 0.14
+      }
     },
     {
       "id": "return-curve",
       "title": "回到 AI 申报优化",
       "narration": "预测本身不会自动省钱。系统需要把负荷和价格判断继续转化为每个交易时点的申报动作，并在市场约束和风险边界内寻找更低成本的方案。",
-      "narrationChapter": "chapter-optimize",
-      "durationMs": 16000,
-      "startMs": 92652,
-      "endMs": 109757,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 11777,
+      "startMs": 103009,
+      "endMs": 115999,
+      "status": "completed",
+      "camera": {
+        "scale": 1.08,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ],
+        "enterMs": 850,
+        "exit": "reset",
+        "motionBlur": 0.06
+      }
     },
     {
       "id": "curve",
       "title": "96 点申报曲线",
       "narration": "这里逐点比较历史申报和AI建议。系统识别成本影响最大的窗口，告诉交易员哪些时段应该上调、哪些时段应该下调，同时保留完整的九十六点曲线，而不是只给一句笼统结论。",
-      "narrationChapter": "chapter-optimize",
-      "durationMs": 18000,
-      "startMs": 109757,
-      "endMs": 128993,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 15322,
+      "startMs": 116000,
+      "endMs": 132926,
+      "status": "completed",
+      "camera": {
+        "scale": 1,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ],
+        "enterMs": 850,
+        "exit": "reset",
+        "motionBlur": 0
+      }
     },
     {
       "id": "recommendation",
       "title": "AI 优化建议",
       "narration": "右侧建议把预计偏差改善、关键调整时段和运行状态集中呈现。交易员可以快速看出方案为什么更省钱、收益来自哪里，以及当前是否具备进入人工复核的条件。",
-      "narrationChapter": "chapter-optimize",
-      "durationMs": 16000,
-      "startMs": 128993,
-      "endMs": 146348,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 13654,
+      "startMs": 132926,
+      "endMs": 147852,
+      "status": "completed",
+      "camera": {
+        "scale": 1.16,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#recommendationTitle"
+          }
+        ],
+        "enterMs": 950,
+        "exit": "connect",
+        "motionBlur": 0.1
+      }
     },
     {
       "id": "open-evidence",
       "title": "打开成本优化证据链",
       "narration": "为了避免把预测价差直接当成收益，系统为建议建立成本证据链。交易员可以核对输入来源、计算公式、数据新鲜度和最近操作记录，确认数字与当前交易日采用同一口径。",
-      "narrationChapter": "chapter-review",
-      "durationMs": 16000,
-      "startMs": 146349,
-      "endMs": 163618,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 14696,
+      "startMs": 147853,
+      "endMs": 163643,
+      "status": "completed",
+      "camera": {
+        "scale": 1.16,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#evidenceTitle"
+          }
+        ],
+        "enterMs": 900,
+        "exit": "connect",
+        "motionBlur": 0.1
+      }
     },
     {
       "id": "close-evidence",
       "title": "完成证据核对",
       "narration": "证据核对完成后，返回主流程。",
-      "narrationChapter": "chapter-review",
-      "durationMs": 4000,
-      "startMs": 163618,
-      "endMs": 168996,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 5350,
+      "startMs": 163643,
+      "endMs": 170067,
+      "status": "completed",
+      "camera": {
+        "scale": 1,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ],
+        "enterMs": 800,
+        "exit": "reset",
+        "motionBlur": 0
+      }
     },
     {
       "id": "human-review",
       "title": "人工复核保留最终决定权",
       "narration": "AI负责汇总、预测、计算和解释，交易员保留最终决定权。进入真实申报前，人员必须复核关键时段、风险边界和成本依据；未经复核，系统不会自动提交交易。",
-      "narrationChapter": "chapter-review",
-      "durationMs": 14000,
-      "startMs": 168996,
-      "endMs": 184411,
-      "status": "completed"
+      "narrationChapter": "chapter-decision",
+      "durationMs": 13861,
+      "startMs": 170068,
+      "endMs": 184983,
+      "status": "completed",
+      "camera": {
+        "scale": 1.15,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ],
+        "enterMs": 900,
+        "exit": "connect",
+        "motionBlur": 0.1
+      }
     },
     {
       "id": "audit-mode",
       "title": "结算统计与审计回流",
       "narration": "交易完成后，执行与结算结果回流系统。单日2.4万元净成本优化额，来自基准成本减去实际结算、手续费、偏差成本和系统运行成本；五项明细完整相减，结果正好一致。",
-      "narrationChapter": "chapter-review",
-      "durationMs": 13000,
-      "startMs": 184412,
-      "endMs": 198736,
-      "status": "completed"
+      "narrationChapter": "chapter-close",
+      "durationMs": 16340,
+      "startMs": 184984,
+      "endMs": 202373,
+      "status": "completed",
+      "camera": {
+        "scale": 1.22,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".review-rule"
+          }
+        ],
+        "enterMs": 1000,
+        "exit": "reset",
+        "motionBlur": 0.16
+      }
     },
     {
       "id": "open-evolution",
       "title": "AI 持续改进策略",
-      "narration": "结算结果继续反哺下一次决策。系统生成候选策略，经过回测和影子运行，再由人员审批。",
-      "narrationChapter": "chapter-outro",
-      "durationMs": 10000,
-      "startMs": 198736,
-      "endMs": 209818,
-      "status": "completed"
+      "narration": "结算结果进入下一轮模型评估，系统据此形成可追溯的候选优化策略。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 5891,
+      "startMs": 202373,
+      "endMs": 209303,
+      "status": "completed",
+      "camera": {
+        "scale": 1,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#strategyEvolutionTitle"
+          }
+        ],
+        "enterMs": 850,
+        "exit": "reset",
+        "motionBlur": 0
+      }
     },
     {
       "id": "evolution-proof",
-      "title": "候选策略只是持续学习的证据",
-      "narration": "挑战者只是持续学习的证据。新版本不会自动上线或申报，始终保留人工审批和回滚。",
-      "narrationChapter": "chapter-outro",
-      "durationMs": 8000,
-      "startMs": 209819,
-      "endMs": 219421,
-      "status": "completed"
+      "title": "候选优化策略的安全验证流程",
+      "narration": "候选策略先经历史回测和实时并行验证，只比较结果、不参与真实申报；指标领先后仍须人工审批，异常可回滚。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 10207,
+      "startMs": 209304,
+      "endMs": 220636,
+      "status": "completed",
+      "camera": {
+        "scale": 1.2,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#evolutionComparison"
+          }
+        ],
+        "enterMs": 1000,
+        "exit": "reset",
+        "motionBlur": 0.14
+      }
     },
     {
       "id": "outro",
-      "title": "让每一笔节约都有依据",
-      "narration": "从预测需求、优化申报到复盘偏差成本，AI让节约有依据、决策可复核。按演示规模测算，年度节约潜力约633.6万元。",
-      "narrationChapter": "chapter-outro",
-      "durationMs": 15000,
-      "startMs": 219422,
-      "endMs": 235512,
-      "status": "completed"
+      "title": "让每一次申报更省、更稳、更有依据",
+      "narration": "AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 7482,
+      "startMs": 220636,
+      "endMs": 229162,
+      "status": "completed",
+      "camera": null
     }
   ],
   "pageUrl": "http://127.0.0.1:5197/?demo=settled",
   "status": "completed",
-  "startedAt": "2026-07-31T15:13:09.110Z",
-  "completedAt": "2026-07-31T15:17:11.267Z",
+  "startedAt": "2026-07-31T17:00:23.011Z",
+  "completedAt": "2026-07-31T17:04:18.187Z",
   "rawMedia": {
     "streams": [
       {
@@ -222,21 +392,21 @@
         "tags": {
           "language": "eng",
           "ENCODER": "Lavc61.3.100 libvpx",
-          "DURATION": "00:03:56.000000000"
+          "DURATION": "00:03:49.640000000"
         }
       }
     ],
     "format": {
-      "filename": "/Users/r/Documents/electric/trading-ai-system/output/video/raw/browser-recording.webm",
+      "filename": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/raw/browser-recording.webm",
       "nb_streams": 1,
       "nb_programs": 0,
       "nb_stream_groups": 0,
       "format_name": "matroska,webm",
       "format_long_name": "Matroska / WebM",
       "start_time": "0.000000",
-      "duration": "236.000000",
-      "size": "20362107",
-      "bit_rate": "690240",
+      "duration": "229.640000",
+      "size": "23740489",
+      "bit_rate": "827050",
       "probe_score": 100,
       "tags": {
         "ENCODER": "Lavf61.1.100"
