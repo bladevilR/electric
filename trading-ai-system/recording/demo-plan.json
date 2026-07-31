@@ -6,19 +6,19 @@
   "intro": {
     "title": "电力交易 AI · 让每一次申报更接近真实需求",
     "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
-    "narrationChapter": "chapter-cost"
+    "narrationChapter": "chapter-value"
   },
   "outro": {
-    "title": "让每一笔节约都有依据",
-    "narration": "从预测需求、优化申报到复盘偏差成本，AI让节约有依据、决策可复核。按演示规模测算，年度节约潜力约633.6万元。",
-    "narrationChapter": "chapter-outro"
+    "title": "让每一次申报更省、更稳、更有依据",
+    "narration": "AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
+    "narrationChapter": "chapter-close"
   },
   "steps": [
     {
       "id": "opening",
       "title": "AI 电力交易副驾驶",
       "chapter": "01 · 先看能省多少钱",
-      "narrationChapter": "chapter-cost",
+      "narrationChapter": "chapter-value",
       "narration": "这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。",
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationDashboardTitle" }] },
@@ -29,7 +29,7 @@
     {
       "id": "savings-impact",
       "title": "成本优化结果",
-      "narrationChapter": "chapter-cost",
+      "narrationChapter": "chapter-value",
       "narration": "在当前演示交易规模下，单日净成本优化额为2.4万元；按二十二个交易日测算，月度约52.8万元；按二百六十四个交易日测算，年度节约潜力约633.6万元。所有金额都可以继续展开核算。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": ".dashboard-audit-summary > summary" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#savingsValue" }] },
@@ -75,7 +75,7 @@
       "id": "return-curve",
       "title": "回到 AI 申报优化",
       "chapter": "03 · 把预测变成省钱的申报方案",
-      "narrationChapter": "chapter-optimize",
+      "narrationChapter": "chapter-decision",
       "narration": "预测本身不会自动省钱。系统需要把负荷和价格判断继续转化为每个交易时点的申报动作，并在市场约束和风险边界内寻找更低成本的方案。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"curve\"][data-stage=\"connect\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
@@ -86,7 +86,7 @@
     {
       "id": "curve",
       "title": "96 点申报曲线",
-      "narrationChapter": "chapter-optimize",
+      "narrationChapter": "chapter-decision",
       "narration": "这里逐点比较历史申报和AI建议。系统识别成本影响最大的窗口，告诉交易员哪些时段应该上调、哪些时段应该下调，同时保留完整的九十六点曲线，而不是只给一句笼统结论。",
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#declarationCurveTitle" }] },
@@ -97,7 +97,7 @@
     {
       "id": "recommendation",
       "title": "AI 优化建议",
-      "narrationChapter": "chapter-optimize",
+      "narrationChapter": "chapter-decision",
       "narration": "右侧建议把预计偏差改善、关键调整时段和运行状态集中呈现。交易员可以快速看出方案为什么更省钱、收益来自哪里，以及当前是否具备进入人工复核的条件。",
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#recommendationTitle" }] },
@@ -109,7 +109,7 @@
       "id": "open-evidence",
       "title": "打开成本优化证据链",
       "chapter": "04 · 每一笔节约都能复核",
-      "narrationChapter": "chapter-review",
+      "narrationChapter": "chapter-decision",
       "narration": "为了避免把预测价差直接当成收益，系统为建议建立成本证据链。交易员可以核对输入来源、计算公式、数据新鲜度和最近操作记录，确认数字与当前交易日采用同一口径。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"open-evidence\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evidenceTitle" }] },
@@ -120,7 +120,7 @@
     {
       "id": "close-evidence",
       "title": "完成证据核对",
-      "narrationChapter": "chapter-review",
+      "narrationChapter": "chapter-decision",
       "narration": "证据核对完成后，返回主流程。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-action=\"close-evidence\"]" }] },
       "ready": { "state": "hidden", "locators": [{ "type": "css", "value": ".evidence-drawer" }] },
@@ -131,7 +131,7 @@
     {
       "id": "human-review",
       "title": "人工复核保留最终决定权",
-      "narrationChapter": "chapter-review",
+      "narrationChapter": "chapter-decision",
       "narration": "AI负责汇总、预测、计算和解释，交易员保留最终决定权。进入真实申报前，人员必须复核关键时段、风险边界和成本依据；未经复核，系统不会自动提交交易。",
       "action": { "type": "show", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#optimizationFlowTitle" }] },
@@ -142,7 +142,7 @@
     {
       "id": "audit-mode",
       "title": "结算统计与审计回流",
-      "narrationChapter": "chapter-review",
+      "narrationChapter": "chapter-close",
       "narration": "交易完成后，执行与结算结果回流系统。单日2.4万元净成本优化额，来自基准成本减去实际结算、手续费、偏差成本和系统运行成本；五项明细完整相减，结果正好一致。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-mode=\"review\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": ".review-workspace" }] },
@@ -153,9 +153,9 @@
     {
       "id": "open-evolution",
       "title": "AI 持续改进策略",
-      "chapter": "05 · 结果继续反哺下一次交易",
-      "narrationChapter": "chapter-outro",
-      "narration": "结算结果继续反哺下一次决策。系统生成候选策略，经过回测和影子运行，再由人员审批。",
+      "chapter": "04 · 结果反哺下一次交易",
+      "narrationChapter": "chapter-close",
+      "narration": "交易与结算结果不会停留在报表里，而会进入下一轮模型评估。系统识别偏差与成本变化，形成候选优化策略，并把每次版本变化纳入可追溯的验证流程。",
       "action": { "type": "click", "locators": [{ "type": "css", "value": "[data-dashboard-nav=\"evolution\"]" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#strategyEvolutionTitle" }] },
       "networkIdleMs": 700,
@@ -164,9 +164,9 @@
     },
     {
       "id": "evolution-proof",
-      "title": "候选策略只是持续学习的证据",
-      "narrationChapter": "chapter-outro",
-      "narration": "挑战者只是持续学习的证据。新版本不会自动上线或申报，始终保留人工审批和回滚。",
+      "title": "候选优化策略的安全验证流程",
+      "narrationChapter": "chapter-close",
+      "narration": "候选优化策略先经过历史回测，再使用同一交易日数据进行实时并行验证，只对比结果，不参与真实申报。指标确认领先后仍须人工审批，审批启用后持续统计，出现异常可以随时回滚。",
       "action": { "type": "scroll", "align": "center", "locators": [{ "type": "css", "value": "#evolutionComparison" }] },
       "ready": { "state": "visible", "locators": [{ "type": "css", "value": "#evolutionCenter" }] },
       "networkIdleMs": 500,

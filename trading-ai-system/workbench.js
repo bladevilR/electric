@@ -322,7 +322,7 @@ function declarationOptimizerPanel(payload) {
     <section class="declaration-optimizer-panel" aria-labelledby="declarationOptimizerTitle">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">冠军基线 · 挑战者验证</span>
+          <span class="eyebrow">现行基线 · 候选策略验证</span>
           <h2 id="declarationOptimizerTitle">申报优化策略</h2>
         </div>
         <span class="inline-state ${validated ? 'is-success' : 'is-warning'}">
@@ -1367,19 +1367,25 @@ function evolutionLoop(loop = []) {
 
 function versionCard(version, tone = 'neutral') {
   if (!version) {
-    return `<article class="evolution-version is-empty"><p>当前无挑战者</p></article>`;
+    return `<article class="evolution-version is-empty"><p>当前无候选优化策略</p></article>`;
   }
   return `
     <article class="evolution-version is-${escapeHtml(tone)}" data-version-id="${escapeHtml(version.id)}">
       <header>
         <span class="version-role">${escapeHtml(
           version.role === 'champion'
-            ? 'Champion'
+            ? '现行策略'
             : version.role === 'challenger'
-              ? 'Challenger'
+              ? '候选优化策略'
               : '历史'
         )}</span>
-        <span class="version-status is-${escapeHtml(version.status)}">${escapeHtml(version.status)}</span>
+        <span class="version-status is-${escapeHtml(version.status)}">${escapeHtml(
+          {
+            live: '已审批启用',
+            shadow: '实时并行验证',
+            retired: '历史版本',
+          }[version.status] || version.status
+        )}</span>
       </header>
       <h3>${escapeHtml(version.label)}</h3>
       <p>${escapeHtml(version.reason || '')}</p>
@@ -1505,7 +1511,7 @@ export function renderStrategyEvolutionDashboard(payload) {
               )
               .join('')}
           </div>
-          <p class="ops-shadow-lift">影子上线后预计额外改善量级：约 ${escapeHtml(
+          <p class="ops-shadow-lift">候选策略审批启用后预计额外改善量级：约 ${escapeHtml(
             String(centers.operations.estimatedShadowLiftYuan ?? '—')
           )} 元（口径示意，不等于已实现收益）</p>
         </section>
@@ -1519,7 +1525,7 @@ export function renderStrategyEvolutionDashboard(payload) {
           </div>
           <div class="governance-policy">
             <span>禁止自动上线</span>
-            <span>必须影子通过</span>
+            <span>必须通过实时并行验证</span>
             <span>必须人工审批</span>
             <span>禁止自动申报</span>
           </div>
@@ -1571,7 +1577,7 @@ export function renderStrategyEvolutionDashboard(payload) {
           </div>
         </section>
       </div>
-      <p class="evolution-footnote">策略进化只改变候选/现役版本与审计状态；未经人工复核，系统不会自动提交任何申报或交易。</p>
+      <p class="evolution-footnote">候选优化策略使用同一交易日数据实时并行计算，只用于指标对比，不参与真实申报；未经人工复核与审批，系统不会自动启用策略，也不会自动提交任何申报或交易。</p>
     </section>
   `;
 }

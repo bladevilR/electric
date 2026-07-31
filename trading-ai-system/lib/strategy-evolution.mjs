@@ -2,7 +2,7 @@
  * 策略自进化决策中枢（参赛成品版）
  *
  * 把既有回测、优化、审批、审计能力串成用户可见的闭环：
- * 发现衰减 → 分析原因 → 候选策略 → 滚动回测 → 影子运行 → 人工审批 → 运营统计 → 一键回滚
+ * 发现衰减 → 分析原因 → 候选策略 → 历史回测 → 实时并行验证 → 人工审批 → 运营统计 → 一键回滚
  */
 
 function round(value, digits = 2) {
@@ -79,7 +79,7 @@ export function buildStrategyEvolution({
     },
     {
       id: 'v2-champion',
-      label: 'V2 同点位均值 · 现役冠军',
+      label: 'V2 同点位均值 · 当前启用',
       role: 'champion',
       status: 'live',
       modelId: optimizer.selectedModel?.id || 'same_slot_mean_w42_a1',
@@ -95,7 +95,7 @@ export function buildStrategyEvolution({
     },
     {
       id: 'v3-challenger',
-      label: 'V3 漂移自适应 · 挑战者',
+      label: 'V3 漂移自适应 · 候选优化',
       role: 'challenger',
       status: 'shadow',
       modelId: 'same_slot_mean_w28_a0.75_drift',
@@ -130,25 +130,25 @@ export function buildStrategyEvolution({
       dataWindow: '训练 60% / 验证 20% / 留出 20%',
       method: '网格搜索 window∈{14,21,28,42} × α∈{0.5,0.75,1}',
       finding: 'w28_a0.75 在漂移切片上 MAE 最低且日胜率最高。',
-      outcome: '产出 V3 挑战者',
+      outcome: '产出 V3 候选优化策略',
     },
     {
       id: 'exp-roll-20260730',
       title: '新旧版本滚动回测',
       status: 'completed',
       dataWindow: '最近 43 个留出交易日',
-      method: 'Champion vs Challenger 同步回放',
+      method: '现行策略与候选优化策略同步回放',
       finding: `V3 改善 ${pct(challengerImprovement)}，日胜率 ${pct(challengerWinRate)}，优于 V2。`,
-      outcome: '进入影子运行',
+      outcome: '进入实时并行验证',
     },
     {
       id: 'exp-shadow-20260731',
-      title: '影子运行验证',
+      title: '实时并行验证',
       status: 'running',
       dataWindow: date || chinaDate(now),
-      method: '仅记录不申报，对比实时偏差',
-      finding: '影子曲线稳定，无越限或异常尖刺。',
-      outcome: '待人工审批上线',
+      method: '使用同一交易日数据并行计算，仅记录结果，不参与真实申报',
+      finding: '候选结果曲线稳定，无越限或异常尖刺。',
+      outcome: '待人工审批启用',
     },
   ];
 
@@ -207,7 +207,7 @@ export function buildStrategyEvolution({
       },
       {
         versionId: 'v3-challenger',
-        label: 'V3 影子',
+        label: 'V3 并行验证',
         sharePct: 0,
         status: 'shadow',
       },
@@ -231,7 +231,7 @@ export function buildStrategyEvolution({
       {
         id: 'promo-v3',
         versionId: 'v3-challenger',
-        title: '将 V3 提升为 Champion',
+        title: '审批启用 V3 候选优化策略',
         status: 'pending_approval',
         risk: 'medium',
         expectedLift: `改善 +${round(challengerImprovement - recentImprovement, 2)}pp，日胜率 +${round(
@@ -240,7 +240,7 @@ export function buildStrategyEvolution({
         )}pp`,
         prerequisites: [
           { id: 'backtest', label: '滚动回测胜出', met: true },
-          { id: 'shadow', label: '影子运行通过', met: true },
+          { id: 'shadow', label: '实时并行验证通过', met: true },
           { id: 'human', label: '人工审批', met: false },
           { id: 'rollback', label: '回滚预案就绪', met: true },
         ],
@@ -257,7 +257,7 @@ export function buildStrategyEvolution({
       {
         at: '2026-07-29T16:40:00+08:00',
         type: 'experiment_completed',
-        detail: '参数搜索完成，生成 V3 挑战者',
+        detail: '参数搜索完成，生成 V3 候选优化策略',
       },
       {
         at: '2026-07-30T11:05:00+08:00',
@@ -267,14 +267,14 @@ export function buildStrategyEvolution({
       {
         at: '2026-07-31T08:20:00+08:00',
         type: 'shadow_started',
-        detail: 'V3 进入影子运行，禁止自动申报',
+        detail: 'V3 进入实时并行验证，仅记录对比结果，不参与真实申报',
       },
       ...normalizeAuditEvents(auditEvents).slice(0, 4),
     ],
     rollback: {
       available: true,
       targetVersionId: 'v2-champion',
-      label: '一键回滚至 V2 冠军',
+      label: '一键回滚至 V2 现行策略',
       actionId: 'rollback_champion',
     },
   };
@@ -284,19 +284,19 @@ export function buildStrategyEvolution({
     { id: 'analyze', label: '自动分析', status: 'complete' },
     { id: 'candidate', label: '生成候选', status: 'complete' },
     { id: 'backtest', label: '滚动回测', status: 'complete' },
-    { id: 'shadow', label: '影子运行', status: 'active' },
+    { id: 'shadow', label: '实时并行验证', status: 'active' },
     { id: 'approve', label: '人工审批', status: 'pending' },
     { id: 'measure', label: '持续统计', status: 'pending' },
     { id: 'rollback', label: '异常回滚', status: 'standby' },
   ];
 
   const narrative = {
-    headline: '策略不是一次性建议，而是可进化、可审批、可回滚的决策中枢',
+    headline: '每次交易结果都进入下一轮模型评估，策略优化全程可验证、可审批、可回滚',
     story: [
       '系统监测到 V2 近窗效果衰减并自动告警。',
       '智能实验中心完成参数搜索与新旧版本滚动回测。',
-      'V3 在影子运行中验证通过，等待人工审批上线。',
-      '上线后持续统计收益与漂移；异常时可一键回滚。',
+      'V3 使用同一交易日数据实时并行计算，只比较结果，不参与真实申报。',
+      '指标达标后仍须人工审批启用；启用后持续统计，异常时可一键回滚。',
     ],
     recommendationStatus:
       declarationRecommendation?.status === 'ready' ? 'ready' : 'pending',
@@ -307,14 +307,14 @@ export function buildStrategyEvolution({
     generatedAt: now.toISOString(),
     date: date || chinaDate(now),
     sampleKind,
-    title: '策略自进化决策中枢',
-    subtitle: '发现衰减 → 实验评估 → 影子验证 → 人工上线 → 运营统计 → 一键回滚',
+    title: '策略版本验证中心',
+    subtitle: '历史回测 → 实时并行验证 → 指标对比 → 人工审批 → 审批启用 → 异常回滚',
     loop,
     narrative,
     centers: {
       evolution: {
         id: 'evolution',
-        title: '策略进化中心',
+        title: '策略版本对比',
         champion,
         challenger,
         versions,
@@ -323,7 +323,7 @@ export function buildStrategyEvolution({
           winRateDeltaPp: round(challengerWinRate - championWinRate, 2),
           maeDeltaMwh: round(championMae - challengerMae, 3),
           verdict: 'challenger_ahead',
-          verdictLabel: '挑战者在留出与漂移切片上均领先',
+          verdictLabel: '候选优化策略在留出集与漂移切片上均领先',
         },
       },
       experiment: {
@@ -409,7 +409,7 @@ export function applyStrategyEvolutionAction(evolution, actionId) {
     next.centers.governance.auditTrail.unshift({
       at: new Date().toISOString(),
       type: 'promotion_approved',
-      detail: '人工审批通过：V3 成为 Champion，V2 退役并可回滚',
+      detail: '人工审批通过：V3 成为现行策略，V2 退役并可回滚',
     });
     next.primaryAction = { id: 'rollback_champion', label: '回滚至 V2' };
     return {
@@ -438,13 +438,13 @@ export function applyStrategyEvolutionAction(evolution, actionId) {
     next.centers.governance.auditTrail.unshift({
       at: new Date().toISOString(),
       type: 'rollback_executed',
-      detail: '一键回滚：恢复 V2 Champion，V3 回到影子运行',
+      detail: '一键回滚：恢复 V2 现行策略，V3 回到实时并行验证',
     });
     next.primaryAction = { id: 'approve_challenger', label: '审批 V3 上线' };
     return {
       handled: true,
       evolution: next,
-      message: '演示：已回滚至 V2 冠军策略。',
+      message: '演示：已回滚至 V2 现行策略。',
     };
   }
 

@@ -132,9 +132,18 @@ test('the shipped competition plan centers AI cost savings and leaves failure he
   assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
-  assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 5);
+  assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 4);
   assert.ok(plan.steps.some((step) => /24,000|2\.4\s*万/.test(step.narration)));
   assert.ok(plan.steps.some((step) => /6,336,000|633\.6\s*万/.test(step.narration)));
+  const allNarration = [
+    plan.intro.narration,
+    ...plan.steps.map((step) => step.narration),
+    plan.outro.narration,
+  ].join('');
+  assert.equal((allNarration.match(/633\.6/g) || []).length, 1);
+  assert.match(allNarration, /历史回测.*实时并行验证.*人工审批/s);
+  assert.doesNotMatch(allNarration, /影子运行|Champion|Challenger/);
+  assert.doesNotMatch(plan.outro.narration, /633\.6|6,336,000/);
   const evolutionHoldMs = plan.steps
     .filter((step) => step.id.includes('evolution'))
     .reduce((sum, step) => sum + step.holdMs, 0);

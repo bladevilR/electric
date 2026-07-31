@@ -260,7 +260,12 @@ test('strategy evolution dashboard renders four centers and safe governance acti
     evidenceOpen: false,
   });
 
-  assert.match(html, /策略自进化决策中枢/);
+  assert.match(html, /策略版本验证中心/);
+  assert.match(html, /现行策略/);
+  assert.match(html, /候选优化策略/);
+  assert.match(html, /实时并行验证/);
+  assert.match(html, /不参与真实申报/);
+  assert.doesNotMatch(html, /Champion|Challenger|影子运行/);
   assert.match(html, /id="evolutionCenter"/);
   assert.match(html, /id="experimentCenter"/);
   assert.match(html, /id="operationsCenter"/);
