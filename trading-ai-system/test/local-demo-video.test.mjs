@@ -699,6 +699,84 @@ test('分段摄影机使用真实连续帧裁切，禁止 zoompan 重复段落�
   assert.doesNotMatch(filter, /zoompan=/);
 });
 
+test('证据抽屉镜头可重用稳定源时段并用 16:9 细节裁切充满画面', () => {
+  const steps = Array.from({ length: 14 }, (_, index) => ({
+    id: `scene-${index + 1}`,
+    camera: {
+      beats: [
+        {
+          at: 0.1,
+          scale: index % 2 === 0 ? 1.65 : 1.35,
+          durationMs: 900,
+          focus: [{ type: 'css', value: `#focus-${index + 1}` }],
+          ...(index === 0
+            ? {
+                source: { segmentId: 'scene-2', at: 0.2 },
+                framing: {
+                  xRatio: 0.7,
+                  yRatio: 0.1,
+                  widthRatio: 0.3,
+                  heightRatio: 0.3,
+                },
+              }
+            : {}),
+        },
+      ],
+      exit: 'reset',
+    },
+  }));
+  const timeline = {
+    width: 3840,
+    height: 2160,
+    segments: [
+      { id: 'intro', startMs: 0, endMs: 12_000, focusRects: [] },
+      ...steps.map((step, index) => ({
+        id: step.id,
+        startMs: 12_000 + index * 10_000,
+        endMs: 22_000 + index * 10_000,
+        focusRects: [
+          {
+            at: 0.1,
+            x: 900,
+            y: 420,
+            width: 700,
+            height: 500,
+          },
+        ],
+      })),
+    ],
+  };
+
+  const camera = buildCameraTimeline({ steps }, timeline);
+  const detailBeat = camera.beats.find((beat) => beat.id === 'scene-1-camera-1');
+
+  assert.equal(detailBeat.sourceStartMs, 24_000);
+  assert.deepEqual(detailBeat.crop, {
+    x: 2688,
+    y: 216,
+    width: 1152,
+    height: 648,
+  });
+
+  const filter = buildSegmentedCameraFilter({
+    camera: {
+      fps: 30,
+      beats: [
+        {
+          startMs: 0,
+          durationMs: 1,
+          scale: 1,
+          crop: { x: 0, y: 0, width: 3840, height: 2160 },
+        },
+        detailBeat,
+      ],
+    },
+    durationMs: 20_000,
+  }).graph;
+  assert.match(filter, /trim=start=24\.000:end=32\.000/);
+  assert.match(filter, /crop=1152\.000000:648\.000000:2688\.000000:216\.000000/);
+});
+
 test('最终媒体门禁拒绝超时、缺音轨或错误编码', () => {
   const validProbe = {
     format: { duration: '238.400' },

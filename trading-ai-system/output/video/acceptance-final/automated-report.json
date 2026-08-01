@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-01T06:09:02.292Z",
+  "generatedAt": "2026-08-01T06:54:59.786Z",
   "finalVideo": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4",
-  "sha256": "c5daf840e2877a5a0cf904d048839f650194a66d5bf4724f15f92d35a8ff24a8",
+  "sha256": "2d225c3e16352df1ea3ac59ccac0839ae6bfd5c2911219ba135b0857e89994ba",
   "media": {
-    "durationSeconds": 228.68,
+    "durationSeconds": 228.7,
     "video": {
       "codec": "h264",
       "width": 1920,
@@ -33,12 +33,13 @@
       3.433333,
       3.033333,
       4.4,
-      3.133333,
-      3.666667,
+      3.4,
+      4.633333,
       3.7,
-      4.166667,
+      3.7,
+      4.133333,
       3.733333,
-      3.8,
+      3.766667,
       3.766667
     ],
     "silenceDurations": [

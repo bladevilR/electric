@@ -53,10 +53,45 @@ function cameraCrop(rect, scale, width, height) {
   };
 }
 
+function ratioCrop(framing, width, height) {
+  const ratios = {
+    x: Number(framing?.xRatio),
+    y: Number(framing?.yRatio),
+    width: Number(framing?.widthRatio),
+    height: Number(framing?.heightRatio),
+  };
+  if (
+    !Object.values(ratios).every(Number.isFinite) ||
+    ratios.x < 0 ||
+    ratios.y < 0 ||
+    ratios.width <= 0 ||
+    ratios.height <= 0 ||
+    ratios.x + ratios.width > 1 ||
+    ratios.y + ratios.height > 1
+  ) {
+    throw new Error('摄影机自定义取景比例无效');
+  }
+  const crop = {
+    x: ratios.x * width,
+    y: ratios.y * height,
+    width: ratios.width * width,
+    height: ratios.height * height,
+  };
+  const sourceAspect = width / height;
+  const cropAspect = crop.width / crop.height;
+  if (Math.abs(sourceAspect - cropAspect) > 0.01) {
+    throw new Error('摄影机自定义取景必须保持 16:9');
+  }
+  return crop;
+}
+
 export function buildCameraTimeline(plan, timeline) {
   const width = Number(timeline.width) || CAPTURE_WIDTH;
   const height = Number(timeline.height) || CAPTURE_HEIGHT;
   const planById = new Map((plan.steps || []).map((step) => [step.id, step]));
+  const segmentById = new Map(
+    (timeline.segments || []).map((segment) => [segment.id, segment])
+  );
   const beats = [
     {
       id: 'film-open-wide',
@@ -87,6 +122,12 @@ export function buildCameraTimeline(plan, timeline) {
       if (!focus) throw new Error(`${segment.id} 缺少第 ${index + 1} 个摄影机焦点矩形`);
       const rect = normalizeFocusRect(focus, { width, height });
       const scale = clamp(Number(spec.scale) || 1, 1, 1.85);
+      const sourceSegment = spec.source?.segmentId
+        ? segmentById.get(spec.source.segmentId)
+        : null;
+      if (spec.source?.segmentId && !sourceSegment) {
+        throw new Error(`${segment.id} 的摄影机稳定源片段不存在：${spec.source.segmentId}`);
+      }
       beats.push({
         id: `${segment.id}-camera-${index + 1}`,
         segmentId: segment.id,
@@ -98,7 +139,19 @@ export function buildCameraTimeline(plan, timeline) {
         durationMs: clamp(Number(spec.durationMs) || 900, 240, 1800),
         scale,
         focus: spec.focus,
-        crop: cameraCrop(rect, scale, width, height),
+        ...(sourceSegment
+          ? {
+              sourceStartMs:
+                Number(sourceSegment.startMs) +
+                Math.round(
+                  (Number(sourceSegment.endMs) - Number(sourceSegment.startMs)) *
+                    clamp(Number(spec.source.at) || 0, 0, 1)
+                ),
+            }
+          : {}),
+        crop: spec.framing
+          ? ratioCrop(spec.framing, width, height)
+          : cameraCrop(rect, scale, width, height),
       });
     }
   }
@@ -179,9 +232,13 @@ export function buildSegmentedCameraFilter({
   const outputs = [];
   for (let index = 0; index < beats.length; index += 1) {
     const beat = beats[index];
-    const startSeconds = (beat.startMs / 1000).toFixed(3);
     const endMs = index === beats.length - 1 ? durationMs : beats[index + 1].startMs;
-    const endSeconds = (endMs / 1000).toFixed(3);
+    const sourceStartMs = Number.isFinite(Number(beat.sourceStartMs))
+      ? Number(beat.sourceStartMs)
+      : Number(beat.startMs);
+    const sourceEndMs = sourceStartMs + (endMs - Number(beat.startMs));
+    const startSeconds = (sourceStartMs / 1000).toFixed(3);
+    const endSeconds = (sourceEndMs / 1000).toFixed(3);
     const crop = beat.crop;
     const output = `cameraPart${index}`;
     outputs.push(`[${output}]`);
