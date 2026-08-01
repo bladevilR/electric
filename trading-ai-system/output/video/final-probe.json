@@ -30,11 +30,11 @@
       "time_base": "1/15360",
       "start_pts": 0,
       "start_time": "0.000000",
-      "duration_ts": 3981312,
-      "duration": "259.200000",
-      "bit_rate": "1604798",
+      "duration_ts": 3512320,
+      "duration": "228.666667",
+      "bit_rate": "876490",
       "bits_per_raw_sample": "8",
-      "nb_frames": "7776",
+      "nb_frames": "6860",
       "extradata_size": 51,
       "disposition": {
         "default": 1,
@@ -58,7 +58,7 @@
         "multilayer": 0
       },
       "tags": {
-        "language": "eng",
+        "language": "und",
         "handler_name": "VideoHandler",
         "encoder": "Lavc62.28.101 libx264"
       }
@@ -84,10 +84,10 @@
       "time_base": "1/48000",
       "start_pts": 0,
       "start_time": "0.000000",
-      "duration_ts": 12441600,
-      "duration": "259.200000",
-      "bit_rate": "138136",
-      "nb_frames": "12151",
+      "duration_ts": 10976640,
+      "duration": "228.680000",
+      "bit_rate": "153233",
+      "nb_frames": "10721",
       "extradata_size": 5,
       "disposition": {
         "default": 1,
@@ -124,9 +124,9 @@
     "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
     "format_long_name": "QuickTime / MOV",
     "start_time": "0.000000",
-    "duration": "259.200000",
-    "size": "56755886",
-    "bit_rate": "1751724",
+    "duration": "228.680000",
+    "size": "29686456",
+    "bit_rate": "1038532",
     "probe_score": 100,
     "tags": {
       "major_brand": "isom",

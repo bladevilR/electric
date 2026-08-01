@@ -11,6 +11,7 @@ import process from 'node:process';
 
 import {
   buildOutputPaths,
+  buildCameraTimeline,
   buildProductionStages,
   buildTimelineSkeleton,
   validateProductionConfig,
@@ -171,6 +172,7 @@ async function main() {
         Number.parseFloat(rawProbe.format.duration) * 1000
       );
       timeline.rawMedia = rawProbe;
+      timeline.camera = buildCameraTimeline(plan, timeline);
       await writeFile(paths.timeline, `${JSON.stringify(timeline, null, 2)}\n`);
       log(`浏览器录制完成：${(timeline.durationMs / 1000).toFixed(2)} 秒`);
     }

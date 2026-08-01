@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-08-01T06:09:02.292Z",
+  "finalVideo": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4",
+  "sha256": "c5daf840e2877a5a0cf904d048839f650194a66d5bf4724f15f92d35a8ff24a8",
+  "media": {
+    "durationSeconds": 228.68,
+    "video": {
+      "codec": "h264",
+      "width": 1920,
+      "height": 1080,
+      "fps": "30/1"
+    },
+    "audio": {
+      "codec": "aac",
+      "sampleRate": "48000",
+      "channels": 2
+    }
+  },
+  "camera": {
+    "beats": 22,
+    "closeUps": 9,
+    "maximumScale": 1.85
+  },
+  "captions": 38,
+  "detections": {
+    "blackStarts": [],
+    "freezeDurations": [
+      6.433333,
+      3.033333,
+      6.1,
+      3.5,
+      4.833333,
+      3.433333,
+      3.033333,
+      4.4,
+      3.133333,
+      3.666667,
+      3.7,
+      4.166667,
+      3.733333,
+      3.8,
+      3.766667
+    ],
+    "silenceDurations": [
+      4.56025,
+      1.557042,
+      1.792167
+    ],
+    "pureWhiteFrames": 0,
+    "meanVolume": -21,
+    "maxVolume": -4.5
+  },
+  "checks": {
+    "media": true,
+    "durationUnderFiveMinutes": true,
+    "noBlackFrames": true,
+    "noPureWhiteFrames": true,
+    "noLongFreeze": true,
+    "audioPresent": true,
+    "silenceBounded": true,
+    "cameraTimeline": true,
+    "captionsGenerated": true,
+    "fullDecode": true
+  },
+  "passed": true
+}

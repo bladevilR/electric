@@ -23,6 +23,12 @@ import {
   buildSrt,
   buildTimedCaptionCues,
   buildTimelineSkeleton,
+  buildCameraTimeline,
+  buildCaptionOverlayFilter,
+  buildPostCameraFilter,
+  buildSegmentedCameraFilter,
+  normalizeFocusRect,
+  validateFinalMediaProbe,
   splitCaptionCues,
   validateProductionConfig,
 } from '../recording/local/lib/video-production.mjs';
@@ -529,7 +535,7 @@ test('长旁白拆为最多两行的醒目短句字幕并按镜头时间切换',
   assert.ok(timed.every((cue) => cue.endMs - cue.startMs >= 1200));
 });
 
-test('真实录制脚本使用固定的大字号电影感字幕层', () => {
+test('真实录制脚本采集焦点坐标但不在 DOM 上执行摄影机变换', () => {
   assert.equal(typeof browserRecording.buildRunCodeForTest, 'function');
   const source = browserRecording.buildRunCodeForTest(
     {
@@ -545,11 +551,14 @@ test('真实录制脚本使用固定的大字号电影感字幕层', () => {
   assert.match(source, /1440px/);
   assert.match(source, /bottom:\s*50px/);
   assert.match(source, /local-demo-caption-keyword/);
-  assert.match(source, /#workbenchRoot/);
+  assert.match(source, /boundingBox/);
+  assert.match(source, /focusRects/);
+  assert.doesNotMatch(source, /workbenchRoot\.animate/);
+  assert.doesNotMatch(source, /transformOrigin\s*=/);
   assert.doesNotMatch(source, /AI 解说/);
 });
 
-test('真实录制脚本在主体层执行连续运镜且目标缺失会明确失败', () => {
+test('真实录制脚本在目标缺失时明确失败并返回后期焦点清单', () => {
   const source = browserRecording.buildRunCodeForTest(
     {
       id: 'camera-runtime-test',
@@ -583,19 +592,18 @@ test('真实录制脚本在主体层执行连续运镜且目标缺失会明确�
     }
   );
   assert.match(source, /camera target not found/i);
-  assert.match(source, /workbenchRoot\.animate/);
-  assert.match(source, /transformOrigin\s*=\s*['"]0 0['"]/);
-  assert.match(source, /exit === ['"]connect['"]/);
   assert.match(source, /for \(const beat of step\.camera\.beats\)/);
+  assert.match(source, /focusRects\.push/);
 });
 
-test('真实录制使用无灰边 1080p 源并在成片阶段统一尺寸', async () => {
+test('真实录制使用视口一致的 4K 页面源并在成片阶段统一为 1080p', async () => {
   const source = await readFile(
     new URL('../recording/local/record-browser-video.mjs', import.meta.url),
     'utf8'
   );
   assert.doesNotMatch(source, /deviceScaleFactor:\s*2/);
-  assert.match(source, /video-start['"],\s*rawVideo,\s*['"]--size['"],\s*['"]1920x1080/);
+  assert.match(source, /resize['"],\s*['"]3840['"],\s*['"]2160/);
+  assert.match(source, /video-start['"],\s*rawVideo,\s*['"]--size['"],\s*['"]3840x2160/);
 
   const args = buildFfmpegArgs({
     rawVideo: 'raw.webm',
@@ -605,6 +613,125 @@ test('真实录制使用无灰边 1080p 源并在成片阶段统一尺寸', asyn
     maxDurationSeconds: 300,
   });
   assert.ok(args.includes('scale=1920:1080:flags=lanczos,fps=30'));
+});
+
+test('后期摄影机约束焦点并生成符合比赛强度的镜头时间线', () => {
+  const rect = normalizeFocusRect(
+    { x: 3500, y: 1900, width: 500, height: 400 },
+    { width: 3840, height: 2160, paddingRatio: 0.15 }
+  );
+  assert.ok(rect.x >= 0 && rect.y >= 0);
+  assert.ok(rect.x + rect.width <= 3840);
+  assert.ok(rect.y + rect.height <= 2160);
+
+  const plan = {
+    steps: Array.from({ length: 14 }, (_, index) => ({
+      id: `scene-${index + 1}`,
+      camera: {
+        beats: [
+          {
+            at: 0.15,
+            scale: index < 12 && index % 2 === 0 ? 1.65 : 1.35,
+            durationMs: 900,
+            focus: [{ type: 'css', value: `#focus-${index + 1}` }],
+          },
+        ],
+        exit: 'reset',
+      },
+    })),
+  };
+  const timeline = {
+    width: 3840,
+    height: 2160,
+    segments: [
+      { id: 'intro', startMs: 0, endMs: 12_000, focusRects: [] },
+      ...plan.steps.map((step, index) => ({
+        id: step.id,
+        startMs: 12_000 + index * 10_000,
+        endMs: 12_000 + (index + 1) * 10_000,
+        focusRects: [
+          { at: 0.15, scale: index < 12 && index % 2 === 0 ? 1.65 : 1.35, x: 900, y: 420, width: 700, height: 500 },
+        ],
+      })),
+    ],
+  };
+  const camera = buildCameraTimeline(plan, timeline);
+  assert.ok(camera.beats.some((beat) => beat.id === 'film-open-push'));
+  assert.ok(camera.beats.length >= 16 && camera.beats.length <= 22);
+  assert.ok(camera.beats.filter((beat) => beat.scale >= 1.5).length >= 6);
+  assert.ok(Math.max(...camera.beats.map((beat) => beat.scale)) <= 1.85);
+  assert.ok(camera.beats.every((beat) => beat.crop.x >= 0 && beat.crop.y >= 0));
+
+  const filter = buildPostCameraFilter({ camera, sourceWidth: 3840, sourceHeight: 2160 });
+  assert.match(filter, /zoompan=/);
+  assert.match(filter, /s=1920x1080/);
+  assert.doesNotMatch(filter, /rotate|perspective/);
+});
+
+test('分段摄影机使用真实连续帧裁切，禁止 zoompan 重复段落首帧', () => {
+  const camera = {
+    fps: 30,
+    beats: [
+      {
+        startMs: 0,
+        durationMs: 1,
+        scale: 1,
+        crop: { x: 0, y: 0, width: 3840, height: 2160 },
+      },
+      {
+        startMs: 5000,
+        durationMs: 900,
+        scale: 1.5,
+        crop: { x: 640, y: 360, width: 2560, height: 1440 },
+      },
+    ],
+  };
+  const filter = buildSegmentedCameraFilter({
+    camera,
+    durationMs: 10_000,
+    sourceWidth: 3840,
+    sourceHeight: 2160,
+  }).graph;
+
+  assert.match(filter, /trim=start=5\.000:end=10\.000/);
+  assert.match(filter, /crop=2560\.000000:1440\.000000:640\.000000:360\.000000/);
+  assert.match(filter, /scale=1920:1080:flags=lanczos,setsar=1/);
+  assert.doesNotMatch(filter, /zoompan=/);
+});
+
+test('最终媒体门禁拒绝超时、缺音轨或错误编码', () => {
+  const validProbe = {
+    format: { duration: '238.400' },
+    streams: [
+      { codec_type: 'video', codec_name: 'h264', width: 1920, height: 1080, avg_frame_rate: '30/1' },
+      { codec_type: 'audio', codec_name: 'aac', sample_rate: '48000', channels: 2 },
+    ],
+  };
+  assert.equal(validateFinalMediaProbe(validProbe).durationSeconds, 238.4);
+  assert.throws(
+    () => validateFinalMediaProbe({ ...validProbe, format: { duration: '300.001' } }),
+    /少于 300 秒/
+  );
+  assert.throws(
+    () => validateFinalMediaProbe({ ...validProbe, streams: validProbe.streams.slice(0, 1) }),
+    /AAC/
+  );
+});
+
+test('PNG 字幕在摄影机之后按 SRT 时间叠加且保持安全边距', () => {
+  const filter = buildCaptionOverlayFilter({
+    baseLabel: 'camera',
+    captions: [
+      { file: '/tmp/caption-001.png', startMs: 500, endMs: 4200 },
+      { file: '/tmp/caption-002.png', startMs: 4200, endMs: 8100 },
+    ],
+    firstInputIndex: 2,
+  });
+  assert.match(filter.graph, /\[camera\]\[2:v\]overlay/);
+  assert.match(filter.graph, /between\(t,0\.500,4\.200\)/);
+  assert.match(filter.graph, /y=H-h-44/);
+  assert.match(filter.graph, /shortest=1:eof_action=endall/);
+  assert.equal(filter.outputLabel, 'caption2');
 });
 
 test('真实 TTS 时长反推镜头预算并把章尾空白控制在 1.2 秒内', () => {

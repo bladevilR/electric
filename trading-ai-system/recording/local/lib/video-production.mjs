@@ -3,6 +3,239 @@ import path from 'node:path';
 const DEFAULT_WIDTH = 1920;
 const DEFAULT_HEIGHT = 1080;
 const DEFAULT_FPS = 30;
+const CAPTURE_WIDTH = 3840;
+const CAPTURE_HEIGHT = 2160;
+
+function clamp(value, minimum, maximum) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+export function normalizeFocusRect(
+  rect,
+  { width = CAPTURE_WIDTH, height = CAPTURE_HEIGHT, paddingRatio = 0.15 } = {}
+) {
+  const source = {
+    x: Number(rect?.x),
+    y: Number(rect?.y),
+    width: Number(rect?.width),
+    height: Number(rect?.height),
+  };
+  if (
+    !Object.values(source).every(Number.isFinite) ||
+    source.width <= 0 ||
+    source.height <= 0
+  ) {
+    throw new Error('摄影机焦点缺少有效目标矩形');
+  }
+  const paddingX = source.width * paddingRatio;
+  const paddingY = source.height * paddingRatio;
+  const paddedWidth = Math.min(width, source.width + paddingX * 2);
+  const paddedHeight = Math.min(height, source.height + paddingY * 2);
+  return {
+    x: clamp(source.x - paddingX, 0, width - paddedWidth),
+    y: clamp(source.y - paddingY, 0, height - paddedHeight),
+    width: paddedWidth,
+    height: paddedHeight,
+  };
+}
+
+function cameraCrop(rect, scale, width, height) {
+  const boundedScale = clamp(Number(scale) || 1, 1, 1.85);
+  const cropWidth = width / boundedScale;
+  const cropHeight = height / boundedScale;
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  return {
+    x: clamp(centerX - cropWidth / 2, 0, width - cropWidth),
+    y: clamp(centerY - cropHeight / 2, 0, height - cropHeight),
+    width: cropWidth,
+    height: cropHeight,
+  };
+}
+
+export function buildCameraTimeline(plan, timeline) {
+  const width = Number(timeline.width) || CAPTURE_WIDTH;
+  const height = Number(timeline.height) || CAPTURE_HEIGHT;
+  const planById = new Map((plan.steps || []).map((step) => [step.id, step]));
+  const beats = [
+    {
+      id: 'film-open-wide',
+      segmentId: timeline.segments[0]?.id || 'intro',
+      startMs: 0,
+      durationMs: 1,
+      scale: 1,
+      crop: { x: 0, y: 0, width, height },
+    },
+  ];
+  const intro = timeline.segments?.find((segment) => segment.id === 'intro');
+  if (intro && Number(intro.endMs) - Number(intro.startMs) >= 10_000) {
+    const scale = 1.06;
+    beats.push({
+      id: 'film-open-push',
+      segmentId: 'intro',
+      startMs: Number(intro.startMs) + Math.round((Number(intro.endMs) - Number(intro.startMs)) * 0.56),
+      durationMs: 420,
+      scale,
+      crop: cameraCrop({ x: 0, y: 0, width, height }, scale, width, height),
+    });
+  }
+  for (const segment of timeline.segments || []) {
+    const step = planById.get(segment.id);
+    const recorded = Array.isArray(segment.focusRects) ? segment.focusRects : [];
+    for (const [index, spec] of (step?.camera?.beats || []).entries()) {
+      const focus = recorded[index] || recorded.find((item) => item.at === spec.at);
+      if (!focus) throw new Error(`${segment.id} 缺少第 ${index + 1} 个摄影机焦点矩形`);
+      const rect = normalizeFocusRect(focus, { width, height });
+      const scale = clamp(Number(spec.scale) || 1, 1, 1.85);
+      beats.push({
+        id: `${segment.id}-camera-${index + 1}`,
+        segmentId: segment.id,
+        startMs:
+          index === 0
+            ? Number(segment.startMs)
+            : Number(segment.startMs) +
+              Math.round((Number(segment.endMs) - Number(segment.startMs)) * Number(spec.at)),
+        durationMs: clamp(Number(spec.durationMs) || 900, 240, 1800),
+        scale,
+        focus: spec.focus,
+        crop: cameraCrop(rect, scale, width, height),
+      });
+    }
+  }
+  beats.push({
+    id: 'film-close-wide',
+    segmentId: timeline.segments.at(-1)?.id || 'outro',
+    startMs: Number(timeline.segments.at(-1)?.startMs || 0),
+    durationMs: 500,
+    scale: 1,
+    crop: { x: 0, y: 0, width, height },
+  });
+  beats.sort((left, right) => left.startMs - right.startMs);
+  if (beats.length < 16 || beats.length > 22) {
+    throw new Error(`摄影机节拍必须为 16–22 个，当前为 ${beats.length}`);
+  }
+  if (beats.filter((beat) => beat.scale >= 1.5).length < 6) {
+    throw new Error('摄影机时间线至少需要 6 个不低于 1.5 倍的特写');
+  }
+  let closeRun = 0;
+  for (const beat of beats) {
+    closeRun = beat.scale >= 1.5 ? closeRun + 1 : 0;
+    if (closeRun > 2) throw new Error('摄影机时间线连续特写不得超过两个');
+  }
+  return { width, height, fps: DEFAULT_FPS, beats };
+}
+
+function piecewiseExpression(beats, property, fps) {
+  let expression = property === 'scale' ? '1' : '0';
+  let previous = property === 'scale' ? 1 : 0;
+  for (const beat of beats.slice(1)) {
+    const target = property === 'scale' ? beat.scale : beat.crop[property];
+    const startFrame = Math.max(0, Math.round((beat.startMs / 1000) * fps));
+    const frames = Math.max(1, Math.round((beat.durationMs / 1000) * fps));
+    const endFrame = startFrame + frames;
+    const transition = `${previous.toFixed(6)}+(${target.toFixed(6)}-${previous.toFixed(6)})*min(1,max(0,(on-${startFrame})/${frames}))`;
+    expression = `if(lt(on,${startFrame}),${expression},if(lte(on,${endFrame}),${transition},${target.toFixed(6)}))`;
+    previous = target;
+  }
+  return expression;
+}
+
+export function buildPostCameraFilter({
+  camera,
+  sourceWidth = CAPTURE_WIDTH,
+  sourceHeight = CAPTURE_HEIGHT,
+  outputWidth = DEFAULT_WIDTH,
+  outputHeight = DEFAULT_HEIGHT,
+} = {}) {
+  if (!camera?.beats?.length) throw new Error('缺少后期摄影机时间线');
+  const fps = camera.fps || DEFAULT_FPS;
+  const renderBeats = camera.renderBeats || camera.beats;
+  const zoom = piecewiseExpression(renderBeats, 'scale', fps);
+  const x = piecewiseExpression(renderBeats, 'x', fps);
+  const y = piecewiseExpression(renderBeats, 'y', fps);
+  return [
+    `scale=${sourceWidth}:${sourceHeight}:flags=lanczos`,
+    `zoompan=z='${zoom}':x='${x}':y='${y}':d=1:s=${outputWidth}x${outputHeight}:fps=${fps}`,
+    `fps=${fps}`,
+    'format=yuv420p',
+  ].join(',');
+}
+
+export function buildSegmentedCameraFilter({
+  camera,
+  durationMs,
+  sourceWidth = CAPTURE_WIDTH,
+  sourceHeight = CAPTURE_HEIGHT,
+  outputWidth = DEFAULT_WIDTH,
+  outputHeight = DEFAULT_HEIGHT,
+} = {}) {
+  const beats = camera?.beats;
+  if (!Array.isArray(beats) || beats.length === 0) {
+    throw new Error('缺少分段摄影机时间线');
+  }
+  const fps = camera.fps || DEFAULT_FPS;
+  const splitLabels = beats.map((_, index) => `[cameraSource${index}]`).join('');
+  const chains = [`[0:v]split=${beats.length}${splitLabels}`];
+  const outputs = [];
+  for (let index = 0; index < beats.length; index += 1) {
+    const beat = beats[index];
+    const startSeconds = (beat.startMs / 1000).toFixed(3);
+    const endMs = index === beats.length - 1 ? durationMs : beats[index + 1].startMs;
+    const endSeconds = (endMs / 1000).toFixed(3);
+    const crop = beat.crop;
+    const output = `cameraPart${index}`;
+    outputs.push(`[${output}]`);
+    chains.push(
+      `[cameraSource${index}]trim=start=${startSeconds}:end=${endSeconds},setpts=PTS-STARTPTS,crop=${crop.width.toFixed(6)}:${crop.height.toFixed(6)}:${crop.x.toFixed(6)}:${crop.y.toFixed(6)},scale=${outputWidth}:${outputHeight}:flags=lanczos,setsar=1,fps=${fps},format=yuv420p[${output}]`
+    );
+  }
+  chains.push(
+    `${outputs.join('')}concat=n=${outputs.length}:v=1:a=0[camera]`
+  );
+  return { graph: chains.join(';'), outputLabel: 'camera' };
+}
+
+export function buildCaptionOverlayFilter({
+  baseLabel = 'camera',
+  captions,
+  firstInputIndex = 2,
+} = {}) {
+  if (!Array.isArray(captions) || captions.length === 0) {
+    throw new Error('缺少 PNG 字幕清单');
+  }
+  const chains = [];
+  let inputLabel = baseLabel;
+  captions.forEach((caption, index) => {
+    const outputLabel = `caption${index + 1}`;
+    const start = (Number(caption.startMs) / 1000).toFixed(3);
+    const end = (Number(caption.endMs) / 1000).toFixed(3);
+    if (!(Number(caption.endMs) > Number(caption.startMs))) {
+      throw new Error(`字幕 ${index + 1} 时间无效`);
+    }
+    chains.push(
+      `[${inputLabel}][${firstInputIndex + index}:v]overlay=x=(W-w)/2:y=H-h-44:shortest=1:eof_action=endall:enable='between(t,${start},${end})'[${outputLabel}]`
+    );
+    inputLabel = outputLabel;
+  });
+  return { graph: chains.join(';'), outputLabel: inputLabel };
+}
+
+export function validateFinalMediaProbe(probe) {
+  const durationSeconds = Number.parseFloat(probe?.format?.duration || '0');
+  if (!(durationSeconds > 0 && durationSeconds < 300)) {
+    throw new Error(`最终成片必须少于 300 秒：${durationSeconds}`);
+  }
+  const video = probe?.streams?.find((stream) => stream.codec_type === 'video');
+  const audio = probe?.streams?.find((stream) => stream.codec_type === 'audio');
+  const frameRate = video?.avg_frame_rate === '30/1' || video?.r_frame_rate === '30/1';
+  if (!video || video.codec_name !== 'h264' || video.width !== 1920 || video.height !== 1080 || !frameRate) {
+    throw new Error('最终视频必须为 1920×1080、30fps、H.264');
+  }
+  if (!audio || audio.codec_name !== 'aac' || Number(audio.sample_rate) !== 48000 || audio.channels !== 2) {
+    throw new Error('最终音轨必须为 AAC 48kHz 双声道');
+  }
+  return { durationSeconds, video, audio };
+}
 
 function chineseLength(value) {
   return Array.from(value).length;
@@ -511,6 +744,7 @@ export function buildFfmpegArgs({
   finalVideo,
   durationSeconds = null,
   maxDurationSeconds = 300,
+  videoFilter = 'scale=1920:1080:flags=lanczos,fps=30',
 }) {
   const args = [
     '-y',
@@ -523,7 +757,7 @@ export function buildFfmpegArgs({
     '-map',
     '1:a:0',
     '-vf',
-    'scale=1920:1080:flags=lanczos,fps=30',
+    videoFilter,
     '-c:v',
     'libx264',
     '-preset',

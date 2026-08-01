@@ -15,7 +15,7 @@
         "savings-impact"
       ],
       "startMs": 1,
-      "endMs": 56410
+      "endMs": 56695
     },
     {
       "id": "chapter-data",
@@ -26,8 +26,8 @@
         "validation-evidence",
         "prediction-proof"
       ],
-      "startMs": 56420,
-      "endMs": 108719
+      "startMs": 56696,
+      "endMs": 104347
     },
     {
       "id": "chapter-decision",
@@ -41,8 +41,8 @@
         "close-evidence",
         "human-review"
       ],
-      "startMs": 108723,
-      "endMs": 204821
+      "startMs": 104347,
+      "endMs": 186112
     },
     {
       "id": "chapter-close",
@@ -54,8 +54,8 @@
         "evolution-proof",
         "outro"
       ],
-      "startMs": 204824,
-      "endMs": 256702
+      "startMs": 186113,
+      "endMs": 227805
     }
   ]
 }

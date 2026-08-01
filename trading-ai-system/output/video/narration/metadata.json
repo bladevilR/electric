@@ -15,7 +15,7 @@
       "savings-impact"
     ],
     "startMs": 1,
-    "endMs": 56410
+    "endMs": 56695
   },
   {
     "id": "chapter-data",
@@ -25,15 +25,15 @@
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
     "seed": 20260731,
-    "durationMs": 47040,
+    "durationMs": 46193,
     "speedFactor": 1,
     "sourceSegmentIds": [
       "data-quality",
       "validation-evidence",
       "prediction-proof"
     ],
-    "startMs": 56420,
-    "endMs": 108719
+    "startMs": 56696,
+    "endMs": 104347
   },
   {
     "id": "chapter-decision",
@@ -53,8 +53,8 @@
       "close-evidence",
       "human-review"
     ],
-    "startMs": 108723,
-    "endMs": 204821
+    "startMs": 104347,
+    "endMs": 186112
   },
   {
     "id": "chapter-close",
@@ -64,7 +64,7 @@
     "voice": "Serena",
     "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
     "seed": 20260731,
-    "durationMs": 42754,
+    "durationMs": 40294,
     "speedFactor": 1,
     "sourceSegmentIds": [
       "audit-mode",
@@ -72,7 +72,7 @@
       "evolution-proof",
       "outro"
     ],
-    "startMs": 204824,
-    "endMs": 256702
+    "startMs": 186113,
+    "endMs": 227805
   }
 ]

@@ -49,11 +49,17 @@ export function remainingHoldMs(plannedMs, elapsedMs) {
   return Math.max(0, Math.round(Number(plannedMs) - Number(elapsedMs)));
 }
 
-function buildRunCode(segment, step, { smoke = false } = {}) {
+function buildRunCode(
+  segment,
+  step,
+  { smoke = false, controllerOverheadMs = 0 } = {}
+) {
+  const plannedHoldMs = step?.holdMs ?? segment.endMs - segment.startMs;
   const payload = JSON.stringify({
     segment,
     step,
-    captionCues: buildTimedCaptionCues({
+    captionCues: [],
+    plannedCaptionCues: buildTimedCaptionCues({
       ...segment,
       durationMs: smoke
         ? Math.min(1200, segment.endMs - segment.startMs)
@@ -62,7 +68,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
     replayWorkbenchMotion: shouldReplayWorkbenchMotion(segment.id),
     holdMs: smoke
       ? Math.min(1200, segment.endMs - segment.startMs)
-      : step?.holdMs ?? segment.endMs - segment.startMs,
+      : Math.max(1200, plannedHoldMs - controllerOverheadMs),
   });
   return `async (page) => {
     const payload = ${payload};
@@ -186,6 +192,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           }
         \`;
         document.head.appendChild(style);
+        document.documentElement.style.zoom = '2';
         const badge = document.createElement('div');
         badge.id = 'local-demo-badge';
         badge.textContent = '本地演示 · 标准样本';
@@ -204,7 +211,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           caption,
           cursor,
           card,
-          camera: { transform: { scale: 1, x: 0, y: 0 }, exit: 'reset' },
+          focusRects: [],
         };
       });
     };
@@ -267,29 +274,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
       }
       throw new Error('未找到目标元素：' + JSON.stringify(locators));
     };
-    const resetCameraIfNeeded = async () => {
-      await page.evaluate(async () => {
-        const ui = window.__localDemoVideo;
-        const workbenchRoot = document.querySelector('#workbenchRoot');
-        if (!workbenchRoot) throw new Error('camera target not found: #workbenchRoot');
-        const shouldConnect = ui.camera.exit === 'connect';
-        if (shouldConnect) return;
-        const current = ui.camera.transform;
-        if (current.scale === 1 && current.x === 0 && current.y === 0) return;
-        const from = 'translate3d(' + current.x + 'px,' + current.y + 'px,0) scale(' + current.scale + ')';
-        const to = 'translate3d(0px,0px,0) scale(1)';
-        workbenchRoot.style.transformOrigin = '0 0';
-        const animation = workbenchRoot.animate(
-          [{ transform: from }, { transform: to }],
-          { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
-        );
-        await animation.finished;
-        workbenchRoot.style.transform = to;
-        animation.cancel();
-        ui.camera.transform = { scale: 1, x: 0, y: 0 };
-      });
-    };
-    const applyCamera = async (beat) => {
+    const captureFocus = async (beat) => {
       let focus;
       try {
         focus = await resolveLocator(beat.focus);
@@ -305,46 +290,18 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
       if (!box || box.width <= 0 || box.height <= 0) {
         throw new Error('camera target not found: empty bounding box');
       }
-      return page.evaluate(async ({ beat, box }) => {
-        const ui = window.__localDemoVideo;
-        const workbenchRoot = document.querySelector('#workbenchRoot');
-        if (!workbenchRoot) throw new Error('camera target not found: #workbenchRoot');
-        const current = ui.camera.transform;
-        const natural = {
-          x: (box.x - current.x) / current.scale,
-          y: (box.y - current.y) / current.scale,
-          width: box.width / current.scale,
-          height: box.height / current.scale,
-        };
-        const focusX = natural.x + natural.width / 2;
-        const focusY = natural.y + natural.height / 2;
-        const rawX = innerWidth / 2 - focusX * beat.scale;
-        const rawY = innerHeight / 2 - focusY * beat.scale;
-        const next = {
-          scale: beat.scale,
-          x: Math.min(0, Math.max(innerWidth - innerWidth * beat.scale, rawX)),
-          y: Math.min(0, Math.max(innerHeight - innerHeight * beat.scale, rawY)),
-        };
-        const css = (value) =>
-          'translate3d(' + value.x + 'px,' + value.y + 'px,0) scale(' + value.scale + ')';
-        workbenchRoot.style.transformOrigin = '0 0';
-        workbenchRoot.style.willChange = 'transform, filter';
-        const blurPx = Math.min(1, beat.motionBlur * 4);
-        const animation = workbenchRoot.animate(
-          [
-            { transform: css(current), filter: 'blur(0px)' },
-            { offset: .55, filter: 'blur(' + blurPx + 'px)' },
-            { transform: css(next), filter: 'blur(0px)' },
-          ],
-          { duration: beat.durationMs, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'forwards' }
-        );
-        await animation.finished;
-        workbenchRoot.style.transform = css(next);
-        workbenchRoot.style.filter = 'none';
-        animation.cancel();
-        ui.camera.transform = next;
-        return { ...next, focus: beat.focus, durationMs: beat.durationMs, at: beat.at };
-      }, { beat, box });
+      const rect = {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        scale: Math.min(1.85, beat.scale),
+        focus: beat.focus,
+        durationMs: beat.durationMs,
+        at: beat.at,
+      };
+      await page.evaluate((value) => window.__localDemoVideo.focusRects.push(value), rect);
+      return rect;
     };
 
     await ensureOverlay();
@@ -359,7 +316,6 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
     }
 
     await page.evaluate(() => window.__localDemoVideo.card.classList.remove('visible'));
-    await resetCameraIfNeeded();
     if (replayWorkbenchMotion) {
       await page.evaluate(async () => {
         const root = document.querySelector('#workbenchRoot');
@@ -407,18 +363,15 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         await page.waitForTimeout(850);
       }
     }
-    const camera = [];
+    const focusRects = [];
     for (const beat of step.camera.beats) {
       const dueAt = segmentStartedAt + Math.round(holdMs * beat.at);
       const waitMs = Math.max(0, dueAt - Date.now());
       if (waitMs > 0) await page.waitForTimeout(waitMs);
-      camera.push(await applyCamera(beat));
+      focusRects.push(await captureFocus(beat));
     }
-    await page.evaluate((exit) => {
-      window.__localDemoVideo.camera.exit = exit;
-    }, step.camera.exit);
     await waitForRemainingHold();
-    return { id: segment.id, status: 'completed', camera };
+    return { id: segment.id, status: 'completed', focusRects };
   }`;
 }
 
@@ -449,6 +402,10 @@ export async function recordBrowserVideo({
   await mkdir(screenshotDirectory, { recursive: true });
   const timeline = {
     ...skeleton,
+    width: 3840,
+    height: 2160,
+    fps: 30,
+    focusCoordinateSpace: 'video-pixels',
     pageUrl: baseUrl,
     status: 'recording',
     startedAt: new Date().toISOString(),
@@ -460,7 +417,7 @@ export async function recordBrowserVideo({
       cwd: projectRoot,
     });
     log?.(`浏览器会话已打开：${session}`);
-    await cli(wrapper, session, ['resize', '1920', '1080'], {
+    await cli(wrapper, session, ['resize', '3840', '2160'], {
       cwd: projectRoot,
     });
     await cli(
@@ -475,7 +432,7 @@ export async function recordBrowserVideo({
     await cli(
       wrapper,
       session,
-      ['video-start', rawVideo, '--size', '1920x1080'],
+      ['video-start', rawVideo, '--size', '3840x2160'],
       { cwd: projectRoot }
     );
     log?.('Playwright 页面级录制已开始');
@@ -495,12 +452,26 @@ export async function recordBrowserVideo({
       timeline.segments.push(record);
       await writeFile(timelineFile, `${JSON.stringify(timeline, null, 2)}\n`);
       try {
-        await cli(
+        const runResult = await cli(
           wrapper,
           session,
-          ['run-code', buildRunCode(source, step, { smoke })],
+          [
+            'run-code',
+            buildRunCode(source, step, {
+              smoke,
+              controllerOverheadMs: Number(plan.controllerOverheadMs) || 0,
+            }),
+            '--raw',
+          ],
           { cwd: projectRoot }
         );
+        const resultMatch = runResult.stdout.match(/\{\s*"id"[\s\S]*"status"\s*:\s*"completed"[\s\S]*\}/);
+        if (resultMatch) {
+          const result = JSON.parse(resultMatch[0]);
+          record.focusRects = result.focusRects || [];
+        } else if (step?.camera?.beats?.length) {
+          throw new Error(`${source.id} 未返回后期摄影机焦点清单`);
+        }
         record.endMs = Date.now() - recordingStart;
         record.status = 'completed';
         log?.(`镜头完成：${source.id}（${record.endMs - record.startMs}ms）`);
