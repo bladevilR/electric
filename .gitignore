@@ -1,79 +1,75 @@
-# OS / editor / local tool state
+
+__jspec_app.js
+!trading-ai-system/assets/app-icon.png
+!trading-ai-system/data/.gitkeep
+.cache/
+.codex-artifacts/windows-package-v2-acceptance/runtime/node/node.exe
 .DS_Store
-Thumbs.db
-.vscode/
 .idea/
 .omc/
+.ppt_extract/
+.vscode/
 .worktrees/
-
-# Dependency/build output
-node_modules/
-dist/
-build/
-.cache/
-coverage/
-*.log
-
-# Raw business files and large binary references
-*.xlsx
-*.xls
-*.xlsm
-*.pdf
-*.ppt
-*.pptx
+*.cer
+*.crt
+*.der
 *.doc
 *.docx
+*.gif
+*.har
+*.jpeg
+*.jpg
+*.key
+*.log
 *.m4a
 *.mp3
-*.wav
+*.p12
+*.pdf
+*.pem
+*.pfx
 *.png
-*.jpg
-*.jpeg
-*.gif
+*.ppt
+*.pptx
+*.wav
 *.webp
-!trading-ai-system/assets/app-icon.png
-
-# Extracted/generated working assets
-.ppt_extract/
-work_crops/
-task_list_pretty.docx
-
-# Local conversations, dumps, and third-party platform bundles
-1.txt
-/*.txt
+*.xls
+*.xlsm
+*.xlsx
 /*.html
-*.har
-__jspec_app.js
-对话.txt
-企业转型与能源服务.txt
-
+/*.txt
+# Dependency/build output
+# Extracted/generated working assets
 # JSPEC capture outputs and cloned browser profiles may contain business data.
-jspec-capture/output/
-jspec-capture/work/
-
 # JSPEC local capture / credentials / browser runtime
-data/jspec/raw/
+# Keep empty data directory available for local generated files.
+# Local conversations, dumps, and third-party platform bundles
+# OS / editor / local tool state
+# Raw business files and large binary references
+# Trading system generated local data/previews
+1.txt
+build/
+coverage/
 data/jspec/manual-exports/**/*.cookie
 data/jspec/manual-exports/**/*.har
 data/jspec/manual-exports/**/*.headers
-data/jspec/manual-exports/**/*ticket*
 data/jspec/manual-exports/**/*authorization*
-*.p12
-*.pfx
-*.key
-*.pem
-*.crt
-*.cer
-*.der
-
-# Trading system generated local data/previews
+data/jspec/manual-exports/**/*ticket*
+data/jspec/raw/
+dist/
+jspec-capture/output/
+jspec-capture/work/
+node_modules/
+task_list_pretty.docx
+Thumbs.db
 trading-ai-system/.browser/
-trading-ai-system/start-ukey-assistant.bat
-trading-ai-system/start-*.local.bat
 trading-ai-system/data/*.js
 trading-ai-system/data/audit-log.ndjson
 trading-ai-system/data/ukey-visible-snapshot.json
+trading-ai-system/output/video/tools/Openscreen-Mac-arm64.dmg
 trading-ai-system/preview*.png
-
-# Keep empty data directory available for local generated files.
-!trading-ai-system/data/.gitkeep
+trading-ai-system/runtime/node/node.exe
+trading-ai-system/start-*.local.bat
+trading-ai-system/start-ukey-assistant.bat
+work_crops/
+对话.txt
+企业转型与能源服务.txt
