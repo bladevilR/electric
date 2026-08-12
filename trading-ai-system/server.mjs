@@ -409,6 +409,8 @@ async function handleApi(request, response, url) {
     sendJson(response, {
       ok: true,
       name: 'trading-ai-system',
+      pid: process.pid,
+      rootDir,
       version: '0.2.0',
       uptimeSeconds: Math.round((Date.now() - startTime) / 1000),
       standardPath,

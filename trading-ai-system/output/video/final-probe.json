@@ -30,11 +30,11 @@
       "time_base": "1/15360",
       "start_pts": 0,
       "start_time": "0.000000",
-      "duration_ts": 3981312,
-      "duration": "259.200000",
-      "bit_rate": "1604798",
+      "duration_ts": 3393536,
+      "duration": "220.933333",
+      "bit_rate": "1093560",
       "bits_per_raw_sample": "8",
-      "nb_frames": "7776",
+      "nb_frames": "6628",
       "extradata_size": 51,
       "disposition": {
         "default": 1,
@@ -58,7 +58,7 @@
         "multilayer": 0
       },
       "tags": {
-        "language": "eng",
+        "language": "und",
         "handler_name": "VideoHandler",
         "encoder": "Lavc62.28.101 libx264"
       }
@@ -84,10 +84,10 @@
       "time_base": "1/48000",
       "start_pts": 0,
       "start_time": "0.000000",
-      "duration_ts": 12441600,
-      "duration": "259.200000",
-      "bit_rate": "138136",
-      "nb_frames": "12151",
+      "duration_ts": 10612800,
+      "duration": "221.100000",
+      "bit_rate": "159574",
+      "nb_frames": "10357",
       "extradata_size": 5,
       "disposition": {
         "default": 1,
@@ -117,16 +117,16 @@
     }
   ],
   "format": {
-    "filename": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4",
+    "filename": "/Users/r/Documents/electric/trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4",
     "nb_streams": 2,
     "nb_programs": 0,
     "nb_stream_groups": 0,
     "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
     "format_long_name": "QuickTime / MOV",
     "start_time": "0.000000",
-    "duration": "259.200000",
-    "size": "56755886",
-    "bit_rate": "1751724",
+    "duration": "221.100000",
+    "size": "34854693",
+    "bit_rate": "1261137",
     "probe_score": 100,
     "tags": {
       "major_brand": "isom",

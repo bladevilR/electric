@@ -1,0 +1,181 @@
+- generic [ref=f3e477]:
+  - status [ref=f3e478]: 演示状态 · 策略待复核 · 仅用于界面测试，不用于交易
+  - complementary [ref=f3e479]:
+    - generic [ref=f3e480]:
+      - generic [ref=f3e481]: ϟ
+      - generic [ref=f3e482]:
+        - strong [ref=f3e483]: 电力交易 AI
+        - generic [ref=f3e484]: 智能申报决策
+    - navigation "AI 申报工作区" [ref=f3e485]:
+      - button "AI申报优化" [ref=f3e486] [cursor=pointer]:
+        - generic [ref=f3e487]: ⌁
+      - button "申报总览" [ref=f3e489] [cursor=pointer]:
+        - generic [ref=f3e490]: ▦
+      - button "曲线对比" [ref=f3e492] [cursor=pointer]:
+        - generic [ref=f3e493]: ⌁
+      - button "复盘回顾" [ref=f3e495] [cursor=pointer]:
+        - generic [ref=f3e496]: ◇
+    - generic [ref=f3e500]:
+      - generic [ref=f3e501]: AI 模型状态
+      - strong [ref=f3e502]: 验证通过
+    - button "证据与审计" [ref=f3e503] [cursor=pointer]:
+      - generic [ref=f3e504]: ◎
+  - main [ref=f3e506]:
+    - generic [ref=f3e507]:
+      - generic [ref=f3e508]:
+        - generic [ref=f3e509]: 交易日
+        - textbox [ref=f3e510]: 2026-07-31
+      - generic [ref=f3e511]: 数据已就绪
+      - group "工作模式" [ref=f3e514]:
+        - button "决策" [ref=f3e515] [cursor=pointer]
+        - button "审计" [ref=f3e516] [cursor=pointer]
+    - generic [ref=f3e517]:
+      - region [ref=f3e518]:
+        - generic [ref=f3e519]:
+          - text: POWER DECLARATION INTELLIGENCE
+          - heading "AI申报优化" [level=1] [ref=f3e520]
+          - paragraph [ref=f3e521]: 基于历史申报与实际负荷偏差，生成可解释建议并交由人工复核
+        - list "申报优化流程" [ref=f3e522]:
+          - listitem [ref=f3e523]:
+            - generic [ref=f3e524]: "1"
+            - generic [ref=f3e525]:
+              - strong [ref=f3e526]: AI 生成建议
+              - generic [ref=f3e527]: 已完成
+          - listitem [ref=f3e528]:
+            - generic [ref=f3e529]: "2"
+            - generic [ref=f3e530]:
+              - strong [ref=f3e531]: 人工复核
+              - generic [ref=f3e532]: 待处理
+          - listitem [ref=f3e533]:
+            - generic [ref=f3e534]: "3"
+            - generic [ref=f3e535]:
+              - strong [ref=f3e536]: 提交申报
+              - generic [ref=f3e537]: 待提交
+      - region "申报优化核心指标" [ref=f3e538]:
+        - article [ref=f3e539]:
+          - generic [ref=f3e540]: ↗
+          - generic [ref=f3e541]:
+            - generic [ref=f3e542]: 偏差改善
+            - strong [ref=f3e543]: +9.64%
+            - generic [ref=f3e544]: 相对默认申报基线
+        - article [ref=f3e545]:
+          - generic [ref=f3e546]: ✓
+          - generic [ref=f3e547]:
+            - generic [ref=f3e548]: 交易日胜率
+            - strong [ref=f3e549]: 86.05%
+            - generic [ref=f3e550]: 独立留出集验证
+        - article [ref=f3e551]:
+          - generic [ref=f3e552]: ∿
+          - generic [ref=f3e553]:
+            - generic [ref=f3e554]: 优化规模
+            - strong [ref=f3e555]: 4,128 点 / 43 日
+            - generic [ref=f3e556]: 覆盖申报点 / 交易日
+        - article [ref=f3e557]:
+          - generic [ref=f3e558]: ★
+          - generic [ref=f3e559]:
+            - generic [ref=f3e560]: 决策可信度
+            - strong [ref=f3e561]: 88/100
+            - generic [ref=f3e562]: 真实数据综合评分
+      - generic [ref=f3e563]:
+        - region [ref=f3e564]:
+          - generic [ref=f3e565]:
+            - generic [ref=f3e566]:
+              - text: REAL 96-POINT EVIDENCE
+              - heading "96 点申报曲线对比" [level=2] [ref=f3e567]
+            - generic "曲线图例" [ref=f3e568]:
+              - generic [ref=f3e569]: 历史申报
+              - generic [ref=f3e570]: AI 建议申报
+          - img "历史申报与 AI 建议申报曲线" [ref=f3e572]:
+            - generic "00:15：基线 420 MWh，AI 建议 438 MWh" [ref=f3e577]
+            - generic "02:15：基线 455 MWh，AI 建议 471 MWh" [ref=f3e580]
+            - generic "04:15：基线 520 MWh，AI 建议 550 MWh" [ref=f3e583]
+            - generic "06:15：基线 690 MWh，AI 建议 720 MWh" [ref=f3e586]
+            - generic "08:15：基线 860 MWh，AI 建议 905 MWh" [ref=f3e589]
+            - generic "10:15：基线 910 MWh，AI 建议 880 MWh" [ref=f3e592]
+            - generic "12:15：基线 840 MWh，AI 建议 805 MWh" [ref=f3e595]
+            - generic "14:15：基线 710 MWh，AI 建议 740 MWh" [ref=f3e598]
+            - generic "16:15：基线 570 MWh，AI 建议 600 MWh" [ref=f3e601]
+            - generic "18:15：基线 450 MWh，AI 建议 420 MWh" [ref=f3e604]
+            - generic "20:15：基线 510 MWh，AI 建议 548 MWh" [ref=f3e607]
+            - generic "24:00：基线 430 MWh，AI 建议 445 MWh" [ref=f3e610]
+          - generic [ref=f3e613]:
+            - generic [ref=f3e614]: 00:15
+            - generic [ref=f3e615]: 时段（15 分钟 / 点）
+            - generic [ref=f3e616]: 24:00
+          - generic [ref=f3e617]:
+            - generic [ref=f3e618]: ✦
+            - paragraph [ref=f3e619]: 识别到 12 个连续调整窗口，所有点位均可追溯。
+            - button "查看偏差分析" [ref=f3e620] [cursor=pointer]: 查看偏差分析 →
+        - complementary [ref=f3e621]:
+          - generic [ref=f3e622]:
+            - generic [ref=f3e623]:
+              - text: DECISION BRIEF
+              - heading "AI 优化建议" [level=2] [ref=f3e624]
+            - generic [ref=f3e625]: 已生成
+          - generic [ref=f3e626]:
+            - generic [ref=f3e627]: 预计偏差改善
+            - strong [ref=f3e628]: +9.64%
+            - generic [ref=f3e629]: 42 日同点位均值模型
+          - generic [ref=f3e630]:
+            - generic [ref=f3e631]:
+              - generic [ref=f3e632]: 关键调整时段
+              - generic [ref=f3e633]: 影响 TOP 5
+            - article [ref=f3e634]:
+              - generic [ref=f3e635]: 00:15
+              - strong [ref=f3e638]: 上调
+            - article [ref=f3e639]:
+              - generic [ref=f3e640]: 02:15
+              - strong [ref=f3e643]: 上调
+            - article [ref=f3e644]:
+              - generic [ref=f3e645]: 04:15
+              - strong [ref=f3e648]: 上调
+            - article [ref=f3e649]:
+              - generic [ref=f3e650]: 06:15
+              - strong [ref=f3e653]: 上调
+            - article [ref=f3e654]:
+              - generic [ref=f3e655]: 08:15
+              - strong [ref=f3e658]: 上调
+          - generic [ref=f3e659]:
+            - generic [ref=f3e660]: 当前运行状态
+            - strong [ref=f3e661]: 已生成 12 点复核建议
+            - generic [ref=f3e662]: 进入人工复核后方可采用
+          - generic [ref=f3e663]:
+            - button "查看详情" [ref=f3e664] [cursor=pointer]
+            - button "进入人工复核" [ref=f3e665] [cursor=pointer]
+          - paragraph [ref=f3e666]: 偏差改善不等于已实现人民币节省；未经人工复核不会提交申报。
+      - region [ref=f3e667]:
+        - generic [ref=f3e668]:
+          - text: HUMAN-IN-THE-LOOP
+          - heading "优化流程" [level=2] [ref=f3e669]
+        - list [ref=f3e670]:
+          - listitem [ref=f3e671]:
+            - generic [ref=f3e672]: ▣
+            - generic [ref=f3e673]:
+              - strong [ref=f3e674]: 数据准备
+              - generic [ref=f3e675]: 已完成
+          - generic [ref=f3e676]: →
+          - listitem [ref=f3e677]:
+            - generic [ref=f3e678]: ⌘
+            - generic [ref=f3e679]:
+              - strong [ref=f3e680]: AI 建模预测
+              - generic [ref=f3e681]: 已验证
+          - generic [ref=f3e682]: →
+          - listitem [ref=f3e683]:
+            - generic [ref=f3e684]: ◷
+            - generic [ref=f3e685]:
+              - strong [ref=f3e686]: 生成优化建议
+              - generic [ref=f3e687]: 已完成
+          - generic [ref=f3e688]: →
+          - listitem [ref=f3e689]:
+            - generic [ref=f3e690]: ♙
+            - generic [ref=f3e691]:
+              - strong [ref=f3e692]: 人工复核
+              - generic [ref=f3e693]: 待处理
+          - generic [ref=f3e694]: →
+          - listitem [ref=f3e695]:
+            - generic [ref=f3e696]: ➤
+            - generic [ref=f3e697]:
+              - strong [ref=f3e698]: 提交申报
+              - generic [ref=f3e699]: 待提交
+      - group [ref=f3e700]:
+        - generic "展开历史策略验证与执行门禁" [ref=f3e701] [cursor=pointer]

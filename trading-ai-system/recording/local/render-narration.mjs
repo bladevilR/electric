@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   buildNarrationMixArgs,
   buildAlignedNarrationClips,
+  buildChapterMixClips,
   buildQwenTtsManifest,
   buildSpeechFitArgs,
   buildSrt,
@@ -210,26 +211,36 @@ export async function renderNarration({
       'utf8'
     )
   );
+  // 字幕仍按镜头静音边界切；成片音轨按整章连续贴，消灭章内大段静音
   const narrationSegments = buildAlignedNarrationClips({
     timeline,
     speech,
     alignment: alignmentConfig.boundariesMs,
+    minimumEdgePaddingMs: 120,
   });
+  const chapterMixClips = buildChapterMixClips({ timeline, speech });
   await writeFile(paths.subtitles, buildSrt(narrationSegments), 'utf8');
   await writeFile(
     path.join(paths.narrationDirectory, 'metadata.json'),
-    `${JSON.stringify(speech, null, 2)}\n`,
+    `${JSON.stringify({ speech, chapterMixClips }, null, 2)}\n`,
     'utf8'
   );
-  const audioInputs = narrationSegments;
+  // 连续旁白 wav 仍写出，供抽检；最终成片走章节声画同步剪辑
+  const tightDurationMs = chapterMixClips.reduce(
+    (sum, clip) => sum + clip.durationMs,
+    0
+  );
   await run(
     'ffmpeg',
     buildNarrationMixArgs({
-      inputs: audioInputs,
-      durationMs: timeline.durationMs,
+      inputs: chapterMixClips.map((clip) => ({
+        ...clip,
+        startMs: clip.startMs,
+      })),
+      durationMs: Math.max(timeline.durationMs, tightDurationMs + 500),
       output: paths.narrationAudio,
     }),
     { cwd: projectRoot, log }
   );
-  return { speech, narrationSegments };
+  return { speech, narrationSegments, chapterMixClips };
 }

@@ -1,0 +1,25 @@
+[Unit]
+Description=电力交易策略助手（外网演示）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sysadmin
+Group=sysadmin
+WorkingDirectory=/home/sysadmin/electric/trading-ai-system/current
+EnvironmentFile=/home/sysadmin/electric/trading-ai-system/shared/service.env
+Environment=JSPEC_MANAGED_BROWSER_DISABLED=1
+Environment=EXECUTION_MODE=human_decision_only
+ExecStart=/home/sysadmin/.local/node-v22.16.0-linux-arm64/bin/node server.mjs --standard /home/sysadmin/electric/trading-ai-system/shared/standard-96.json --audit /home/sysadmin/electric/trading-ai-system/shared/audit-log.ndjson
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/home/sysadmin/electric/trading-ai-system/shared
+
+[Install]
+WantedBy=multi-user.target

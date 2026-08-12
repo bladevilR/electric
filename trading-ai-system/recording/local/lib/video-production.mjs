@@ -417,10 +417,13 @@ export function buildAlignedNarrationClips({
   timeline,
   speech,
   alignment,
-  minimumEdgePaddingMs = 300,
+  minimumEdgePaddingMs = 120,
+  chainGapMs = 80,
 }) {
   const speechById = new Map(speech.map((item) => [item.id, item]));
   const segmentById = new Map(timeline.segments.map((item) => [item.id, item]));
+  // 前对齐 + 跨镜头链式贴紧：避免「镜头内居中」在章节交界处叠出 3 秒+ 静音。
+  let previousEndMs = 0;
   return buildNarrationChapters(timeline).flatMap((chapter) => {
     const chapterSpeech = speechById.get(chapter.id);
     if (!chapterSpeech) throw new Error(`${chapter.id} 缺少旁白音频`);
@@ -441,17 +444,34 @@ export function buildAlignedNarrationClips({
     return chapter.sourceSegments.map((source, index) => {
       const segment = segmentById.get(source.id);
       if (!segment) throw new Error(`${source.id} 缺少真实镜头时间`);
-      const trimStartMs = points[index];
-      const clipDurationMs = points[index + 1] - trimStartMs;
+      const rawTrimStartMs = points[index];
+      const rawClipDurationMs = points[index + 1] - rawTrimStartMs;
       const segmentDurationMs = segment.endMs - segment.startMs;
-      const availableMs = segmentDurationMs - minimumEdgePaddingMs * 2;
+      const leadIn = Math.min(120, minimumEdgePaddingMs);
+      const trailPad = Math.min(80, minimumEdgePaddingMs);
+      const availableMs = Math.max(800, segmentDurationMs - leadIn - trailPad);
+      let clipDurationMs = rawClipDurationMs;
+      let trimStartMs = rawTrimStartMs;
       if (clipDurationMs > availableMs) {
-        throw new Error(
-          `${source.id} 对齐旁白超过镜头安全区：${clipDurationMs}ms > ${availableMs}ms`
-        );
+        if (rawClipDurationMs > segmentDurationMs + 1200) {
+          throw new Error(
+            `${source.id} 对齐旁白超过镜头安全区：${rawClipDurationMs}ms > ${availableMs}ms`
+          );
+        }
+        clipDurationMs = availableMs;
+        trimStartMs =
+          rawTrimStartMs + Math.round((rawClipDurationMs - clipDurationMs) / 2);
       }
-      const startMs =
-        segment.startMs + Math.round((segmentDurationMs - clipDurationMs) / 2);
+      const earliest = segment.startMs + leadIn;
+      const latestStart = Math.max(
+        earliest,
+        segment.endMs - clipDurationMs - trailPad
+      );
+      let startMs = Math.max(earliest, previousEndMs + chainGapMs);
+      if (startMs > latestStart) startMs = latestStart;
+      if (startMs < segment.startMs) startMs = segment.startMs;
+      const endMs = startMs + clipDurationMs;
+      previousEndMs = endMs;
       return {
         id: source.id,
         chapterId: chapter.id,
@@ -460,11 +480,133 @@ export function buildAlignedNarrationClips({
         trimStartMs,
         durationMs: clipDurationMs,
         startMs,
-        endMs: startMs + clipDurationMs,
+        endMs,
         segmentEndMs: segment.endMs,
       };
     });
   });
+}
+
+/**
+ * 按章节生成「声画同步剪辑」计划：
+ * - 音轨：各章 wav 直接首尾相接（仅 80ms 间隔）
+ * - 画面：每章从该章首镜头起点取与旁白等长的片段后拼接
+ * 这样既消灭章内居中静音，也裁掉镜头墙钟拖尾造成的跨章空档。
+ */
+export function buildChapterMixClips({
+  timeline,
+  speech,
+  chainGapMs = 80,
+}) {
+  const speechById = new Map(speech.map((item) => [item.id, item]));
+  const chapters = buildNarrationChapters(timeline);
+  let cursorMs = 0;
+  return chapters.map((chapter, index) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    if (!chapterSpeech) throw new Error(`${chapter.id} 缺少旁白音频`);
+    const first = chapter.sourceSegments[0];
+    const last = chapter.sourceSegments.at(-1);
+    const segment = timeline.segments.find((item) => item.id === first.id);
+    const lastSegment = timeline.segments.find((item) => item.id === last.id);
+    if (!segment || !lastSegment) {
+      throw new Error(`${chapter.id} 缺少真实镜头时间`);
+    }
+    const durationMs = Math.ceil(Number(chapterSpeech.durationMs));
+    const videoStartMs = segment.startMs;
+    const videoAvailableMs = Math.max(500, lastSegment.endMs - segment.startMs);
+    const videoDurationMs = Math.min(durationMs, videoAvailableMs);
+    if (index > 0) cursorMs += chainGapMs;
+    const startMs = cursorMs;
+    cursorMs += durationMs;
+    return {
+      id: chapter.id,
+      chapterId: chapter.id,
+      text: chapter.text,
+      file: chapterSpeech.file,
+      trimStartMs: 0,
+      durationMs,
+      startMs,
+      endMs: startMs + durationMs,
+      videoStartMs,
+      videoDurationMs,
+      segmentEndMs: lastSegment.endMs,
+    };
+  });
+}
+
+/** 声画同步成片：按章节裁剪画面并与连续旁白混音 */
+export function buildChapterSyncedFfmpegArgs({
+  rawVideo,
+  chapterClips,
+  finalVideo,
+  maxDurationSeconds = 300,
+}) {
+  if (!Array.isArray(chapterClips) || chapterClips.length === 0) {
+    throw new Error('chapterClips 不能为空');
+  }
+  const args = ['-y', '-i', rawVideo];
+  for (const clip of chapterClips) {
+    args.push('-i', clip.file);
+  }
+  const videoParts = [];
+  const audioParts = [];
+  const filters = [];
+  chapterClips.forEach((clip, index) => {
+    const vStart = (clip.videoStartMs / 1000).toFixed(3);
+    const vDur = (clip.videoDurationMs / 1000).toFixed(3);
+    const aDur = (clip.durationMs / 1000).toFixed(3);
+    // 画面取章节起点等长片段；若旁白略长于画面，用 tpad 冻尾帧补齐
+    filters.push(
+      `[0:v]trim=start=${vStart}:duration=${vDur},setpts=PTS-STARTPTS,scale=1920:1080:flags=lanczos,fps=30,format=yuv420p,tpad=stop_mode=clone:stop_duration=${Math.max(
+        0,
+        (clip.durationMs - clip.videoDurationMs) / 1000
+      ).toFixed(3)}[v${index}]`
+    );
+    filters.push(
+      `[${index + 1}:a]atrim=start=0:duration=${aDur},asetpts=PTS-STARTPTS,loudnorm=I=-18:TP=-2:LRA=7,aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo[a${index}]`
+    );
+    videoParts.push(`[v${index}]`);
+    audioParts.push(`[a${index}]`);
+  });
+  const n = chapterClips.length;
+  filters.push(
+    `${videoParts.join('')}concat=n=${n}:v=1:a=0[vout]`
+  );
+  filters.push(
+    `${audioParts.join('')}concat=n=${n}:v=0:a=1,alimiter=limit=0.95[aout]`
+  );
+  const totalSec = Math.min(
+    maxDurationSeconds,
+    chapterClips.reduce((sum, clip) => sum + clip.durationMs, 0) / 1000 + 0.5
+  );
+  args.push(
+    '-filter_complex',
+    filters.join(';'),
+    '-map',
+    '[vout]',
+    '-map',
+    '[aout]',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'medium',
+    '-crf',
+    '18',
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-ar',
+    '48000',
+    '-b:a',
+    '160k',
+    '-movflags',
+    '+faststart',
+    '-t',
+    totalSec.toFixed(3),
+    finalVideo
+  );
+  return args;
 }
 
 function formatSrtTimestamp(milliseconds) {

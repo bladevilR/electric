@@ -15,6 +15,8 @@ import {
   buildNarrationMixArgs,
   buildNarrationChapters,
   buildAlignedNarrationClips,
+  buildChapterMixClips,
+  buildChapterSyncedFfmpegArgs,
   buildChapterCaptionSegments,
   buildNarrationSegments,
   buildOutputPaths,
@@ -367,7 +369,7 @@ test('五个连续章节保留源镜头并按实际音频时长生成章内字�
   assert.ok(captions[0].endMs <= captions[1].startMs);
 });
 
-test('章节连续旁白在静音边界切分后居中对齐每个真实镜头', () => {
+test('章节连续旁白在静音边界切分后前对齐并链式贴紧', () => {
   const timeline = {
     segments: [
       { id: 'intro', narrationChapter: 'chapter-value', narration: '成本问题。', startMs: 0, endMs: 7000 },
@@ -383,9 +385,12 @@ test('章节连续旁白在静音边界切分后居中对齐每个真实镜头',
   assert.deepEqual(clips.map((clip) => clip.id), ['intro', 'savings']);
   assert.deepEqual(clips.map((clip) => clip.trimStartMs), [0, 5200]);
   assert.deepEqual(clips.map((clip) => clip.durationMs), [5200, 6800]);
-  assert.equal(clips[0].startMs, 900);
-  assert.equal(clips[1].startMs, 7600);
-  assert.ok(clips.every((clip) => clip.endMs <= clip.segmentEndMs - 500));
+  // 前对齐：首镜贴近起点；次镜在下一镜头最早可入点起声（不再居中留白）
+  assert.equal(clips[0].startMs, 120);
+  assert.equal(clips[0].endMs, 5320);
+  assert.equal(clips[1].startMs, 7120);
+  assert.ok(clips[1].startMs - clips[0].endMs < 2000);
+  assert.ok(clips.every((clip) => clip.endMs <= clip.segmentEndMs));
 
   const args = buildNarrationMixArgs({
     inputs: clips,
@@ -395,6 +400,105 @@ test('章节连续旁白在静音边界切分后居中对齐每个真实镜头',
   const filter = args[args.indexOf('-filter_complex') + 1];
   assert.match(filter, /atrim=start=0\.000:duration=5\.200,asetpts=PTS-STARTPTS/);
   assert.match(filter, /atrim=start=5\.200:duration=6\.800,asetpts=PTS-STARTPTS/);
+});
+
+test('章节声画同步计划按旁白时长裁画面并链式贴紧音轨', () => {
+  const timeline = {
+    segments: [
+      {
+        id: 'intro',
+        narrationChapter: 'chapter-value',
+        narration: '成本问题。',
+        startMs: 0,
+        endMs: 8000,
+      },
+      {
+        id: 'savings',
+        narrationChapter: 'chapter-value',
+        narration: '节约金额。',
+        startMs: 8000,
+        endMs: 20000,
+      },
+      {
+        id: 'data',
+        narrationChapter: 'chapter-data',
+        narration: '数据门禁。',
+        startMs: 20000,
+        endMs: 36000,
+      },
+    ],
+  };
+  const speech = [
+    { id: 'chapter-value', file: '/tmp/value.wav', durationMs: 12000 },
+    { id: 'chapter-data', file: '/tmp/data.wav', durationMs: 9000 },
+  ];
+  const clips = buildChapterMixClips({ timeline, speech, chainGapMs: 80 });
+  assert.equal(clips.length, 2);
+  assert.equal(clips[0].id, 'chapter-value');
+  assert.equal(clips[0].videoStartMs, 0);
+  // 画面窗口 0–20000，旁白 12000 → 取 12000
+  assert.equal(clips[0].videoDurationMs, 12000);
+  assert.equal(clips[0].durationMs, 12000);
+  assert.equal(clips[0].startMs, 0);
+  assert.equal(clips[1].id, 'chapter-data');
+  assert.equal(clips[1].videoStartMs, 20000);
+  assert.equal(clips[1].videoDurationMs, 9000);
+  // 第二段音轨紧跟第一段，仅 80ms 间隙
+  assert.equal(clips[1].startMs, 12080);
+  assert.equal(clips[1].startMs - clips[0].endMs, 80);
+
+  const args = buildChapterSyncedFfmpegArgs({
+    rawVideo: '/tmp/raw.webm',
+    chapterClips: clips,
+    finalVideo: '/tmp/final.mp4',
+  });
+  assert.equal(args[0], '-y');
+  assert.ok(args.includes('/tmp/raw.webm'));
+  assert.ok(args.includes('/tmp/value.wav'));
+  assert.ok(args.includes('/tmp/data.wav'));
+  const filter = args[args.indexOf('-filter_complex') + 1];
+  assert.match(filter, /trim=start=0\.000:duration=12\.000/);
+  assert.match(filter, /trim=start=20\.000:duration=9\.000/);
+  assert.match(filter, /concat=n=2:v=1:a=0\[vout\]/);
+  assert.match(filter, /concat=n=2:v=0:a=1/);
+  assert.ok(args.includes('[vout]'));
+  assert.ok(args.includes('[aout]'));
+  assert.ok(args.includes('libx264'));
+  assert.ok(args.includes('aac'));
+});
+
+test('录制脚本在演示态隐藏不可执行并抬高字幕', () => {
+  const source = browserRecording.buildRunCodeForTest(
+    {
+      id: 'savings-copy-test',
+      narration: '年度节约潜力约633.6万元。',
+      startMs: 0,
+      endMs: 8000,
+      durationMs: 8000,
+    },
+    {
+      chapter: '01 · 先看能省多少钱',
+      holdMs: 8000,
+      camera: {
+        beats: [
+          {
+            at: 0.1,
+            scale: 1.48,
+            focus: [{ type: 'css', value: '.savings-projection-grid' }],
+            durationMs: 800,
+            motionBlur: 0.1,
+          },
+        ],
+        exit: 'reset',
+      },
+    }
+  );
+  assert.match(source, /local-demo-recording/);
+  assert.match(source, /当前不可执行|decision-state/);
+  assert.match(source, /演示口径/);
+  assert.match(source, /bottom:\s*118px/);
+  assert.match(source, /local-demo-focus/);
+  assert.match(source, /requested < 1\.22/);
 });
 
 test('Qwen 旁白轻微超时使用高质量时长适配且保留 WAV', () => {
@@ -543,7 +647,7 @@ test('真实录制脚本使用固定的大字号电影感字幕层', () => {
   );
   assert.match(source, /font:\s*650 36px\/1\.42/);
   assert.match(source, /1440px/);
-  assert.match(source, /bottom:\s*50px/);
+  assert.match(source, /bottom:\s*118px/);
   assert.match(source, /local-demo-caption-keyword/);
   assert.match(source, /#workbenchRoot/);
   assert.doesNotMatch(source, /AI 解说/);
@@ -584,7 +688,8 @@ test('真实录制脚本在主体层执行连续运镜且目标缺失会明确�
   );
   assert.match(source, /camera target not found/i);
   assert.match(source, /workbenchRoot\.animate/);
-  assert.match(source, /transformOrigin\s*=\s*['"]0 0['"]/);
+  assert.match(source, /transformOrigin\s*=/);
+  assert.match(source, /scale\(/);
   assert.match(source, /exit === ['"]connect['"]/);
   assert.match(source, /for \(const beat of step\.camera\.beats\)/);
 });

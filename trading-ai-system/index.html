@@ -18,6 +18,13 @@
   </div>
   <noscript>需要启用 JavaScript 才能使用电力交易智能决策平台。</noscript>
   <script src="./vendor/gsap.min.js"></script>
+  <script nomodule>
+    (function () {
+      var root = document.getElementById('workbenchRoot');
+      if (!root) return;
+      root.innerHTML = '<div class="fatal-state"><strong>当前浏览器不支持系统运行</strong><p>请使用 Microsoft Edge 或 Google Chrome 重新打开 http://127.0.0.1:5177/，不要使用 360 兼容模式。</p></div>';
+    })();
+  </script>
   <script type="module" src="./workbench.js"></script>
 </body>
 </html>

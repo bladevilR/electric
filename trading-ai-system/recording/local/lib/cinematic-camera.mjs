@@ -90,15 +90,30 @@ export function normalizeCameraSpec(raw, label = 'camera') {
   };
 }
 
+function clean(value) {
+  const rounded = Math.round(value * 1000) / 1000;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+/**
+ * Compute pan/zoom so the focus stays fully visible and centered in the
+ * "safe" frame (above captions, below chapter chips). If the requested scale
+ * would clamp the pan away from the focus, scale is reduced until the focus
+ * can be held on-screen with padding — this prevents the empty white frames
+ * and clipped numbers seen in earlier contest cuts.
+ */
 export function computeCameraTransform({
   viewportWidth,
   viewportHeight,
   focusRect,
   scale,
+  safeTop = 72,
+  safeBottom = 150,
+  padding = 36,
 }) {
   const width = finiteNumber(viewportWidth, 'viewportWidth');
   const height = finiteNumber(viewportHeight, 'viewportHeight');
-  const zoom = finiteNumber(scale, 'scale');
+  let zoom = finiteNumber(scale, 'scale');
   if (width <= 0 || height <= 0) throw new Error('视口尺寸必须大于零');
   if (zoom < 1 || zoom > MAX_CAMERA_SCALE) {
     throw new Error(`scale 必须在 1 到 ${MAX_CAMERA_SCALE} 之间`);
@@ -115,20 +130,62 @@ export function computeCameraTransform({
   if (rect.width <= 0 || rect.height <= 0) {
     throw new Error('focusRect 必须具有可见尺寸');
   }
+
+  const safeHeight = Math.max(240, height - safeTop - safeBottom);
+  const targetX = width / 2;
+  const targetY = safeTop + safeHeight / 2;
   const focusX = rect.x + rect.width / 2;
   const focusY = rect.y + rect.height / 2;
-  const rawX = width / 2 - focusX * zoom;
-  const rawY = height / 2 - focusY * zoom;
-  return {
-    scale: zoom,
-    x: Math.min(0, Math.max(width - width * zoom, rawX)),
-    y: Math.min(0, Math.max(height - height * zoom, rawY)),
-  };
-}
 
-function clean(value) {
-  const rounded = Math.round(value * 1000) / 1000;
-  return Object.is(rounded, -0) ? 0 : rounded;
+  // Prefer not to over-zoom a large panel into a featureless crop.
+  const maxZoomForFit = Math.max(
+    1,
+    Math.min(
+      MAX_CAMERA_SCALE,
+      (width - padding * 2) / rect.width,
+      (safeHeight - padding) / rect.height
+    )
+  );
+  zoom = Math.min(zoom, maxZoomForFit);
+
+  const place = (level) => {
+    const rawX = targetX - focusX * level;
+    const rawY = targetY - focusY * level;
+    return {
+      scale: level,
+      x: Math.min(0, Math.max(width - width * level, rawX)),
+      y: Math.min(0, Math.max(height - height * level, rawY)),
+    };
+  };
+
+  let transform = place(zoom);
+
+  // If clamping moved the focus far from the safe center, ease scale down so
+  // the subject stays readable instead of leaving a white void.
+  for (let step = 0; step < 12; step += 1) {
+    const screenFocusX = focusX * transform.scale + transform.x;
+    const screenFocusY = focusY * transform.scale + transform.y;
+    const dx = Math.abs(screenFocusX - targetX);
+    const dy = Math.abs(screenFocusY - targetY);
+    const halfW = (rect.width * transform.scale) / 2;
+    const halfH = (rect.height * transform.scale) / 2;
+    const fitsX =
+      screenFocusX - halfW >= padding &&
+      screenFocusX + halfW <= width - padding;
+    const fitsY =
+      screenFocusY - halfH >= safeTop + padding / 2 &&
+      screenFocusY + halfH <= height - safeBottom - padding / 2;
+    const centeredEnough = dx <= width * 0.12 && dy <= height * 0.14;
+    if ((fitsX && fitsY) || centeredEnough || transform.scale <= 1.05) break;
+    zoom = Math.max(1, transform.scale - 0.08);
+    transform = place(zoom);
+  }
+
+  return {
+    scale: clean(transform.scale),
+    x: clean(transform.x),
+    y: clean(transform.y),
+  };
 }
 
 export function cameraTransformCss(transform) {

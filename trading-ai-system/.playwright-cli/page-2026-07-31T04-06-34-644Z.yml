@@ -1,0 +1,4 @@
+- generic [ref=e3]:
+  - strong [ref=e4]: 工作台没有加载成功
+  - paragraph [ref=e5]: "今日数据核对失败：ENOENT: no such file or directory, open '/Users/r/Documents/electric/jspec-capture/output/session-20260507-101645/standard/standard-96.json'"
+  - button "重新加载" [ref=e6] [cursor=pointer]

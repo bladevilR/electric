@@ -45,6 +45,16 @@ async function runPowerShell(args, options = {}) {
   });
 }
 
+async function waitFor(check, timeoutMs = 10_000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const value = await Promise.resolve().then(check).catch(() => null);
+    if (value) return value;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`condition was not met within ${timeoutMs}ms`);
+}
+
 test('launcher failure stays diagnosable through a persistent startup log', async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-launcher-'));
   const logPath = path.join(temp, 'startup.log');
@@ -135,6 +145,71 @@ test('successful launcher keeps the service alive while the launch window remain
     if (child.exitCode === null) {
       child.kill('SIGTERM');
     }
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
+test('launcher replaces an existing trading assistant process before starting this package', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-launcher-replace-'));
+  const logPath = path.join(temp, 'startup.log');
+  const port = await getFreePort();
+  const standardPath = path.join(systemRoot, 'data', 'standard-96.sample.json');
+  const oldServer = spawn(
+    process.execPath,
+    ['server.mjs', '--port', String(port), '--standard', standardPath],
+    { cwd: systemRoot, stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  let launcher = null;
+
+  try {
+    const oldHealth = await waitFor(() =>
+      fetch(`http://127.0.0.1:${port}/api/health`).then((response) => response.json())
+    );
+    assert.equal(oldHealth.name, 'trading-ai-system');
+    assert.equal(oldHealth.pid, oldServer.pid);
+
+    launcher = spawn(
+      'pwsh',
+      [
+        '-NoProfile',
+        '-File',
+        path.join(systemRoot, 'start-system.ps1'),
+        '-Port',
+        String(port),
+        '-NodePath',
+        process.execPath,
+        '-LogFile',
+        logPath,
+        '-NoBrowser',
+        '-NoPause',
+        '-KeepAliveSeconds',
+        '2',
+      ],
+      { cwd: systemRoot, stdio: ['ignore', 'pipe', 'pipe'] }
+    );
+
+    let stdout = '';
+    let stderr = '';
+    launcher.stdout.on('data', (chunk) => {
+      stdout += chunk.toString('utf8');
+    });
+    launcher.stderr.on('data', (chunk) => {
+      stderr += chunk.toString('utf8');
+    });
+
+    await waitFor(() => stdout.includes(`Started: http://127.0.0.1:${port}/`));
+    const replacementHealth = await fetch(`http://127.0.0.1:${port}/api/health`).then(
+      (response) => response.json()
+    );
+    assert.notEqual(replacementHealth.pid, oldServer.pid);
+    assert.match(stdout, /Stopped existing trading assistant/);
+    await waitFor(() => oldServer.exitCode !== null || oldServer.signalCode !== null);
+
+    const exitCode = await new Promise((resolve) => launcher.once('exit', resolve));
+    assert.equal(exitCode, 0, `${stdout}\n${stderr}`);
+  } finally {
+    if (launcher?.exitCode === null) launcher.kill('SIGTERM');
+    if (oldServer.exitCode === null) oldServer.kill('SIGTERM');
     await rm(temp, { recursive: true, force: true });
   }
 });

@@ -1,0 +1,154 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: 电
+      - generic [ref=e6]:
+        - strong [ref=e7]: 电力交易策略助手
+        - generic [ref=e8]: 价格预测与策略复核
+    - navigation [ref=e9]:
+      - generic [ref=e235]: 总览
+      - button "总 今日工作台" [ref=e236] [cursor=pointer]:
+        - generic [ref=e237]: 总
+        - text: 今日工作台
+      - button "收 收益情况" [ref=e238] [cursor=pointer]:
+        - generic [ref=e239]: 收
+        - text: 收益情况
+      - button "主 主体信息" [ref=e240] [cursor=pointer]:
+        - generic [ref=e241]: 主
+        - text: 主体信息
+      - button "结 结算复盘" [ref=e242] [cursor=pointer]:
+        - generic [ref=e243]: 结
+        - text: 结算复盘
+      - button "复 复盘看板" [ref=e244] [cursor=pointer]:
+        - generic [ref=e245]: 复
+        - text: 复盘看板
+      - generic [ref=e246]: 数据
+      - button "市 市场数据" [ref=e247] [cursor=pointer]:
+        - generic [ref=e248]: 市
+        - text: 市场数据
+      - button "私 我的数据" [ref=e249] [cursor=pointer]:
+        - generic [ref=e250]: 私
+        - text: 我的数据
+      - button "数 数据准备情况" [ref=e251] [cursor=pointer]:
+        - generic [ref=e252]: 数
+        - text: 数据准备情况
+      - button "资 数据进度" [ref=e253] [cursor=pointer]:
+        - generic [ref=e254]: 资
+        - text: 数据进度
+      - button "参 结算参考" [ref=e255] [cursor=pointer]:
+        - generic [ref=e256]: 参
+        - text: 结算参考
+      - generic [ref=e257]: 实时
+      - button "实 实时数据助手" [ref=e258] [cursor=pointer]:
+        - generic [ref=e259]: 实
+        - text: 实时数据助手
+      - generic [ref=e260]: 预测
+      - button "预 价格预测" [ref=e261] [cursor=pointer]:
+        - generic [ref=e262]: 预
+        - text: 价格预测
+      - button "验 预测验证" [ref=e263] [cursor=pointer]:
+        - generic [ref=e264]: 验
+        - text: 预测验证
+      - generic [ref=e265]: 策略
+      - button "策 策略建议" [ref=e266] [cursor=pointer]:
+        - generic [ref=e267]: 策
+        - text: 策略建议
+      - button "助 辅助建议" [ref=e268] [cursor=pointer]:
+        - generic [ref=e269]: 助
+        - text: 辅助建议
+      - button "稿 交易草稿复核" [ref=e270] [cursor=pointer]:
+        - generic [ref=e271]: 稿
+        - text: 交易草稿复核
+    - generic [ref=e47]:
+      - text: 本地试用版
+      - strong [ref=e48]: 先看数据，再看建议
+      - paragraph [ref=e49]: 只做辅助判断，不会自动提交交易。实时数据需要用户自己插 UKey 登录后采集。
+  - main [ref=e50]:
+    - generic [ref=e51]:
+      - generic [ref=e52]:
+        - generic [ref=e53]: 当前位置
+        - strong [ref=e54]: 实时数据助手
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - text: 交易日
+          - combobox "交易日" [ref=e57]
+        - button "刷新数据" [ref=e58] [cursor=pointer]
+        - button "生成建议报告" [ref=e59] [cursor=pointer]
+    - generic [ref=e60]:
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - heading "实时数据助手" [level=1] [ref=e274]
+          - paragraph [ref=e275]: 插上 UKey 后，在本机打开交易平台页面；系统只读取页面上已经显示的业务表格。
+        - button "刷新状态" [ref=e277] [cursor=pointer]
+      - generic [ref=e278]:
+        - article [ref=e279]:
+          - text: 数据窗口
+          - strong [ref=e280]: 未打开
+          - generic [ref=e281]: 点击按钮后会打开专用浏览器
+        - article [ref=e282]:
+          - text: 自动采集
+          - strong [ref=e283]: 未自动采集
+          - generic [ref=e284]: 默认约 30 秒一次
+        - article [ref=e285]:
+          - text: 全量慢采
+          - strong [ref=e286]: 待命
+          - generic [ref=e287]: 完整清单 0 个页面
+        - article [ref=e288]:
+          - text: 最近采集
+          - strong [ref=e289]: "-"
+          - generic [ref=e290]: 还没有采集到表格
+        - article [ref=e291]:
+          - text: 实时价格
+          - strong [ref=e292]: 等待页面
+          - generic [ref=e293]: "-"
+      - generic [ref=e294]:
+        - article [ref=e295]:
+          - heading "一键操作" [level=2] [ref=e296]
+          - generic [ref=e297]:
+            - button "打开数据窗口" [ref=e298] [cursor=pointer]
+            - button "一键全量慢采" [ref=e299] [cursor=pointer]
+            - button "采集一次" [ref=e300] [cursor=pointer]
+            - button "开始自动采集" [ref=e301] [cursor=pointer]
+            - button "停止自动采集" [ref=e302] [cursor=pointer]
+          - generic [ref=e303]:
+            - generic [ref=e304]:
+              - strong [ref=e305]: 第一步
+              - generic [ref=e306]: 插上 UKey，点击“打开数据窗口”。
+            - generic [ref=e307]:
+              - strong [ref=e308]: 第二步
+              - generic [ref=e309]: 在打开的浏览器里完成登录，停在任意 JSPEC 页面即可。
+            - generic [ref=e310]:
+              - strong [ref=e311]: 第三步
+              - generic [ref=e312]: 点击“一键全量慢采”，系统会按完整清单逐页读取，每页间隔不低于 20 秒。
+        - article [ref=e313]:
+          - heading "当前页面识别" [level=2] [ref=e314]
+          - table [ref=e315]:
+            - rowgroup [ref=e316]:
+              - row [ref=e317]:
+                - columnheader "项目" [ref=e318]
+                - columnheader "状态" [ref=e319]
+            - rowgroup [ref=e320]:
+              - row [ref=e321]:
+                - cell "页面" [ref=e322]
+                - cell "还没打开实时页面" [ref=e323]
+              - row [ref=e324]:
+                - cell "登录" [ref=e325]
+                - cell "等待打开数据窗口" [ref=e326]
+              - row [ref=e327]:
+                - cell "采集结果" [ref=e328]
+                - cell "还没有读到可用表格" [ref=e329]
+              - row [ref=e330]:
+                - cell "巡扫结果" [ref=e331]
+                - cell "0 个页面待慢采" [ref=e332]
+      - article [ref=e333]:
+        - heading "使用边界" [level=2] [ref=e334]
+        - generic [ref=e335]:
+          - generic [ref=e336]:
+            - strong [ref=e337]: 只读屏幕上看得到的数据
+            - generic [ref=e338]: 比如时间点、价格、申报量、负荷等业务表格。
+          - generic [ref=e339]:
+            - strong [ref=e340]: 不会替你点提交
+            - generic [ref=e341]: 系统只给建议和草稿，最终操作仍由用户确认。
+          - generic [ref=e342]:
+            - strong [ref=e343]: 登录留在本机
+            - generic [ref=e344]: UKey 和浏览器登录状态只保存在使用者电脑上。

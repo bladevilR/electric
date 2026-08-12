@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一分钟上手 - 电力交易策略助手</title>
+  <link rel="icon" href="./assets/app-icon.png">
+  <style>
+    :root {
+      --ink: #15242f;
+      --muted: #637587;
+      --line: #dce7e2;
+      --panel: #ffffff;
+      --soft: #f3f8f6;
+      --green: #1f8b5b;
+      --green-dark: #17633d;
+      --teal: #0f6f6b;
+      --yellow: #f1c744;
+      --blue: #236f96;
+      --shadow: 0 16px 38px rgba(27, 56, 72, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background:
+        linear-gradient(180deg, #f6fbf9 0%, #edf5f1 42%, #f7f9fb 100%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 26px 22px 44px;
+    }
+
+    .hero {
+      min-height: 520px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+      gap: 28px;
+      align-items: center;
+      padding: 24px 0 20px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      color: var(--green-dark);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--yellow);
+      box-shadow: 0 0 0 5px rgba(241, 199, 68, 0.2);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 650px;
+      margin: 18px 0 0;
+      color: #3f5465;
+      font-size: 19px;
+      line-height: 1.75;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .primary-action,
+    .secondary-action {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 7px;
+      padding: 0 20px;
+      text-decoration: none;
+      font-weight: 800;
+      border: 1px solid transparent;
+    }
+
+    .primary-action {
+      color: #fff;
+      background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+      box-shadow: 0 12px 24px rgba(31, 139, 91, 0.24);
+    }
+
+    .secondary-action {
+      color: var(--green-dark);
+      background: #fff;
+      border-color: #cbded5;
+    }
+
+    .note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .hero-visual {
+      display: grid;
+      justify-items: center;
+      gap: 16px;
+    }
+
+    .app-icon {
+      width: min(330px, 72vw);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .status-strip {
+      width: min(390px, 100%);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .status-strip span {
+      padding: 9px 8px;
+      border-radius: 6px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(27, 56, 72, 0.06);
+    }
+
+    section {
+      margin-top: 22px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 26px;
+      line-height: 1.25;
+    }
+
+    .steps,
+    .features,
+    .boundaries {
+      display: grid;
+      gap: 12px;
+    }
+
+    .steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .features {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 28px rgba(27, 56, 72, 0.07);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+      font-size: 15px;
+    }
+
+    .num {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 12px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--green);
+      font-weight: 800;
+    }
+
+    .full-band {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 18px;
+      border-radius: 8px;
+      background: #133f42;
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .full-band p {
+      margin: 6px 0 0;
+      color: rgba(255, 255, 255, 0.78);
+      line-height: 1.65;
+    }
+
+    .full-band a {
+      white-space: nowrap;
+      color: #123431;
+      background: #f5d85a;
+      border-radius: 7px;
+      padding: 13px 18px;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .boundaries {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .boundary {
+      padding: 14px;
+      border-radius: 7px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      color: #395166;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    footer {
+      margin-top: 34px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: #8a9aa8;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 18px 14px 34px;
+      }
+
+      .hero,
+      .steps,
+      .features,
+      .boundaries,
+      .full-band {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: 0;
+      }
+
+      .full-band a {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">电力交易策略助手</span>
+        <h1>一分钟上手</h1>
+        <p class="lead">
+          这是一个本地运行的电力交易辅助工具。它帮你把市场价格、历史结算、价格预测、回测结果和省钱策略放在一个页面里看清楚；需要实时数据时，插上 UKey 后可以一键全量慢采，采集会在后台自动完成。
+        </p>
+        <div class="actions">
+          <a class="primary-action" href="./启动系统.bat">一键启动系统</a>
+          <a class="secondary-action" href="http://127.0.0.1:5177/">打开工作台</a>
+        </div>
+        <p class="note">
+          如果浏览器拦截 bat 文件，请回到这个文件夹，双击 <b>启动系统.bat</b>。启动后保持命令窗口打开，系统会在本机运行。
+        </p>
+      </div>
+      <div class="hero-visual">
+        <img class="app-icon" src="./assets/app-icon.png" alt="电力交易策略助手图标">
+        <div class="status-strip">
+          <span>本地运行</span>
+          <span>人工复核</span>
+          <span>不会自动提交</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">三步就能开始</h2>
+      <div class="steps">
+        <article class="card">
+          <span class="num">1</span>
+          <strong>双击启动</strong>
+          <p>打开 <b>启动系统.bat</b>。系统会启动本地服务，并自动打开 <b>http://127.0.0.1:5177/</b>。</p>
+        </article>
+        <article class="card">
+          <span class="num">2</span>
+          <strong>先看数据</strong>
+          <p>进入“数据进度”“结算参考”“价格预测”“预测验证”，先确认当前数据够不够、哪里还缺。</p>
+        </article>
+        <article class="card">
+          <span class="num">3</span>
+          <strong>再看策略</strong>
+          <p>进入“策略建议”，查看低价窗口、高价风险、三档策略和不可执行原因。所有建议都需要人工复核。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">启动环境要求</h2>
+      <div class="features">
+        <article class="card">
+          <strong>普通查看和离线演示</strong>
+          <p>需要 Windows 10/11、PowerShell、浏览器，以及可用的 5177 端口。本开箱包自带 Node 运行时和样本数据，先解压整个文件夹后，双击 <b>启动系统.bat</b> 即可。</p>
+        </article>
+        <article class="card">
+          <strong>实时采集和全量慢采</strong>
+          <p>需要 UKey、CA 驱动、JSPEC 账号、可访问交易平台的网络，以及 Chrome 或 Edge。点击全量慢采后，保持 UKey、数据窗口和本地服务打开。</p>
+        </article>
+      </div>
+      <p class="note">
+        如果浏览器提示 127.0.0.1 无法访问，通常是本地服务还没启动成功。启动失败时黑色窗口会保持打开，请不要关闭；把窗口内容和 <b>logs</b> 文件夹发给技术支持。不要在压缩包里直接运行。
+      </p>
+    </section>
+
+    <section>
+      <div class="full-band">
+        <div>
+          <strong>一键全量慢采</strong>
+          <p>
+            插上 UKey 并登录 JSPEC 后，点击“一键全量慢采”。系统会按完整清单逐页读取，每页间隔不低于 20 秒。你可以去做别的，只要保持 UKey、数据窗口和本地服务打开即可。
+          </p>
+        </div>
+        <a href="http://127.0.0.1:5177/">去工作台操作</a>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">全量功能一眼看懂</h2>
+      <div class="features">
+        <article class="card">
+          <strong>数据资产</strong>
+          <p>告诉你本地已经有什么：实时均价、日前出清、申报曲线、系统负荷、合同、交易序列和结算参考。</p>
+        </article>
+        <article class="card">
+          <strong>结算参考</strong>
+          <p>把本地现货核对单、交易计算表、月度表整理成可复盘的证据，方便追溯历史实际负荷和结算金额。</p>
+        </article>
+        <article class="card">
+          <strong>价格预测</strong>
+          <p>在数据足够时给出基线预测；数据不够时会明确告诉你历史样本不足，不会假装模型已经很准。</p>
+        </article>
+        <article class="card">
+          <strong>预测验证</strong>
+          <p>用历史日期做 walk-forward 回测，只用过去预测未来，避免拿未来数据作弊。</p>
+        </article>
+        <article class="card">
+          <strong>省钱策略</strong>
+          <p>识别低价窗口和高价暴露，给出保守、均衡、激进三档建议；没有实际负荷、结算和约束时不会给可执行电量。</p>
+        </article>
+        <article class="card">
+          <strong>报告和草稿</strong>
+          <p>可以生成建议报告和交易草稿复核材料。它只帮你整理和提醒，最终操作仍由人在 JSPEC 里确认。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">重要边界</h2>
+      <div class="boundaries">
+        <div class="boundary">UKey 和登录态只留在你的电脑上。</div>
+        <div class="boundary">系统只读取页面上已经显示的业务表格。</div>
+        <div class="boundary">系统不会自动提交申报或交易。</div>
+        <div class="boundary">遇到频率风险、跳登录或连续空数据，应先停止采集。</div>
+      </div>
+    </section>
+
+    <footer>
+      present by Si hang
+    </footer>
+  </main>
+</body>
+</html>

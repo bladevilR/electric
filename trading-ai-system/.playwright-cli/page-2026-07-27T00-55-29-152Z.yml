@@ -1,0 +1,108 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: 电
+      - generic [ref=e6]:
+        - strong [ref=e7]: 电力交易策略助手
+        - generic [ref=e8]: 价格预测与策略复核
+    - navigation [ref=e9]:
+      - generic [ref=e583]: 总览
+      - button "总 今日工作台" [ref=e584] [cursor=pointer]:
+        - generic [ref=e585]: 总
+        - text: 今日工作台
+      - button "收 收益情况" [ref=e586] [cursor=pointer]:
+        - generic [ref=e587]: 收
+        - text: 收益情况
+      - button "主 主体信息" [ref=e588] [cursor=pointer]:
+        - generic [ref=e589]: 主
+        - text: 主体信息
+      - button "结 结算复盘" [ref=e590] [cursor=pointer]:
+        - generic [ref=e591]: 结
+        - text: 结算复盘
+      - button "复 复盘看板" [ref=e592] [cursor=pointer]:
+        - generic [ref=e593]: 复
+        - text: 复盘看板
+      - generic [ref=e594]: 数据
+      - button "市 市场数据" [ref=e595] [cursor=pointer]:
+        - generic [ref=e596]: 市
+        - text: 市场数据
+      - button "私 我的数据" [ref=e597] [cursor=pointer]:
+        - generic [ref=e598]: 私
+        - text: 我的数据
+      - button "数 数据准备情况" [ref=e599] [cursor=pointer]:
+        - generic [ref=e600]: 数
+        - text: 数据准备情况
+      - button "资 数据进度" [ref=e601] [cursor=pointer]:
+        - generic [ref=e602]: 资
+        - text: 数据进度
+      - button "参 结算参考" [ref=e603] [cursor=pointer]:
+        - generic [ref=e604]: 参
+        - text: 结算参考
+      - generic [ref=e605]: 实时
+      - button "实 实时数据助手" [ref=e606] [cursor=pointer]:
+        - generic [ref=e607]: 实
+        - text: 实时数据助手
+      - generic [ref=e608]: 预测
+      - button "预 价格预测" [ref=e609] [cursor=pointer]:
+        - generic [ref=e610]: 预
+        - text: 价格预测
+      - button "验 预测验证" [ref=e611] [cursor=pointer]:
+        - generic [ref=e612]: 验
+        - text: 预测验证
+      - generic [ref=e613]: 策略
+      - button "策 策略建议" [ref=e614] [cursor=pointer]:
+        - generic [ref=e615]: 策
+        - text: 策略建议
+      - button "助 辅助建议" [ref=e616] [cursor=pointer]:
+        - generic [ref=e617]: 助
+        - text: 辅助建议
+      - button "稿 交易草稿复核" [ref=e618] [cursor=pointer]:
+        - generic [ref=e619]: 稿
+        - text: 交易草稿复核
+    - generic [ref=e47]:
+      - text: 本地试用版
+      - strong [ref=e48]: 先看数据，再看建议
+      - paragraph [ref=e49]: 只做辅助判断，不会自动提交交易。实时数据需要用户自己插 UKey 登录后采集。
+  - main [ref=e50]:
+    - generic [ref=e51]:
+      - generic [ref=e52]:
+        - generic [ref=e53]: 当前位置
+        - strong [ref=e54]: 价格预测
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - text: 交易日
+          - combobox "交易日" [ref=e57]
+        - button "刷新数据" [ref=e58] [cursor=pointer]
+        - button "生成建议报告" [ref=e59] [cursor=pointer]
+    - generic [ref=e60]:
+      - generic [ref=e621]:
+        - heading "价格预测" [level=1] [ref=e622]
+        - paragraph [ref=e623]: 预测实时均价、实时-日前价差和高价风险；历史不足时会直接显示原因。
+      - generic [ref=e624]: 价格预测没有读到：服务返回 500
+      - generic [ref=e625]:
+        - article [ref=e626]:
+          - text: 预测状态
+          - strong [ref=e627]: 暂不可用
+          - generic [ref=e628]: 预测服务暂时不可用，先检查数据进度。
+        - article [ref=e629]:
+          - text: 历史天数
+          - strong [ref=e630]: "0"
+          - generic [ref=e631]: 目标日前可用历史
+        - article [ref=e632]:
+          - text: 可比点位
+          - strong [ref=e633]: "0"
+          - generic [ref=e634]: 同点位历史覆盖
+        - article [ref=e635]:
+          - text: 预测点数
+          - strong [ref=e636]: "0"
+          - generic [ref=e637]: 同点位历史基线输出
+      - generic [ref=e638]:
+        - article [ref=e639]:
+          - heading "预测口径" [level=2] [ref=e640]
+          - generic [ref=e641]: 现在还没有可展示的数据。
+        - article [ref=e642]:
+          - heading "缺失原因" [level=2] [ref=e643]
+          - generic [ref=e644]: 暂时没有需要处理的事项。
+      - article [ref=e645]:
+        - heading "价格预测摘要" [level=2] [ref=e646]
+        - generic [ref=e647]: 现在还没有可展示的数据。

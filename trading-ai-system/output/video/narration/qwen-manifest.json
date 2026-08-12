@@ -8,31 +8,31 @@
     {
       "id": "chapter-value",
       "text": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。在当前演示交易规模下，单日净成本优化额为2.4万元；按二十二个交易日测算，月度约52.8万元；按二百六十四个交易日测算，年度节约潜力约633.6万元。所有金额都可以继续展开核算。",
-      "output": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-value.wav",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-value.wav",
       "sourceSegmentIds": [
         "intro",
         "opening",
         "savings-impact"
       ],
       "startMs": 1,
-      "endMs": 56410
+      "endMs": 54342
     },
     {
       "id": "chapter-data",
       "text": "节约成本的第一步，不是立即给出交易量，而是先确认数据是否可信。系统统一检查市场价格、负荷预测、持仓、交易限额和数据新鲜度；任何关键数据缺失或过期，都会明确阻断后续决策。校验结果不是一个模糊的绿灯。每一类数据都显示来源、数量、更新时间和是否满足执行条件，让交易员知道系统为什么允许继续，或者为什么必须暂停。数据通过后，AI结合历史负荷、价格和时段特征形成预测。系统同时保留留出集误差、交易日胜率和基线对比，只有真正优于基线的模型，才可以进入申报优化。",
-      "output": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-data.wav",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-data.wav",
       "sourceSegmentIds": [
         "data-quality",
         "validation-evidence",
         "prediction-proof"
       ],
-      "startMs": 56420,
-      "endMs": 108719
+      "startMs": 54342,
+      "endMs": 109404
     },
     {
       "id": "chapter-decision",
       "text": "预测本身不会自动省钱。系统需要把负荷和价格判断继续转化为每个交易时点的申报动作，并在市场约束和风险边界内寻找更低成本的方案。这里逐点比较历史申报和AI建议。系统识别成本影响最大的窗口，告诉交易员哪些时段应该上调、哪些时段应该下调，同时保留完整的九十六点曲线，而不是只给一句笼统结论。右侧建议把预计偏差改善、关键调整时段和运行状态集中呈现。交易员可以快速看出方案为什么更省钱、收益来自哪里，以及当前是否具备进入人工复核的条件。为了避免把预测价差直接当成收益，系统为建议建立成本证据链。交易员可以核对输入来源、计算公式、数据新鲜度和最近操作记录，确认数字与当前交易日采用同一口径。证据核对完成后，返回主流程。AI负责汇总、预测、计算和解释，交易员保留最终决定权。进入真实申报前，人员必须复核关键时段、风险边界和成本依据；未经复核，系统不会自动提交交易。",
-      "output": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-decision.wav",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-decision.wav",
       "sourceSegmentIds": [
         "return-curve",
         "curve",
@@ -41,21 +41,21 @@
         "close-evidence",
         "human-review"
       ],
-      "startMs": 108723,
-      "endMs": 204821
+      "startMs": 109404,
+      "endMs": 194738
     },
     {
       "id": "chapter-close",
       "text": "交易完成后，执行与结算结果回流系统。单日2.4万元净成本优化额，来自基准成本减去实际结算、手续费、偏差成本和系统运行成本；五项明细完整相减，结果正好一致。结算结果进入下一轮模型评估，系统据此形成可追溯的候选优化策略。候选策略先经历史回测和实时并行验证，只比较结果、不参与真实申报；指标领先后仍须人工审批，异常可回滚。AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
-      "output": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-close.wav",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-close.wav",
       "sourceSegmentIds": [
         "audit-mode",
         "open-evolution",
         "evolution-proof",
         "outro"
       ],
-      "startMs": 204824,
-      "endMs": 256702
+      "startMs": 194738,
+      "endMs": 241691
     }
   ]
 }

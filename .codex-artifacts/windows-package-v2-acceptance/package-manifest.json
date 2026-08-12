@@ -1,0 +1,15 @@
+{
+  "name": "trading-ai-system-one-minute",
+  "title": "电力交易策略助手 - 一分钟上手包",
+  "generatedAt": "2026-08-07T06:17:27.758Z",
+  "release": "windows-browser-assets-fix-v2-20260807",
+  "entry": "一分钟上手.html",
+  "launcher": "启动系统.bat",
+  "presentBy": "Si hang",
+  "includesNodeRuntime": true,
+  "notes": [
+    "本包不包含本机浏览器登录态、Cookie、Token、证书私钥或 UKey PIN。",
+    "启动后保持 UKey、数据窗口和本地服务打开。",
+    "系统不会自动提交申报或交易。"
+  ]
+}

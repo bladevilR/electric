@@ -20,11 +20,15 @@ import { renderNarration } from './render-narration.mjs';
 import { probeMedia, renderFinalVideo } from './render-final.mjs';
 
 function parseArgs(argv) {
-  const result = { stage: 'all', port: 5197, smoke: false };
+  const result = { stage: 'all', port: 5197, smoke: false, disableCamera: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--smoke') {
       result.smoke = true;
+      continue;
+    }
+    if (argument === '--disable-camera') {
+      result.disableCamera = true;
       continue;
     }
     if (argument === '--stage' || argument === '--port') {
@@ -33,6 +37,7 @@ function parseArgs(argv) {
     }
   }
   result.port = Number(result.port);
+  if (process.env.LOCAL_DEMO_DISABLE_CAMERA === '1') result.disableCamera = true;
   return result;
 }
 
@@ -161,6 +166,7 @@ async function main() {
         screenshotDirectory: paths.screenshots,
         log,
         smoke: args.smoke,
+        disableCamera: args.disableCamera,
       });
       const rawProbe = await probeMedia(paths.rawVideo, {
         cwd: projectRoot,
