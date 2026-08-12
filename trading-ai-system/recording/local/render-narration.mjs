@@ -4,11 +4,12 @@ import path from 'node:path';
 
 import {
   buildNarrationMixArgs,
-  buildAlignedNarrationClips,
-  buildChapterMixClips,
+  buildChapterCaptionSegments,
+  buildNarrationChapters,
   buildQwenTtsManifest,
   buildSpeechFitArgs,
   buildSrt,
+  buildTimedCaptionCues,
 } from './lib/video-production.mjs';
 
 function run(command, args, { cwd, env, log } = {}) {
@@ -78,6 +79,26 @@ async function generateQwenSpeech({
     paths.narrationDirectory,
     'qwen-manifest.json'
   );
+  const signature = (value) =>
+    JSON.stringify({
+      modelDirectory: value?.modelDirectory,
+      speaker: value?.speaker,
+      language: value?.language,
+      seed: value?.seed,
+      instruct: value?.instruct,
+      segments: value?.segments?.map((segment) => ({
+        id: segment.id,
+        text: segment.text,
+        output: segment.output,
+        sourceSegmentIds: segment.sourceSegmentIds,
+      })),
+    });
+  const previousManifest = await readFile(manifestFile, 'utf8')
+    .then(JSON.parse)
+    .catch(() => null);
+  const canReuse =
+    signature(previousManifest) === signature(manifest) &&
+    manifest.segments.length > 0;
   await writeFile(
     manifestFile,
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -99,11 +120,12 @@ async function generateQwenSpeech({
       env: {
         PYTORCH_ENABLE_MPS_FALLBACK: '1',
         QWEN_TTS_REUSE_EXISTING:
-          process.env.QWEN_TTS_REUSE_EXISTING || '0',
+          process.env.QWEN_TTS_REUSE_EXISTING || (canReuse ? '1' : '0'),
       },
       log,
     }
   );
+  log?.(canReuse ? '旁白参数与文案未变，已复用 Serena 音频' : '旁白清单已变化，已重新生成 Serena 音频');
 
   const speech = [];
   for (const segment of manifest.segments) {
@@ -205,42 +227,44 @@ export async function renderNarration({
     projectRoot,
     log,
   });
-  const alignmentConfig = JSON.parse(
-    await readFile(
-      path.join(projectRoot, 'recording', 'narration-alignment.json'),
-      'utf8'
-    )
-  );
-  // 字幕仍按镜头静音边界切；成片音轨按整章连续贴，消灭章内大段静音
-  const narrationSegments = buildAlignedNarrationClips({
-    timeline,
-    speech,
-    alignment: alignmentConfig.boundariesMs,
-    minimumEdgePaddingMs: 120,
+  const speechById = new Map(speech.map((item) => [item.id, item]));
+  const chapters = buildNarrationChapters(timeline);
+  const narrationSegments = chapters.flatMap((chapter) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    if (!chapterSpeech) throw new Error(`${chapter.id} 缺少旁白音频`);
+    return buildChapterCaptionSegments(chapter, chapterSpeech.durationMs);
   });
-  const chapterMixClips = buildChapterMixClips({ timeline, speech });
-  await writeFile(paths.subtitles, buildSrt(narrationSegments), 'utf8');
+  const subtitleCues = narrationSegments.flatMap((segment) =>
+    buildTimedCaptionCues(
+      { narration: segment.text, durationMs: segment.durationMs },
+      { maxCharsPerLine: 24, maxLines: 2, minimumCueMs: 1200 }
+    ).map((cue) => ({
+      text: cue.lines.join('\n'),
+      startMs: segment.startMs + cue.startMs,
+      endMs: segment.startMs + cue.endMs,
+    }))
+  );
+  await writeFile(paths.subtitles, buildSrt(subtitleCues), 'utf8');
   await writeFile(
     path.join(paths.narrationDirectory, 'metadata.json'),
-    `${JSON.stringify({ speech, chapterMixClips }, null, 2)}\n`,
+    `${JSON.stringify(speech, null, 2)}\n`,
     'utf8'
   );
-  // 连续旁白 wav 仍写出，供抽检；最终成片走章节声画同步剪辑
-  const tightDurationMs = chapterMixClips.reduce(
-    (sum, clip) => sum + clip.durationMs,
-    0
-  );
+  const audioInputs = chapters.map((chapter) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    return {
+      file: chapterSpeech.file,
+      startMs: chapter.startMs + 500,
+    };
+  });
   await run(
     'ffmpeg',
     buildNarrationMixArgs({
-      inputs: chapterMixClips.map((clip) => ({
-        ...clip,
-        startMs: clip.startMs,
-      })),
-      durationMs: Math.max(timeline.durationMs, tightDurationMs + 500),
+      inputs: audioInputs,
+      durationMs: timeline.durationMs,
       output: paths.narrationAudio,
     }),
     { cwd: projectRoot, log }
   );
-  return { speech, narrationSegments, chapterMixClips };
+  return { speech, narrationSegments };
 }
