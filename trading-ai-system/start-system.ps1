@@ -69,6 +69,93 @@ function Stop-Startup {
   exit 1
 }
 
+function Open-WorkbenchBrowser {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Url
+  )
+
+  if ($isWindowsHost) {
+    $browserCandidates = @(
+      @{ Name = "Microsoft Edge"; Command = "msedge.exe"; Paths = @(
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+        "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+        "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
+      ) },
+      @{ Name = "Google Chrome"; Command = "chrome.exe"; Paths = @(
+        "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+      ) }
+    )
+
+    foreach ($browser in $browserCandidates) {
+      $browserPath = $browser.Paths | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+      if (-not $browserPath) {
+        $browserCommand = Get-Command $browser.Command -ErrorAction SilentlyContinue
+        if ($browserCommand) {
+          $browserPath = $browserCommand.Source
+        }
+      }
+      if ($browserPath) {
+        Start-Process -FilePath $browserPath -ArgumentList $Url | Out-Null
+        Write-StartupMessage "Opened in $($browser.Name): $Url"
+        return
+      }
+    }
+  }
+
+  Start-Process -FilePath $Url | Out-Null
+  Write-StartupMessage "Opened in the system browser: $Url"
+}
+
+function Stop-ExistingTradingService {
+  param(
+    [Parameter(Mandatory = $true)]
+    [object]$Health,
+    [Parameter(Mandatory = $true)]
+    [int]$ServicePort,
+    [Parameter(Mandatory = $true)]
+    [string]$HealthUrl
+  )
+
+  if ($Health.name -ne "trading-ai-system") {
+    Stop-Startup -Message "Port $ServicePort is occupied by another application." -Details "The existing service was not identified as trading-ai-system, so it was not stopped."
+  }
+
+  $existingProcessId = 0
+  if ($Health.pid) {
+    $existingProcessId = [int]$Health.pid
+  } elseif ($isWindowsHost) {
+    $listener = Get-NetTCPConnection -LocalPort $ServicePort -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($listener) {
+      $existingProcessId = [int]$listener.OwningProcess
+    }
+  }
+
+  if ($existingProcessId -le 0) {
+    Stop-Startup -Message "The existing trading assistant could not be restarted safely." -Details "No owning process ID was available for port $ServicePort. Close the old launch window and try again."
+  }
+
+  try {
+    Stop-Process -Id $existingProcessId -Force -ErrorAction Stop
+  } catch {
+    Stop-Startup -Message "The existing trading assistant could not be stopped." -Details $_.Exception.Message
+  }
+
+  for ($i = 0; $i -lt 20; $i += 1) {
+    Start-Sleep -Milliseconds 250
+    try {
+      Invoke-RestMethod -Uri $HealthUrl -TimeoutSec 1 | Out-Null
+    } catch {
+      Write-StartupMessage "Stopped existing trading assistant process $existingProcessId."
+      return
+    }
+  }
+
+  Stop-Startup -Message "The existing trading assistant did not release port $ServicePort." -Details "Stopped process ID: $existingProcessId"
+}
+
 $portableNode = Join-Path $root "runtime\node\node.exe"
 $bundledNode = "C:\Users\R\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
 $node = ""
@@ -99,11 +186,7 @@ $healthUrl = "http://127.0.0.1:$Port/api/health"
 try {
   $existing = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 1
   if ($existing.ok) {
-    if (-not $NoBrowser) {
-      Start-Process -FilePath $workbenchUrl | Out-Null
-    }
-    Write-StartupMessage "Already running: $workbenchUrl"
-    exit 0
+    Stop-ExistingTradingService -Health $existing -ServicePort $Port -HealthUrl $healthUrl
   }
 } catch {
   # Not running yet. Continue with startup.
@@ -139,7 +222,7 @@ for ($i = 0; $i -lt 60; $i += 1) {
     $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 1
     if ($health.ok) {
       if (-not $NoBrowser) {
-        Start-Process -FilePath $workbenchUrl | Out-Null
+        Open-WorkbenchBrowser -Url $workbenchUrl
       }
       Write-StartupMessage "Started: $workbenchUrl"
       Write-StartupMessage "Keep this window open while using the system."

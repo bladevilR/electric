@@ -8,17 +8,8 @@ const systemRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const repoRoot = path.resolve(systemRoot, '..');
 const outputRoot = path.join(repoRoot, 'dist', 'trading-ai-system-one-minute');
 const zipPath = `${outputRoot}.zip`;
-const sampleStandardPath = path.join(
-  repoRoot,
-  'jspec-capture',
-  'output',
-  'session-20260507-101645',
-  'standard',
-  'standard-96.json'
-);
 
 const files = [
-  '.env.production.example',
   'README.md',
   '一分钟上手.html',
   '启动系统.bat',
@@ -26,15 +17,18 @@ const files = [
   'app.js',
   'styles.css',
   'workbench.js',
+  'workbench-motion.js',
   'workbench.css',
   'server.mjs',
   'run-system.ps1',
   'start-system.ps1',
   'build-data.mjs',
+  'data/standard-96.sample.json',
 ];
 
 const directories = [
   'assets',
+  'vendor',
   'lib',
   'docs',
   'tools',
@@ -96,10 +90,6 @@ async function main() {
   }
 
   await copyFileIfExists('data/integration-summary.json');
-  if (existsSync(sampleStandardPath)) {
-    await mkdir(path.join(outputRoot, 'data'), { recursive: true });
-    await cp(sampleStandardPath, path.join(outputRoot, 'data', 'standard-96.sample.json'));
-  }
 
   const hasRuntime = await copyRuntimeNode();
   const manifest = {

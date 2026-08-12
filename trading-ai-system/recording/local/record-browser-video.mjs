@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildTimedCaptionCues } from './lib/video-production.mjs';
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -40,18 +41,43 @@ export function shouldReplayWorkbenchMotion(segmentId) {
   return segmentId === 'opening';
 }
 
-function buildRunCode(segment, step, { smoke = false } = {}) {
+export function selectRecordingSegments(skeleton) {
+  return skeleton.segments;
+}
+
+export function remainingHoldMs(plannedMs, elapsedMs) {
+  return Math.max(0, Math.round(Number(plannedMs) - Number(elapsedMs)));
+}
+
+function buildRunCode(
+  segment,
+  step,
+  { smoke = false, controllerOverheadMs = 0 } = {}
+) {
+  const plannedHoldMs = step?.holdMs ?? segment.endMs - segment.startMs;
   const payload = JSON.stringify({
     segment,
     step,
+    captionCues: [],
+    plannedCaptionCues: buildTimedCaptionCues({
+      ...segment,
+      durationMs: smoke
+        ? Math.min(1200, segment.endMs - segment.startMs)
+        : step?.holdMs ?? segment.endMs - segment.startMs,
+    }, { minimumCueMs: smoke ? 1 : 1200 }),
     replayWorkbenchMotion: shouldReplayWorkbenchMotion(segment.id),
     holdMs: smoke
       ? Math.min(1200, segment.endMs - segment.startMs)
-      : step?.holdMs ?? segment.endMs - segment.startMs,
+      : Math.max(1200, plannedHoldMs - controllerOverheadMs),
   });
   return `async (page) => {
     const payload = ${payload};
-    const { segment, step, holdMs, replayWorkbenchMotion } = payload;
+    const { segment, step, captionCues, holdMs, replayWorkbenchMotion } = payload;
+    const segmentStartedAt = Date.now();
+    const waitForRemainingHold = async () => {
+      const remaining = Math.max(0, holdMs - (Date.now() - segmentStartedAt));
+      if (remaining > 0) await page.waitForTimeout(remaining);
+    };
     const ensureOverlay = async () => {
       await page.evaluate(() => {
         if (window.__localDemoVideo) return;
@@ -80,19 +106,22 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           }
           #local-demo-chapter.visible { opacity: 1; transform: translate(-50%, 0); }
           #local-demo-caption {
-            position: fixed; z-index: 2147483646; left: 50%; bottom: 30px;
-            width: min(1280px, calc(100vw - 180px)); transform: translateX(-50%);
-            padding: 17px 26px 18px; border-radius: 16px;
-            color: #fff; background: rgba(5,24,46,.88);
-            border: 1px solid rgba(132,196,255,.24);
-            box-shadow: 0 18px 48px rgba(0,14,34,.28);
-            font: 600 22px/1.55 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-            letter-spacing: .01em; text-align: center;
-            pointer-events: none; backdrop-filter: blur(16px);
+            position: fixed; z-index: 2147483646; left: 50%; bottom: 50px;
+            width: min(1440px, calc(100vw - 240px)); max-width: 1440px;
+            transform: translate(-50%, 8px); opacity: 0;
+            padding: 18px 34px 19px; border-radius: 18px;
+            color: #fff; background: rgba(7,25,48,.92);
+            border: 1px solid rgba(112,196,255,.28);
+            box-shadow: 0 24px 70px rgba(0,18,42,.34);
+            font: 650 36px/1.42 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: .01em; text-align: center; white-space: normal;
+            pointer-events: none; backdrop-filter: blur(24px) saturate(1.15);
+            transition: opacity .18s ease, transform .22s ease;
           }
-          #local-demo-caption strong {
-            margin-right: 13px; color: #7fc5ff; font-size: 14px;
-            letter-spacing: .12em; vertical-align: 2px;
+          #local-demo-caption.visible { opacity: 1; transform: translate(-50%, 0); }
+          .local-demo-caption-keyword {
+            color: #7ce7d8; font-weight: 800;
+            text-shadow: 0 0 24px rgba(58,221,199,.28);
           }
           #local-demo-cursor {
             position: fixed; z-index: 2147483647; left: 0; top: 0;
@@ -139,6 +168,16 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
             margin: 28px 0 0; max-width: 1000px; color: #355d83;
             font: 520 25px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
           }
+          #local-demo-card .impact {
+            margin-top: 28px; color: #087c70;
+            font: 800 52px/1.1 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: -.035em;
+          }
+          #local-demo-card .impact small {
+            display: block; margin-top: 8px; color: #53728f;
+            font: 650 15px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            letter-spacing: .04em;
+          }
           #local-demo-card .flow {
             display: flex; gap: 14px; margin-top: 38px; flex-wrap: wrap;
           }
@@ -153,6 +192,7 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
           }
         \`;
         document.head.appendChild(style);
+        document.documentElement.style.zoom = '2';
         const badge = document.createElement('div');
         badge.id = 'local-demo-badge';
         badge.textContent = '本地演示 · 标准样本';
@@ -165,27 +205,62 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         const card = document.createElement('div');
         card.id = 'local-demo-card';
         document.body.append(badge, chapter, caption, cursor, card);
-        window.__localDemoVideo = { badge, chapter, caption, cursor, card };
+        window.__localDemoVideo = {
+          badge,
+          chapter,
+          caption,
+          cursor,
+          card,
+          focusRects: [],
+        };
       });
     };
     const showText = async () => {
-      await page.evaluate(({ segment, step }) => {
+      await page.evaluate(({ captionCues, step }) => {
         const ui = window.__localDemoVideo;
-        ui.caption.innerHTML = '<strong>AI 解说</strong>' + segment.narration;
+        const keywords = ['633.6万元', '2.4万元', '52.8万元', '96 点', '九十六点', '人工审批', '实时并行验证', '不参与真实申报'];
+        const renderCue = (cue) => {
+          ui.caption.classList.remove('visible');
+          setTimeout(() => {
+            ui.caption.replaceChildren();
+            const copy = document.createElement('span');
+            let remaining = cue.text;
+            while (remaining) {
+              const matches = keywords
+                .map((keyword) => ({ keyword, index: remaining.indexOf(keyword) }))
+                .filter((item) => item.index >= 0)
+                .sort((a, b) => a.index - b.index || b.keyword.length - a.keyword.length);
+              const match = matches[0];
+              if (!match) {
+                copy.appendChild(document.createTextNode(remaining));
+                break;
+              }
+              if (match.index > 0) copy.appendChild(document.createTextNode(remaining.slice(0, match.index)));
+              const mark = document.createElement('span');
+              mark.className = 'local-demo-caption-keyword';
+              mark.textContent = match.keyword;
+              copy.appendChild(mark);
+              remaining = remaining.slice(match.index + match.keyword.length);
+            }
+            ui.caption.appendChild(copy);
+            ui.caption.classList.add('visible');
+          }, 180);
+        };
+        for (const cue of captionCues) setTimeout(() => renderCue(cue), cue.startMs);
         if (step?.chapter) {
           ui.chapter.textContent = step.chapter;
           ui.chapter.classList.add('visible');
           setTimeout(() => ui.chapter.classList.remove('visible'), 1800);
         }
-      }, { segment, step });
+      }, { captionCues, step });
     };
     const showCard = async (kind) => {
       await page.evaluate(({ kind }) => {
         const ui = window.__localDemoVideo;
         const intro = kind === 'intro';
         ui.card.innerHTML = intro
-          ? '<div class="inner"><div class="eyebrow">ELECTRICITY TRADING AI</div><h1>电力交易 AI · 智能申报决策</h1><p>把数据校验、AI 申报优化、人工复核和审计证据，整合为一条可追溯的决策闭环。</p><div class="flow"><span>数据校验</span><span>模型优化</span><span>人工复核</span><span>审计留痕</span></div></div>'
-          : '<div class="inner"><div class="eyebrow">DECISION SUPPORT · HUMAN IN THE LOOP</div><h1>数据、模型、建议、复核、审计</h1><p>用可解释、可复核、可追溯的方式提升申报质量。系统只提供决策支持，未经人工复核不会自动提交。</p><div class="flow"><span>标准样本演示</span><span>不会自动交易</span><span>完整证据链</span></div></div>';
+          ? '<div class="inner"><div class="eyebrow">AI ELECTRICITY TRADING COPILOT</div><h1>让每一次申报，更接近真实需求</h1><p>AI协助交易员完成数据校验、预测、九十六点申报优化、人工复核和结算回流。</p><div class="impact">¥6,336,000<small>年度节约潜力 · 按当前演示交易规模等比例测算</small></div><div class="flow"><span>减少申报偏差</span><span>降低交易成本</span><span>每笔节约可核算</span></div></div>'
+          : '<div class="inner"><div class="eyebrow">AI COMPUTES · HUMAN DECIDES</div><h1>让每一次申报，更省、更稳、更有依据</h1><p>AI负责计算与解释，交易员负责最终决策。所有建议都保留数据来源、成本口径、人工审批与版本回滚记录。</p><div class="flow"><span>可执行</span><span>可解释</span><span>可复核</span><span>可追溯</span></div></div>';
         ui.card.classList.add('visible');
         ui.cursor.style.transform = 'translate(-80px,-80px)';
       }, { kind });
@@ -199,12 +274,41 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
       }
       throw new Error('未找到目标元素：' + JSON.stringify(locators));
     };
+    const captureFocus = async (beat) => {
+      let focus;
+      try {
+        focus = await resolveLocator(beat.focus);
+      } catch (error) {
+        throw new Error('camera target not found: ' + JSON.stringify(beat.focus));
+      }
+      await focus.waitFor({ state: 'visible', timeout: step.timeoutMs });
+      await focus.evaluate((element) => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      });
+      await page.waitForTimeout(500);
+      const box = await focus.boundingBox();
+      if (!box || box.width <= 0 || box.height <= 0) {
+        throw new Error('camera target not found: empty bounding box');
+      }
+      const rect = {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        scale: Math.min(1.85, beat.scale),
+        focus: beat.focus,
+        durationMs: beat.durationMs,
+        at: beat.at,
+      };
+      await page.evaluate((value) => window.__localDemoVideo.focusRects.push(value), rect);
+      return rect;
+    };
 
     await ensureOverlay();
     await showText();
     if (segment.id === 'intro' || segment.id === 'outro') {
       await showCard(segment.id);
-      await page.waitForTimeout(holdMs);
+      await waitForRemainingHold();
       if (segment.id === 'intro') {
         await page.evaluate(() => window.__localDemoVideo.card.classList.remove('visible'));
       }
@@ -259,9 +363,20 @@ function buildRunCode(segment, step, { smoke = false } = {}) {
         await page.waitForTimeout(850);
       }
     }
-    await page.waitForTimeout(holdMs);
-    return { id: segment.id, status: 'completed' };
+    const focusRects = [];
+    for (const beat of step.camera.beats) {
+      const dueAt = segmentStartedAt + Math.round(holdMs * beat.at);
+      const waitMs = Math.max(0, dueAt - Date.now());
+      if (waitMs > 0) await page.waitForTimeout(waitMs);
+      focusRects.push(await captureFocus(beat));
+    }
+    await waitForRemainingHold();
+    return { id: segment.id, status: 'completed', focusRects };
   }`;
+}
+
+export function buildRunCodeForTest(segment, step, options = {}) {
+  return buildRunCode(segment, step, options);
 }
 
 async function cli(wrapper, session, args, options) {
@@ -287,6 +402,10 @@ export async function recordBrowserVideo({
   await mkdir(screenshotDirectory, { recursive: true });
   const timeline = {
     ...skeleton,
+    width: 3840,
+    height: 2160,
+    fps: 30,
+    focusCoordinateSpace: 'video-pixels',
     pageUrl: baseUrl,
     status: 'recording',
     startedAt: new Date().toISOString(),
@@ -298,7 +417,7 @@ export async function recordBrowserVideo({
       cwd: projectRoot,
     });
     log?.(`浏览器会话已打开：${session}`);
-    await cli(wrapper, session, ['resize', '1920', '1080'], {
+    await cli(wrapper, session, ['resize', '3840', '2160'], {
       cwd: projectRoot,
     });
     await cli(
@@ -313,15 +432,13 @@ export async function recordBrowserVideo({
     await cli(
       wrapper,
       session,
-      ['video-start', rawVideo, '--size', '1920x1080'],
+      ['video-start', rawVideo, '--size', '3840x2160'],
       { cwd: projectRoot }
     );
     log?.('Playwright 页面级录制已开始');
 
     const recordingStart = Date.now();
-    const sourceSegments = smoke
-      ? [skeleton.segments[0], skeleton.segments[1], skeleton.segments.at(-1)]
-      : skeleton.segments;
+    const sourceSegments = selectRecordingSegments(skeleton, { smoke });
     for (const source of sourceSegments) {
       const step = plan.steps.find((candidate) => candidate.id === source.id);
       const segmentStart = Date.now() - recordingStart;
@@ -330,16 +447,31 @@ export async function recordBrowserVideo({
         startMs: segmentStart,
         endMs: null,
         status: 'running',
+        camera: step?.camera || null,
       };
       timeline.segments.push(record);
       await writeFile(timelineFile, `${JSON.stringify(timeline, null, 2)}\n`);
       try {
-        await cli(
+        const runResult = await cli(
           wrapper,
           session,
-          ['run-code', buildRunCode(source, step, { smoke })],
+          [
+            'run-code',
+            buildRunCode(source, step, {
+              smoke,
+              controllerOverheadMs: Number(plan.controllerOverheadMs) || 0,
+            }),
+            '--raw',
+          ],
           { cwd: projectRoot }
         );
+        const resultMatch = runResult.stdout.match(/\{\s*"id"[\s\S]*"status"\s*:\s*"completed"[\s\S]*\}/);
+        if (resultMatch) {
+          const result = JSON.parse(resultMatch[0]);
+          record.focusRects = result.focusRects || [];
+        } else if (step?.camera?.beats?.length) {
+          throw new Error(`${source.id} 未返回后期摄影机焦点清单`);
+        }
         record.endMs = Date.now() - recordingStart;
         record.status = 'completed';
         log?.(`镜头完成：${source.id}（${record.endMs - record.startMs}ms）`);

@@ -1,13 +1,15 @@
 import { spawn } from 'node:child_process';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
   buildNarrationMixArgs,
-  buildNarrationSegments,
+  buildChapterCaptionSegments,
+  buildNarrationChapters,
   buildQwenTtsManifest,
   buildSpeechFitArgs,
   buildSrt,
+  buildTimedCaptionCues,
 } from './lib/video-production.mjs';
 
 function run(command, args, { cwd, env, log } = {}) {
@@ -77,6 +79,26 @@ async function generateQwenSpeech({
     paths.narrationDirectory,
     'qwen-manifest.json'
   );
+  const signature = (value) =>
+    JSON.stringify({
+      modelDirectory: value?.modelDirectory,
+      speaker: value?.speaker,
+      language: value?.language,
+      seed: value?.seed,
+      instruct: value?.instruct,
+      segments: value?.segments?.map((segment) => ({
+        id: segment.id,
+        text: segment.text,
+        output: segment.output,
+        sourceSegmentIds: segment.sourceSegmentIds,
+      })),
+    });
+  const previousManifest = await readFile(manifestFile, 'utf8')
+    .then(JSON.parse)
+    .catch(() => null);
+  const canReuse =
+    signature(previousManifest) === signature(manifest) &&
+    manifest.segments.length > 0;
   await writeFile(
     manifestFile,
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -98,19 +120,17 @@ async function generateQwenSpeech({
       env: {
         PYTORCH_ENABLE_MPS_FALLBACK: '1',
         QWEN_TTS_REUSE_EXISTING:
-          process.env.QWEN_TTS_REUSE_EXISTING || '0',
+          process.env.QWEN_TTS_REUSE_EXISTING || (canReuse ? '1' : '0'),
       },
       log,
     }
   );
+  log?.(canReuse ? '旁白参数与文案未变，已复用 Serena 音频' : '旁白清单已变化，已重新生成 Serena 音频');
 
   const speech = [];
-  for (const segment of timeline.segments) {
-    if (!segment.narration) continue;
-    let output = path.join(
-      paths.narrationDirectory,
-      `${segment.id}.wav`
-    );
+  for (const segment of manifest.segments) {
+    let output = segment.output;
+    let speedFactorApplied = 1;
     let durationMs = await probeDurationMs(output, {
       cwd: projectRoot,
       log,
@@ -122,13 +142,14 @@ async function generateQwenSpeech({
     );
     if (durationMs > availableMs) {
       let speedFactor = (durationMs / availableMs) * 1.01;
-      // 允许为贴合镜头适度提速；超过 1.45 仍拒绝
-      if (speedFactor > 1.45) {
+      // 只允许轻微时长适配，超过 1.15 会显著破坏自然声线。
+      if (speedFactor > 1.15) {
         throw new Error(
           `${segment.id} Qwen 旁白超时过多，拒绝强行提速：${durationMs}ms > ${availableMs}ms`
         );
       }
-      speedFactor = Math.min(1.45, Math.max(1.01, speedFactor));
+      speedFactor = Math.min(1.15, Math.max(1.01, speedFactor));
+      speedFactorApplied *= speedFactor;
       const fittedOutput = path.join(
         paths.narrationDirectory,
         `${segment.id}.fit.wav`
@@ -150,9 +171,10 @@ async function generateQwenSpeech({
       // atempo 有舍入误差时再补一次精确贴合
       if (durationMs > availableMs) {
         const secondFactor = Math.min(
-          1.45,
+          1.15,
           Math.max(1.01, (durationMs / availableMs) * 1.005)
         );
+        speedFactorApplied *= secondFactor;
         await run(
           'ffmpeg',
           buildSpeechFitArgs({
@@ -181,7 +203,12 @@ async function generateQwenSpeech({
       model: manifest.modelDirectory,
       voice: manifest.speaker,
       instruct: manifest.instruct,
+      seed: manifest.seed,
       durationMs,
+      speedFactor: Number(speedFactorApplied.toFixed(4)),
+      sourceSegmentIds: segment.sourceSegmentIds,
+      startMs: segment.startMs,
+      endMs: segment.endMs,
     });
   }
   return speech;
@@ -200,23 +227,36 @@ export async function renderNarration({
     projectRoot,
     log,
   });
-  const durationsById = Object.fromEntries(
-    speech.map((item) => [item.id, item.durationMs])
+  const speechById = new Map(speech.map((item) => [item.id, item]));
+  const chapters = buildNarrationChapters(timeline);
+  const narrationSegments = chapters.flatMap((chapter) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    if (!chapterSpeech) throw new Error(`${chapter.id} 缺少旁白音频`);
+    return buildChapterCaptionSegments(chapter, chapterSpeech.durationMs);
+  });
+  const subtitleCues = narrationSegments.flatMap((segment) =>
+    buildTimedCaptionCues(
+      { narration: segment.text, durationMs: segment.durationMs },
+      { maxCharsPerLine: 24, maxLines: 2, minimumCueMs: 1200 }
+    ).map((cue) => ({
+      text: cue.lines.join('\n'),
+      startMs: segment.startMs + cue.startMs,
+      endMs: segment.startMs + cue.endMs,
+    }))
   );
-  const narrationSegments = buildNarrationSegments(
-    timeline,
-    durationsById
-  );
-  await writeFile(paths.subtitles, buildSrt(narrationSegments), 'utf8');
+  await writeFile(paths.subtitles, buildSrt(subtitleCues), 'utf8');
   await writeFile(
     path.join(paths.narrationDirectory, 'metadata.json'),
     `${JSON.stringify(speech, null, 2)}\n`,
     'utf8'
   );
-  const audioInputs = narrationSegments.map((segment) => ({
-    file: speech.find((item) => item.id === segment.id).file,
-    startMs: segment.startMs,
-  }));
+  const audioInputs = chapters.map((chapter) => {
+    const chapterSpeech = speechById.get(chapter.id);
+    return {
+      file: chapterSpeech.file,
+      startMs: chapter.startMs + 500,
+    };
+  });
   await run(
     'ffmpeg',
     buildNarrationMixArgs({

@@ -47,6 +47,21 @@ function formatMoney(value) {
     : `¥${moneyFormatter.format(numeric)}`;
 }
 
+export function buildSavingsProjection(
+  dailyYuan,
+  { monthlyTradingDays = 22, annualTradingDays = 264 } = {}
+) {
+  const daily = Number(dailyYuan);
+  if (!Number.isFinite(daily)) return null;
+  return {
+    dailyYuan: daily,
+    monthlyYuan: daily * monthlyTradingDays,
+    annualYuan: daily * annualTradingDays,
+    monthlyTradingDays,
+    annualTradingDays,
+  };
+}
+
 function formatDateTime(value) {
   if (!value) return '未获取';
   const date = new Date(value);
@@ -109,6 +124,7 @@ function stageNavigation(payload, activeStage) {
 function savingsHero(payload) {
   const verified = payload.status === 'verified';
   const value = verified ? payload.savings?.realizedNetYuan : payload.savings?.estimatedNetYuan;
+  const projection = payload.savings?.projection || null;
   return `
     <section class="savings-hero" aria-labelledby="savingsTitle">
       <div>
@@ -117,6 +133,26 @@ function savingsHero(payload) {
           ${escapeHtml(formatMoney(value))}
         </div>
         <p>${escapeHtml(payload.savings?.formula || '基准成本 − 实际结算成本 − 手续费 − 偏差成本 − 系统运行成本')}</p>
+        ${projection ? `
+          <div class="savings-projection-grid" aria-label="成本优化额测算">
+            <div class="savings-projection-item is-primary">
+              <span>单日净优化额</span>
+              <strong>${escapeHtml(formatMoney(projection.dailyYuan))}</strong>
+              <small>演示回放已核验</small>
+            </div>
+            <div class="savings-projection-item">
+              <span>月度节约测算</span>
+              <strong>${escapeHtml(formatMoney(projection.monthlyYuan))}</strong>
+              <small>按 ${escapeHtml(projection.monthlyTradingDays)} 个交易日</small>
+            </div>
+            <div class="savings-projection-item">
+              <span>年度节约潜力</span>
+              <strong>${escapeHtml(formatMoney(projection.annualYuan))}</strong>
+              <small>按 ${escapeHtml(projection.annualTradingDays)} 个交易日</small>
+            </div>
+          </div>
+          <p class="savings-scope-note">按当前演示交易规模等比例测算，非已实现生产收益。</p>
+        ` : ''}
       </div>
       <div class="decision-state">
         <span class="status-badge is-${escapeHtml(payload.status)}">${escapeHtml(statusText(payload.status))}</span>
@@ -286,7 +322,7 @@ function declarationOptimizerPanel(payload) {
     <section class="declaration-optimizer-panel" aria-labelledby="declarationOptimizerTitle">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">冠军基线 · 挑战者验证</span>
+          <span class="eyebrow">现行基线 · 候选策略验证</span>
           <h2 id="declarationOptimizerTitle">申报优化策略</h2>
         </div>
         <span class="inline-state ${validated ? 'is-success' : 'is-warning'}">
@@ -836,6 +872,19 @@ export function buildDemoWorkbenchScenario(payload, scenario) {
     };
   }
   if (scenario === 'settled') {
+    const costs = {
+      baselineCostYuan: 1302400,
+      actualSettlementCostYuan: 1258520,
+      transactionFeesYuan: 8520,
+      deviationCostYuan: 10800,
+      systemOperatingCostYuan: 560,
+    };
+    const realizedNetYuan =
+      costs.baselineCostYuan -
+      costs.actualSettlementCostYuan -
+      costs.transactionFeesYuan -
+      costs.deviationCostYuan -
+      costs.systemOperatingCostYuan;
     return {
       ...base,
       demoMode: true,
@@ -852,16 +901,11 @@ export function buildDemoWorkbenchScenario(payload, scenario) {
       stages: (base.stages || []).map((item) => ({ ...item, status: 'complete' })),
       savings: {
         ...base.savings,
-        estimatedNetYuan: 24000,
-        realizedNetYuan: 24000,
+        estimatedNetYuan: realizedNetYuan,
+        realizedNetYuan,
         formulaComplete: true,
-        costs: {
-          baselineCostYuan: 1302400,
-          actualSettlementCostYuan: 1268520,
-          transactionFeesYuan: 8520,
-          deviationCostYuan: 10800,
-          systemOperatingCostYuan: 560,
-        },
+        costs,
+        projection: buildSavingsProjection(realizedNetYuan),
       },
       primaryAction: {
         id: 'review_evidence',
@@ -1323,19 +1367,25 @@ function evolutionLoop(loop = []) {
 
 function versionCard(version, tone = 'neutral') {
   if (!version) {
-    return `<article class="evolution-version is-empty"><p>当前无挑战者</p></article>`;
+    return `<article class="evolution-version is-empty"><p>当前无候选优化策略</p></article>`;
   }
   return `
     <article class="evolution-version is-${escapeHtml(tone)}" data-version-id="${escapeHtml(version.id)}">
       <header>
         <span class="version-role">${escapeHtml(
           version.role === 'champion'
-            ? 'Champion'
+            ? '现行策略'
             : version.role === 'challenger'
-              ? 'Challenger'
+              ? '候选优化策略'
               : '历史'
         )}</span>
-        <span class="version-status is-${escapeHtml(version.status)}">${escapeHtml(version.status)}</span>
+        <span class="version-status is-${escapeHtml(version.status)}">${escapeHtml(
+          {
+            live: '已审批启用',
+            shadow: '实时并行验证',
+            retired: '历史版本',
+          }[version.status] || version.status
+        )}</span>
       </header>
       <h3>${escapeHtml(version.label)}</h3>
       <p>${escapeHtml(version.reason || '')}</p>
@@ -1461,7 +1511,7 @@ export function renderStrategyEvolutionDashboard(payload) {
               )
               .join('')}
           </div>
-          <p class="ops-shadow-lift">影子上线后预计额外改善量级：约 ${escapeHtml(
+          <p class="ops-shadow-lift">候选策略审批启用后预计额外改善量级：约 ${escapeHtml(
             String(centers.operations.estimatedShadowLiftYuan ?? '—')
           )} 元（口径示意，不等于已实现收益）</p>
         </section>
@@ -1475,7 +1525,7 @@ export function renderStrategyEvolutionDashboard(payload) {
           </div>
           <div class="governance-policy">
             <span>禁止自动上线</span>
-            <span>必须影子通过</span>
+            <span>必须通过实时并行验证</span>
             <span>必须人工审批</span>
             <span>禁止自动申报</span>
           </div>
@@ -1527,7 +1577,7 @@ export function renderStrategyEvolutionDashboard(payload) {
           </div>
         </section>
       </div>
-      <p class="evolution-footnote">策略进化只改变候选/现役版本与审计状态；未经人工复核，系统不会自动提交任何申报或交易。</p>
+      <p class="evolution-footnote">候选优化策略使用同一交易日数据实时并行计算，只用于指标对比，不参与真实申报；未经人工复核与审批，系统不会自动启用策略，也不会自动提交任何申报或交易。</p>
     </section>
   `;
 }

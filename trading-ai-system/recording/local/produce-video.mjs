@@ -11,6 +11,8 @@ import process from 'node:process';
 
 import {
   buildOutputPaths,
+  buildCameraTimeline,
+  buildProductionStages,
   buildTimelineSkeleton,
   validateProductionConfig,
 } from './lib/video-production.mjs';
@@ -18,38 +20,16 @@ import { recordBrowserVideo } from './record-browser-video.mjs';
 import { renderNarration } from './render-narration.mjs';
 import { probeMedia, renderFinalVideo } from './render-final.mjs';
 
-// 本地成片旁白以参赛成品叙事为准；缺省回退 demo-plan.json
-const LOCAL_NARRATION = {
-  opening:
-    '系统把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。',
-  'core-metrics':
-    '首屏看偏差改善、日胜率和可信度，指标来自真实回测，不是写死演示数字。',
-  'open-evolution':
-    '进入策略进化中枢。发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。',
-  'champion-challenger':
-    '对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。',
-  'experiment-lab':
-    '实验中心完成漂移诊断、参数搜索和滚动回测，候选策略进入影子运行。',
-  'ops-and-governance':
-    '运营盯漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线申报。',
-  'approve-challenger':
-    '人工审批挑战者上线，只切换策略版本，不会自动提交申报。',
-  'return-declaration':
-    '回到申报优化主视图。九十六点曲线和人工复核仍在，与进化中枢共用证据链。',
-  curve:
-    '逐点比较历史申报与人工智能建议，标出关键调整窗口。',
-  'human-loop':
-    '人工智能只生成建议，进入申报前必须人工复核，不会自动提交。',
-  'audit-mode':
-    '审计模式复核模型、执行、结算是否同一主体、同一交易日。',
-};
-
 function parseArgs(argv) {
-  const result = { stage: 'all', port: 5197, smoke: false };
+  const result = { stage: 'all', port: 5197, smoke: false, disableCamera: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--smoke') {
       result.smoke = true;
+      continue;
+    }
+    if (argument === '--disable-camera') {
+      result.disableCamera = true;
       continue;
     }
     if (argument === '--stage' || argument === '--port') {
@@ -58,6 +38,7 @@ function parseArgs(argv) {
     }
   }
   result.port = Number(result.port);
+  if (process.env.LOCAL_DEMO_DISABLE_CAMERA === '1') result.disableCamera = true;
   return result;
 }
 
@@ -127,6 +108,9 @@ async function stopServer(child) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const productionStages = buildProductionStages(args.stage, {
+    smoke: args.smoke,
+  });
   const projectRoot = path.resolve(
     path.dirname(new URL(import.meta.url).pathname),
     '..',
@@ -135,10 +119,6 @@ async function main() {
   const plan = JSON.parse(
     await readFile(path.join(projectRoot, 'recording', 'demo-plan.json'), 'utf8')
   );
-  plan.steps = plan.steps.map((step) => ({
-    ...step,
-    narration: LOCAL_NARRATION[step.id] || step.narration,
-  }));
   const baseUrl = `http://127.0.0.1:${args.port}${plan.url}`;
   validateProductionConfig({
     baseUrl,
@@ -163,14 +143,19 @@ async function main() {
     appendFile(paths.log, line, 'utf8').catch(() => {});
   };
   const skeleton = buildTimelineSkeleton(plan);
-  if (!args.smoke && skeleton.durationMs > 130_000) {
-    throw new Error(`计划时长异常：${skeleton.durationMs}ms`);
+  if (
+    !args.smoke &&
+    (skeleton.durationMs < 195_000 || skeleton.durationMs > 235_000)
+  ) {
+    throw new Error(
+      `扣除录制控制开销后的计划时长必须在 3:15–3:55：${skeleton.durationMs}ms`
+    );
   }
 
   let server = null;
   try {
     server = await startServer(projectRoot, args.port, log);
-    if (['all', 'record'].includes(args.stage)) {
+    if (productionStages.includes('record')) {
       await unlink(paths.rawVideo).catch(() => {});
       await recordBrowserVideo({
         projectRoot,
@@ -182,6 +167,7 @@ async function main() {
         screenshotDirectory: paths.screenshots,
         log,
         smoke: args.smoke,
+        disableCamera: args.disableCamera,
       });
       const rawProbe = await probeMedia(paths.rawVideo, {
         cwd: projectRoot,
@@ -192,11 +178,12 @@ async function main() {
         Number.parseFloat(rawProbe.format.duration) * 1000
       );
       timeline.rawMedia = rawProbe;
+      timeline.camera = buildCameraTimeline(plan, timeline);
       await writeFile(paths.timeline, `${JSON.stringify(timeline, null, 2)}\n`);
       log(`浏览器录制完成：${(timeline.durationMs / 1000).toFixed(2)} 秒`);
     }
 
-    if (['all', 'tts'].includes(args.stage)) {
+    if (productionStages.includes('tts')) {
       const timeline = JSON.parse(await readFile(paths.timeline, 'utf8'));
       await renderNarration({
         projectRoot,
@@ -208,7 +195,7 @@ async function main() {
     }
 
     let finalProbe = null;
-    if (['all', 'final'].includes(args.stage)) {
+    if (productionStages.includes('final')) {
       finalProbe = await renderFinalVideo({ projectRoot, paths, log });
       await writeFile(
         path.join(paths.root, 'final-probe.json'),
