@@ -1,0 +1,156 @@
+- generic [ref=e3]:
+  - status [ref=e4]: 演示状态 · 策略待复核 · 仅用于界面测试，不用于交易
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: ϟ
+      - generic [ref=e8]:
+        - strong [ref=e9]: 电力交易 AI
+        - generic [ref=e10]: 智能申报决策
+    - navigation "AI 申报工作区" [ref=e11]:
+      - button "AI申报优化" [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]: ⌁
+      - button "申报总览" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: ▦
+      - button "曲线对比" [ref=e18] [cursor=pointer]:
+        - generic [ref=e19]: ⌁
+      - button "复盘回顾" [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: ◇
+    - generic [ref=e26]:
+      - generic [ref=e27]: AI 模型状态
+      - strong [ref=e28]: 等待验证
+    - button "证据与审计" [ref=e29] [cursor=pointer]:
+      - generic [ref=e30]: ◎
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]: 交易日
+        - textbox [ref=e36]: 2026-07-31
+      - generic [ref=e37]: 数据已就绪
+      - group "工作模式" [ref=e40]:
+        - button "决策" [ref=e41] [cursor=pointer]
+        - button "审计" [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - region [ref=e44]:
+        - generic [ref=e45]:
+          - text: POWER DECLARATION INTELLIGENCE
+          - heading "AI申报优化" [level=1] [ref=e46]
+          - paragraph [ref=e47]: 基于历史申报与实际负荷偏差，生成可解释建议并交由人工复核
+        - list "申报优化流程" [ref=e48]:
+          - listitem [ref=e49]:
+            - generic [ref=e50]: "1"
+            - generic [ref=e51]:
+              - strong [ref=e52]: AI 生成建议
+              - generic [ref=e53]: 待生成
+          - listitem [ref=e54]:
+            - generic [ref=e55]: "2"
+            - generic [ref=e56]:
+              - strong [ref=e57]: 人工复核
+              - generic [ref=e58]: 待处理
+          - listitem [ref=e59]:
+            - generic [ref=e60]: "3"
+            - generic [ref=e61]:
+              - strong [ref=e62]: 提交申报
+              - generic [ref=e63]: 待提交
+      - region "申报优化核心指标" [ref=e64]:
+        - article [ref=e65]:
+          - generic [ref=e66]: ↗
+          - generic [ref=e67]:
+            - generic [ref=e68]: 偏差改善
+            - strong [ref=e69]: 待验证
+            - generic [ref=e70]: 相对默认申报基线
+        - article [ref=e71]:
+          - generic [ref=e72]: ✓
+          - generic [ref=e73]:
+            - generic [ref=e74]: 交易日胜率
+            - strong [ref=e75]: 待验证
+            - generic [ref=e76]: 独立留出集验证
+        - article [ref=e77]:
+          - generic [ref=e78]: ∿
+          - generic [ref=e79]:
+            - generic [ref=e80]: 优化规模
+            - strong [ref=e81]: 待验证
+            - generic [ref=e82]: 覆盖申报点 / 交易日
+        - article [ref=e83]:
+          - generic [ref=e84]: ★
+          - generic [ref=e85]:
+            - generic [ref=e86]: 决策可信度
+            - strong [ref=e87]: 待校验
+            - generic [ref=e88]: 真实数据综合评分
+      - generic [ref=e89]:
+        - region [ref=e90]:
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - text: REAL 96-POINT EVIDENCE
+              - heading "96 点申报曲线对比" [level=2] [ref=e93]
+            - generic "曲线图例" [ref=e94]:
+              - generic [ref=e95]: 历史申报
+              - generic [ref=e96]: AI 建议申报
+          - status [ref=e97]:
+            - generic [ref=e98]: ∿
+            - strong [ref=e99]: 96 点曲线等待真实数据
+            - paragraph [ref=e100]: 补齐目标日默认申报与最近实际负荷后，系统将在这里生成可复核建议。
+          - generic [ref=e101]:
+            - generic [ref=e102]: ✦
+            - paragraph [ref=e103]: 当前没有可展示的调整窗口，系统不会虚构曲线或收益。
+            - button "查看偏差分析" [ref=e104] [cursor=pointer]: 查看偏差分析 →
+        - complementary [ref=e105]:
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - text: DECISION BRIEF
+              - heading "AI 优化建议" [level=2] [ref=e108]
+            - generic [ref=e109]: 待数据
+          - generic [ref=e110]:
+            - generic [ref=e111]: 预计偏差改善
+            - strong [ref=e112]: 待验证
+            - generic [ref=e113]: 依据真实历史回测结果
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: 关键调整时段
+              - generic [ref=e117]: 影响 TOP —
+            - paragraph [ref=e118]: 等待 96 点建议生成后展示调整窗口。
+          - generic [ref=e119]:
+            - generic [ref=e120]: 当前运行状态
+            - strong [ref=e121]: 当前回退默认申报
+            - generic [ref=e122]: 优化失败时保留默认申报
+          - generic [ref=e123]:
+            - button "查看详情" [ref=e124] [cursor=pointer]
+            - button "生成策略并提交复核" [ref=e125] [cursor=pointer]
+          - paragraph [ref=e126]: 偏差改善不等于已实现人民币节省；未经人工复核不会提交申报。
+      - region [ref=e127]:
+        - generic [ref=e128]:
+          - text: HUMAN-IN-THE-LOOP
+          - heading "优化流程" [level=2] [ref=e129]
+        - list [ref=e130]:
+          - listitem [ref=e131]:
+            - generic [ref=e132]: ▣
+            - generic [ref=e133]:
+              - strong [ref=e134]: 数据准备
+              - generic [ref=e135]: 已完成
+          - generic [ref=e136]: →
+          - listitem [ref=e137]:
+            - generic [ref=e138]: ⌘
+            - generic [ref=e139]:
+              - strong [ref=e140]: AI 建模预测
+              - generic [ref=e141]: 待验证
+          - generic [ref=e142]: →
+          - listitem [ref=e143]:
+            - generic [ref=e144]: ◷
+            - generic [ref=e145]:
+              - strong [ref=e146]: 生成优化建议
+              - generic [ref=e147]: 待生成
+          - generic [ref=e148]: →
+          - listitem [ref=e149]:
+            - generic [ref=e150]: ♙
+            - generic [ref=e151]:
+              - strong [ref=e152]: 人工复核
+              - generic [ref=e153]: 待处理
+          - generic [ref=e154]: →
+          - listitem [ref=e155]:
+            - generic [ref=e156]: ➤
+            - generic [ref=e157]:
+              - strong [ref=e158]: 提交申报
+              - generic [ref=e159]: 待提交
+      - group [ref=e160]:
+        - generic "展开历史策略验证与执行门禁" [ref=e161] [cursor=pointer]
+  - complementary [ref=e162]:
+    - button "打开成本优化证据链" [ref=e163] [cursor=pointer]

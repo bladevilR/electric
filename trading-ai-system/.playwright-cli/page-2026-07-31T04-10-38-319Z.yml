@@ -1,0 +1,78 @@
+- main [ref=f1e2]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - generic [ref=f1e5]: 电力交易策略助手
+      - heading "一分钟上手" [level=1] [ref=f1e6]
+      - paragraph [ref=f1e7]: 这是一个本地运行的电力交易辅助工具。它帮你把市场价格、历史结算、价格预测、回测结果和省钱策略放在一个页面里看清楚；需要实时数据时，插上 UKey 后可以一键全量慢采，采集会在后台自动完成。
+      - generic [ref=f1e8]:
+        - link "一键启动系统" [ref=f1e9] [cursor=pointer]:
+          - /url: ./启动系统.bat
+        - link "打开工作台" [ref=f1e10] [cursor=pointer]:
+          - /url: http://127.0.0.1:5177/
+      - paragraph [ref=f1e11]: 如果浏览器拦截 bat 文件，请回到这个文件夹，双击 启动系统.bat。启动后保持命令窗口打开，系统会在本机运行。
+    - generic [ref=f1e12]:
+      - img "电力交易策略助手图标" [ref=f1e13]
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]: 本地运行
+        - generic [ref=f1e16]: 人工复核
+        - generic [ref=f1e17]: 不会自动提交
+  - generic [ref=f1e18]:
+    - heading "三步就能开始" [level=2] [ref=f1e19]
+    - generic [ref=f1e20]:
+      - article [ref=f1e21]:
+        - generic [ref=f1e22]: "1"
+        - strong [ref=f1e23]: 双击启动
+        - paragraph [ref=f1e24]: 打开 启动系统.bat。系统会启动本地服务，并自动打开 http://127.0.0.1:5177/。
+      - article [ref=f1e25]:
+        - generic [ref=f1e26]: "2"
+        - strong [ref=f1e27]: 先看数据
+        - paragraph [ref=f1e28]: 进入“数据进度”“结算参考”“价格预测”“预测验证”，先确认当前数据够不够、哪里还缺。
+      - article [ref=f1e29]:
+        - generic [ref=f1e30]: "3"
+        - strong [ref=f1e31]: 再看策略
+        - paragraph [ref=f1e32]: 进入“策略建议”，查看低价窗口、高价风险、三档策略和不可执行原因。所有建议都需要人工复核。
+  - generic [ref=f1e33]:
+    - heading "启动环境要求" [level=2] [ref=f1e34]
+    - generic [ref=f1e35]:
+      - article [ref=f1e36]:
+        - strong [ref=f1e37]: 普通查看和离线演示
+        - paragraph [ref=f1e38]: 需要 Windows 10/11、PowerShell、浏览器，以及可用的 5177 端口。本开箱包自带 Node 运行时和样本数据，先解压整个文件夹后，双击 启动系统.bat 即可。
+      - article [ref=f1e39]:
+        - strong [ref=f1e40]: 实时采集和全量慢采
+        - paragraph [ref=f1e41]: 需要 UKey、CA 驱动、JSPEC 账号、可访问交易平台的网络，以及 Chrome 或 Edge。点击全量慢采后，保持 UKey、数据窗口和本地服务打开。
+    - paragraph [ref=f1e42]: 如果浏览器提示 127.0.0.1 无法访问，通常是本地服务还没启动成功。请回到解压后的文件夹重新双击 启动系统.bat，不要在压缩包里直接运行。
+  - generic [ref=f1e44]:
+    - generic [ref=f1e45]:
+      - strong [ref=f1e46]: 一键全量慢采
+      - paragraph [ref=f1e47]: 插上 UKey 并登录 JSPEC 后，点击“一键全量慢采”。系统会按完整清单逐页读取，每页间隔不低于 20 秒。你可以去做别的，只要保持 UKey、数据窗口和本地服务打开即可。
+    - link "去工作台操作" [ref=f1e48] [cursor=pointer]:
+      - /url: http://127.0.0.1:5177/
+  - generic [ref=f1e49]:
+    - heading "全量功能一眼看懂" [level=2] [ref=f1e50]
+    - generic [ref=f1e51]:
+      - article [ref=f1e52]:
+        - strong [ref=f1e53]: 数据资产
+        - paragraph [ref=f1e54]: 告诉你本地已经有什么：实时均价、日前出清、申报曲线、系统负荷、合同、交易序列和结算参考。
+      - article [ref=f1e55]:
+        - strong [ref=f1e56]: 结算参考
+        - paragraph [ref=f1e57]: 把本地现货核对单、交易计算表、月度表整理成可复盘的证据，方便追溯历史实际负荷和结算金额。
+      - article [ref=f1e58]:
+        - strong [ref=f1e59]: 价格预测
+        - paragraph [ref=f1e60]: 在数据足够时给出基线预测；数据不够时会明确告诉你历史样本不足，不会假装模型已经很准。
+      - article [ref=f1e61]:
+        - strong [ref=f1e62]: 预测验证
+        - paragraph [ref=f1e63]: 用历史日期做 walk-forward 回测，只用过去预测未来，避免拿未来数据作弊。
+      - article [ref=f1e64]:
+        - strong [ref=f1e65]: 省钱策略
+        - paragraph [ref=f1e66]: 识别低价窗口和高价暴露，给出保守、均衡、激进三档建议；没有实际负荷、结算和约束时不会给可执行电量。
+      - article [ref=f1e67]:
+        - strong [ref=f1e68]: 报告和草稿
+        - paragraph [ref=f1e69]: 可以生成建议报告和交易草稿复核材料。它只帮你整理和提醒，最终操作仍由人在 JSPEC 里确认。
+  - generic [ref=f1e70]:
+    - heading "重要边界" [level=2] [ref=f1e71]
+    - generic [ref=f1e72]:
+      - generic [ref=f1e73]: UKey 和登录态只留在你的电脑上。
+      - generic [ref=f1e74]: 系统只读取页面上已经显示的业务表格。
+      - generic [ref=f1e75]: 系统不会自动提交申报或交易。
+      - generic [ref=f1e76]: 遇到频率风险、跳登录或连续空数据，应先停止采集。
+  - generic [ref=f1e77]: present by Si hang

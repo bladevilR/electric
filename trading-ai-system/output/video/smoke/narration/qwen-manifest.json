@@ -1,0 +1,30 @@
+{
+  "modelDirectory": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+  "speaker": "Serena",
+  "language": "Chinese",
+  "seed": 20260731,
+  "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
+  "segments": [
+    {
+      "id": "chapter-cost",
+      "text": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/smoke/narration/chapter-cost.wav",
+      "sourceSegmentIds": [
+        "intro",
+        "opening"
+      ],
+      "startMs": 0,
+      "endMs": 5125
+    },
+    {
+      "id": "chapter-outro",
+      "text": "从预测真实需求，到优化每一个申报时点，再到复盘每一笔偏差成本，AI让每一笔节约都有依据，让每一次决策都可复核。按当前演示规模测算，年度节约潜力约六百三十三点六万元。",
+      "output": "/Users/r/Documents/electric/trading-ai-system/output/video/smoke/narration/chapter-outro.wav",
+      "sourceSegmentIds": [
+        "outro"
+      ],
+      "startMs": 5126,
+      "endMs": 7413
+    }
+  ]
+}

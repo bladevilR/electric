@@ -1,133 +1,791 @@
 {
   "version": 1,
-  "title": "电力交易 AI · 策略自进化参赛演示",
-  "width": 1920,
-  "height": 1080,
+  "title": "电力交易 AI · 智能交易副驾驶参赛演示",
+  "width": 3840,
+  "height": 2160,
   "fps": 30,
-  "durationMs": 124480,
+  "durationMs": 228680,
   "segments": [
     {
       "id": "intro",
-      "title": "电力交易 AI · 策略自进化",
-      "narration": "电力交易 AI：发现衰减，实验评估，影子验证，人工审批上线，异常一键回滚。",
-      "durationMs": 10000,
-      "startMs": 0,
-      "endMs": 11081,
-      "status": "completed"
+      "title": "电力交易 AI · 让每一次申报更接近真实需求",
+      "narration": "电力交易中，申报多一点、少一点，最终都会反映在结算成本里。面对每天九十六个交易时点，AI的价值，是帮助企业减少偏差，降低交易成本。",
+      "narrationChapter": "chapter-value",
+      "durationMs": 14230,
+      "startMs": 1,
+      "endMs": 16327,
+      "status": "completed",
+      "camera": null,
+      "focusRects": []
     },
     {
       "id": "opening",
-      "title": "策略自进化中枢",
-      "narration": "系统不只给一条建议，而是把衰减发现、实验评估、影子验证、人工审批和回滚，串成策略进化中枢。",
-      "durationMs": 6200,
-      "startMs": 11081,
-      "endMs": 18939,
-      "status": "completed"
+      "title": "AI 电力交易副驾驶",
+      "narration": "这套系统不是只做一次预测，而是把数据、预测、申报、复核和结算连成一条降低交易成本的闭环。交易员看到的不只是建议，还有每一项调整可能减少的成本。",
+      "narrationChapter": "chapter-value",
+      "durationMs": 15650,
+      "startMs": 16328,
+      "endMs": 34490,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.08,
+            "scale": 1.32,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#declarationDashboardTitle"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.08
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 544,
+          "y": 220,
+          "width": 1735.546875,
+          "height": 112,
+          "scale": 1.32,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#declarationDashboardTitle"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.08
+        }
+      ]
     },
     {
-      "id": "core-metrics",
-      "title": "现役策略表现",
-      "narration": "首屏看现役策略的偏差改善、日胜率和可信度，指标来自真实回测，不是写死的演示数字。",
-      "durationMs": 5600,
-      "startMs": 18939,
-      "endMs": 27051,
-      "status": "completed"
+      "id": "savings-impact",
+      "title": "成本优化结果",
+      "narration": "在当前演示交易规模下，单日净成本优化额为2.4万元；按二十二个交易日测算，月度约52.8万元；按二百六十四个交易日测算，年度节约潜力约633.6万元。所有金额都可以继续展开核算。",
+      "narrationChapter": "chapter-value",
+      "durationMs": 19910,
+      "startMs": 34504,
+      "endMs": 56695,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.05,
+            "scale": 1.45,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".savings-projection-grid"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.12
+          },
+          {
+            "at": 0.38,
+            "scale": 1.9,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".savings-projection-item:nth-child(3)"
+              }
+            ],
+            "durationMs": 760,
+            "motionBlur": 0.18
+          },
+          {
+            "at": 0.78,
+            "scale": 1.15,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".savings-projection-grid"
+              }
+            ],
+            "durationMs": 1100,
+            "motionBlur": 0.08
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 530,
+          "y": 973.390625,
+          "width": 2035.796875,
+          "height": 214,
+          "scale": 1.45,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".savings-projection-grid"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.05
+        },
+        {
+          "x": 1900.53125,
+          "y": 973.390625,
+          "width": 665.265625,
+          "height": 214,
+          "scale": 1.85,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".savings-projection-item:nth-child(3)"
+            }
+          ],
+          "durationMs": 760,
+          "at": 0.38
+        },
+        {
+          "x": 530,
+          "y": 973.390625,
+          "width": 2035.796875,
+          "height": 214,
+          "scale": 1.15,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".savings-projection-grid"
+            }
+          ],
+          "durationMs": 1100,
+          "at": 0.78
+        }
+      ]
     },
     {
-      "id": "open-evolution",
-      "title": "进入策略进化",
-      "narration": "进入策略进化中枢。系统发现近窗衰减后自动拉起挑战者，而不是静默沿用旧策略。",
-      "durationMs": 6500,
-      "startMs": 27052,
-      "endMs": 37622,
-      "status": "completed"
+      "id": "data-quality",
+      "title": "数据接入与质量门禁",
+      "narration": "节约成本的第一步，不是立即给出交易量，而是先确认数据是否可信。系统统一检查市场价格、负荷预测、持仓、交易限额和数据新鲜度；任何关键数据缺失或过期，都会明确阻断后续决策。",
+      "narrationChapter": "chapter-data",
+      "durationMs": 16865,
+      "startMs": 56696,
+      "endMs": 74218,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.12,
+            "scale": 1.38,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".dashboard-context-alert"
+              }
+            ],
+            "durationMs": 1150,
+            "motionBlur": 0.08
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 488,
+          "y": 729,
+          "width": 3280,
+          "height": 96,
+          "scale": 1.38,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".dashboard-context-alert"
+            }
+          ],
+          "durationMs": 1150,
+          "at": 0.12
+        }
+      ]
     },
     {
-      "id": "champion-challenger",
-      "title": "冠军与挑战者",
-      "narration": "进化中心对照冠军与挑战者：版本、参数、改善差额和近窗漂移一目了然。",
-      "durationMs": 6200,
-      "startMs": 37622,
-      "endMs": 46299,
-      "status": "completed"
+      "id": "validation-evidence",
+      "title": "执行前数据校验",
+      "narration": "校验结果不是一个模糊的绿灯。每一类数据都显示来源、数量、更新时间和是否满足执行条件，让交易员知道系统为什么允许继续，或者为什么必须暂停。",
+      "narrationChapter": "chapter-data",
+      "durationMs": 13434,
+      "startMs": 74221,
+      "endMs": 89801,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.1,
+            "scale": 1.65,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#validationTitle"
+              }
+            ],
+            "durationMs": 820,
+            "motionBlur": 0.14
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 530,
+          "y": 1168.171875,
+          "width": 407.609375,
+          "height": 56,
+          "scale": 1.65,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#validationTitle"
+            }
+          ],
+          "durationMs": 820,
+          "at": 0.1
+        }
+      ]
     },
     {
-      "id": "experiment-lab",
-      "title": "智能实验",
-      "narration": "实验中心完成漂移诊断、参数搜索和滚动回测，候选策略带着证据进入影子运行。",
-      "durationMs": 6000,
-      "startMs": 46299,
-      "endMs": 54712,
-      "status": "completed"
+      "id": "prediction-proof",
+      "title": "预测效果验证",
+      "narration": "数据通过后，AI结合历史负荷、价格和时段特征形成预测。系统同时保留留出集误差、交易日胜率和基线对比，只有真正优于基线的模型，才可以进入申报优化。",
+      "narrationChapter": "chapter-data",
+      "durationMs": 14291,
+      "startMs": 89801,
+      "endMs": 104347,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.12,
+            "scale": 1.7,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#strategyValidationTitle"
+              }
+            ],
+            "durationMs": 800,
+            "motionBlur": 0.16
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 568,
+          "y": 1051.78125,
+          "width": 244.5625,
+          "height": 56,
+          "scale": 1.7,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#strategyValidationTitle"
+            }
+          ],
+          "durationMs": 800,
+          "at": 0.12
+        }
+      ]
     },
     {
-      "id": "ops-and-governance",
-      "title": "运营与治理",
-      "narration": "运营盯住漂移与回撤；治理要求影子通过、人工审批和一键回滚，禁止自动上线与自动申报。",
-      "durationMs": 6800,
-      "startMs": 54713,
-      "endMs": 63953,
-      "status": "completed"
-    },
-    {
-      "id": "approve-challenger",
-      "title": "人工审批上线",
-      "narration": "人工审批挑战者上线，只切换策略版本，不会自动向交易平台提交申报。",
-      "durationMs": 5500,
-      "startMs": 63953,
-      "endMs": 73440,
-      "status": "completed"
-    },
-    {
-      "id": "return-declaration",
-      "title": "回到申报优化",
-      "narration": "回到申报优化主视图。九十六点曲线和人工复核仍在，进化中枢与日常决策共用证据链。",
-      "durationMs": 5500,
-      "startMs": 73440,
-      "endMs": 82924,
-      "status": "completed"
+      "id": "return-curve",
+      "title": "回到 AI 申报优化",
+      "narration": "预测本身不会自动省钱。系统需要把负荷和价格判断继续转化为每个交易时点的申报动作，并在市场约束和风险边界内寻找更低成本的方案。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 11777,
+      "startMs": 104347,
+      "endMs": 116303,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.1,
+            "scale": 1.32,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#declarationCurveTitle"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.08
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 538,
+          "y": 823,
+          "width": 313.40625,
+          "height": 50,
+          "scale": 1.32,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#declarationCurveTitle"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.1
+        }
+      ]
     },
     {
       "id": "curve",
       "title": "96 点申报曲线",
-      "narration": "逐点比较历史申报与人工智能建议，标出关键调整窗口，让上调下调都有时段依据。",
-      "durationMs": 5600,
-      "startMs": 82925,
-      "endMs": 91039,
-      "status": "completed"
+      "narration": "这里逐点比较历史申报和AI建议。系统识别成本影响最大的窗口，告诉交易员哪些时段应该上调、哪些时段应该下调，同时保留完整的九十六点曲线，而不是只给一句笼统结论。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 15322,
+      "startMs": 116305,
+      "endMs": 133038,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.1,
+            "scale": 1.45,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".declaration-curve-panel"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.1
+          },
+          {
+            "at": 0.55,
+            "scale": 1.72,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#declarationCurveTitle"
+              }
+            ],
+            "durationMs": 780,
+            "motionBlur": 0.16
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 488,
+          "y": 580,
+          "width": 2528,
+          "height": 1000,
+          "scale": 1.45,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".declaration-curve-panel"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.1
+        },
+        {
+          "x": 538,
+          "y": 823,
+          "width": 313.40625,
+          "height": 50,
+          "scale": 1.72,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#declarationCurveTitle"
+            }
+          ],
+          "durationMs": 780,
+          "at": 0.55
+        }
+      ]
     },
     {
-      "id": "human-loop",
-      "title": "人工在环",
-      "narration": "人工智能只生成并解释建议；进入申报前必须人工复核，系统不会自动提交交易。",
-      "durationMs": 5200,
-      "startMs": 91039,
-      "endMs": 97851,
-      "status": "completed"
+      "id": "recommendation",
+      "title": "AI 优化建议",
+      "narration": "右侧建议把预计偏差改善、关键调整时段和运行状态集中呈现。交易员可以快速看出方案为什么更省钱、收益来自哪里，以及当前是否具备进入人工复核的条件。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 13654,
+      "startMs": 133040,
+      "endMs": 149233,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.15,
+            "scale": 1.72,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#recommendationTitle"
+              }
+            ],
+            "durationMs": 820,
+            "motionBlur": 0.16
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 3086,
+          "y": 815,
+          "width": 191.953125,
+          "height": 50,
+          "scale": 1.72,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#recommendationTitle"
+            }
+          ],
+          "durationMs": 820,
+          "at": 0.15
+        }
+      ]
+    },
+    {
+      "id": "open-evidence",
+      "title": "打开成本优化证据链",
+      "narration": "为了避免把预测价差直接当成收益，系统为建议建立成本证据链。交易员可以核对输入来源、计算公式、数据新鲜度和最近操作记录，确认数字与当前交易日采用同一口径。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 14696,
+      "startMs": 149262,
+      "endMs": 166064,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.08,
+            "scale": 1.48,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#evidenceTitle"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.12
+          },
+          {
+            "at": 0.52,
+            "scale": 1.75,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".evidence-drawer"
+              }
+            ],
+            "durationMs": 800,
+            "motionBlur": 0.16
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 3050,
+          "y": 100,
+          "width": 340.375,
+          "height": 67,
+          "scale": 1.48,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#evidenceTitle"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.08
+        },
+        {
+          "x": 3000,
+          "y": 0,
+          "width": 840,
+          "height": 4320,
+          "scale": 1.75,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".evidence-drawer"
+            }
+          ],
+          "durationMs": 800,
+          "at": 0.52
+        }
+      ]
+    },
+    {
+      "id": "close-evidence",
+      "title": "完成证据核对",
+      "narration": "证据核对完成后，返回主流程。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 5350,
+      "startMs": 166065,
+      "endMs": 171675,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.15,
+            "scale": 1.15,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#optimizationFlowTitle"
+              }
+            ],
+            "durationMs": 1100,
+            "motionBlur": 0.06
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 538,
+          "y": 1044,
+          "width": 320,
+          "height": 50,
+          "scale": 1.15,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#optimizationFlowTitle"
+            }
+          ],
+          "durationMs": 1100,
+          "at": 0.15
+        }
+      ]
+    },
+    {
+      "id": "human-review",
+      "title": "人工复核保留最终决定权",
+      "narration": "AI负责汇总、预测、计算和解释，交易员保留最终决定权。进入真实申报前，人员必须复核关键时段、风险边界和成本依据；未经复核，系统不会自动提交交易。",
+      "narrationChapter": "chapter-decision",
+      "durationMs": 13861,
+      "startMs": 171676,
+      "endMs": 186112,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.12,
+            "scale": 1.65,
+            "focus": [
+              {
+                "type": "css",
+                "value": "#optimizationFlowTitle"
+              }
+            ],
+            "durationMs": 820,
+            "motionBlur": 0.14
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 538,
+          "y": 1055,
+          "width": 320,
+          "height": 50,
+          "scale": 1.65,
+          "focus": [
+            {
+              "type": "css",
+              "value": "#optimizationFlowTitle"
+            }
+          ],
+          "durationMs": 820,
+          "at": 0.12
+        }
+      ]
     },
     {
       "id": "audit-mode",
-      "title": "审计复核",
-      "narration": "审计模式复核模型、执行、结算与成本是否同一主体、同一交易日。",
-      "durationMs": 5600,
-      "startMs": 97851,
-      "endMs": 107486,
-      "status": "completed"
+      "title": "结算统计与审计回流",
+      "narration": "交易完成后，执行与结算结果回流系统。单日2.4万元净成本优化额，来自基准成本减去实际结算、手续费、偏差成本和系统运行成本；五项明细完整相减，结果正好一致。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 16340,
+      "startMs": 186113,
+      "endMs": 202991,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.1,
+            "scale": 1.75,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".review-rule"
+              }
+            ],
+            "durationMs": 820,
+            "motionBlur": 0.17
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 550,
+          "y": 1010.984375,
+          "width": 3156,
+          "height": 138,
+          "scale": 1.75,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".review-rule"
+            }
+          ],
+          "durationMs": 820,
+          "at": 0.1
+        }
+      ]
+    },
+    {
+      "id": "open-evolution",
+      "title": "AI 持续改进策略",
+      "narration": "结算结果进入下一轮模型评估，系统据此形成可追溯的候选优化策略。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 5891,
+      "startMs": 202992,
+      "endMs": 209044,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.1,
+            "scale": 1.45,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".evolution-version.is-champion"
+              }
+            ],
+            "durationMs": 1150,
+            "motionBlur": 0.1
+          }
+        ],
+        "exit": "connect"
+      },
+      "focusRects": [
+        {
+          "x": 526,
+          "y": 813.78125,
+          "width": 1590,
+          "height": 532.5,
+          "scale": 1.45,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".evolution-version.is-champion"
+            }
+          ],
+          "durationMs": 1150,
+          "at": 0.1
+        }
+      ]
+    },
+    {
+      "id": "evolution-proof",
+      "title": "候选优化策略的安全验证流程",
+      "narration": "候选策略先经历史回测和实时并行验证，只比较结果、不参与真实申报；指标领先后仍须人工审批，异常可回滚。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 10207,
+      "startMs": 209045,
+      "endMs": 219800,
+      "status": "completed",
+      "camera": {
+        "beats": [
+          {
+            "at": 0.05,
+            "scale": 1.68,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".evolution-version.is-challenger"
+              }
+            ],
+            "durationMs": 800,
+            "motionBlur": 0.15
+          },
+          {
+            "at": 0.52,
+            "scale": 1.48,
+            "focus": [
+              {
+                "type": "css",
+                "value": ".evolution-loop"
+              }
+            ],
+            "durationMs": 1200,
+            "motionBlur": 0.1
+          }
+        ],
+        "exit": "reset"
+      },
+      "focusRects": [
+        {
+          "x": 2140,
+          "y": 813.78125,
+          "width": 1590,
+          "height": 532.5,
+          "scale": 1.68,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".evolution-version.is-challenger"
+            }
+          ],
+          "durationMs": 800,
+          "at": 0.05
+        },
+        {
+          "x": 488,
+          "y": 922.78125,
+          "width": 3280,
+          "height": 144,
+          "scale": 1.48,
+          "focus": [
+            {
+              "type": "css",
+              "value": ".evolution-loop"
+            }
+          ],
+          "durationMs": 1200,
+          "at": 0.52
+        }
+      ]
     },
     {
       "id": "outro",
-      "title": "可进化、可解释、敢落地",
-      "narration": "从衰减预警到候选策略，从影子运行到人工上线，再到统计与回滚，系统会进化，也守住人工在环。未经复核，不会自动提交。",
-      "durationMs": 15000,
-      "startMs": 107486,
-      "endMs": 124019,
-      "status": "completed"
+      "title": "让每一次申报更省、更稳、更有依据",
+      "narration": "AI负责计算与解释，交易员负责最终决策。让每次申报都可执行、可复核、可追溯。",
+      "narrationChapter": "chapter-close",
+      "durationMs": 7482,
+      "startMs": 219801,
+      "endMs": 227805,
+      "status": "completed",
+      "camera": null,
+      "focusRects": []
     }
   ],
-  "pageUrl": "http://127.0.0.1:5203/?demo=reviewable",
+  "pageUrl": "http://127.0.0.1:5197/?demo=settled",
   "status": "completed",
-  "startedAt": "2026-07-31T13:41:41.953Z",
-  "completedAt": "2026-07-31T13:43:49.358Z",
+  "startedAt": "2026-08-01T04:45:04.232Z",
+  "completedAt": "2026-08-01T04:48:59.780Z",
   "rawMedia": {
     "streams": [
       {
@@ -139,10 +797,10 @@
         "codec_tag_string": "[0][0][0][0]",
         "codec_tag": "0x0000",
         "mime_codec_string": "vp8",
-        "width": 1920,
-        "height": 1080,
-        "coded_width": 1920,
-        "coded_height": 1080,
+        "width": 3840,
+        "height": 2160,
+        "coded_width": 3840,
+        "coded_height": 2160,
         "has_b_frames": 0,
         "sample_aspect_ratio": "1:1",
         "display_aspect_ratio": "16:9",
@@ -179,25 +837,435 @@
         "tags": {
           "language": "eng",
           "ENCODER": "Lavc61.3.100 libvpx",
-          "DURATION": "00:02:04.480000000"
+          "DURATION": "00:03:48.680000000"
         }
       }
     ],
     "format": {
-      "filename": "/Users/r/Documents/electric/trading-ai-system/output/video/raw/browser-recording.webm",
+      "filename": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/raw/browser-recording.webm",
       "nb_streams": 1,
       "nb_programs": 0,
       "nb_stream_groups": 0,
       "format_name": "matroska,webm",
       "format_long_name": "Matroska / WebM",
       "start_time": "0.000000",
-      "duration": "124.480000",
-      "size": "11848673",
-      "bit_rate": "761482",
+      "duration": "228.680000",
+      "size": "38278786",
+      "bit_rate": "1339121",
       "probe_score": 100,
       "tags": {
         "ENCODER": "Lavf61.1.100"
       }
     }
-  }
+  },
+  "camera": {
+    "width": 3840,
+    "height": 2160,
+    "fps": 30,
+    "beats": [
+      {
+        "id": "film-open-wide",
+        "segmentId": "intro",
+        "startMs": 0,
+        "durationMs": 1,
+        "scale": 1,
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 3840,
+          "height": 2160
+        }
+      },
+      {
+        "id": "film-open-push",
+        "segmentId": "intro",
+        "startMs": 9144,
+        "durationMs": 420,
+        "scale": 1.06,
+        "crop": {
+          "x": 108.67924528301887,
+          "y": 61.13207547169804,
+          "width": 3622.6415094339623,
+          "height": 2037.7358490566037
+        }
+      },
+      {
+        "id": "opening-camera-1",
+        "segmentId": "opening",
+        "startMs": 16328,
+        "durationMs": 1200,
+        "scale": 1.32,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationDashboardTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 2909.090909090909,
+          "height": 1636.3636363636363
+        }
+      },
+      {
+        "id": "savings-impact-camera-1",
+        "segmentId": "savings-impact",
+        "startMs": 34504,
+        "durationMs": 1200,
+        "scale": 1.45,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".savings-projection-grid"
+          }
+        ],
+        "crop": {
+          "x": 223.7605064655172,
+          "y": 335.5630387931034,
+          "width": 2648.2758620689656,
+          "height": 1489.6551724137933
+        }
+      },
+      {
+        "id": "savings-impact-camera-2",
+        "segmentId": "savings-impact",
+        "startMs": 42937,
+        "durationMs": 760,
+        "scale": 1.85,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".savings-projection-item:nth-child(3)"
+          }
+        ],
+        "crop": {
+          "x": 1195.3262246621623,
+          "y": 496.60684121621625,
+          "width": 2075.6756756756754,
+          "height": 1167.5675675675675
+        }
+      },
+      {
+        "id": "savings-impact-camera-3",
+        "segmentId": "savings-impact",
+        "startMs": 51813,
+        "durationMs": 1100,
+        "scale": 1.15,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".savings-projection-grid"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 141.26019021739125,
+          "width": 3339.130434782609,
+          "height": 1878.2608695652175
+        }
+      },
+      {
+        "id": "data-quality-camera-1",
+        "segmentId": "data-quality",
+        "startMs": 56696,
+        "durationMs": 1150,
+        "scale": 1.38,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".dashboard-context-alert"
+          }
+        ],
+        "crop": {
+          "x": 528.695652173913,
+          "y": 0,
+          "width": 2782.608695652174,
+          "height": 1565.217391304348
+        }
+      },
+      {
+        "id": "validation-evidence-camera-1",
+        "segmentId": "validation-evidence",
+        "startMs": 74221,
+        "durationMs": 820,
+        "scale": 1.65,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#validationTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 541.6264204545454,
+          "width": 2327.2727272727275,
+          "height": 1309.0909090909092
+        }
+      },
+      {
+        "id": "prediction-proof-camera-1",
+        "segmentId": "prediction-proof",
+        "startMs": 89801,
+        "durationMs": 800,
+        "scale": 1.7,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#strategyValidationTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 444.4871323529412,
+          "width": 2258.823529411765,
+          "height": 1270.5882352941176
+        }
+      },
+      {
+        "id": "return-curve-camera-1",
+        "segmentId": "return-curve",
+        "startMs": 104347,
+        "durationMs": 1200,
+        "scale": 1.32,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 29.81818181818187,
+          "width": 2909.090909090909,
+          "height": 1636.3636363636363
+        }
+      },
+      {
+        "id": "curve-camera-1",
+        "segmentId": "curve",
+        "startMs": 116305,
+        "durationMs": 1200,
+        "scale": 1.45,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".declaration-curve-panel"
+          }
+        ],
+        "crop": {
+          "x": 427.8620689655172,
+          "y": 335.1724137931034,
+          "width": 2648.2758620689656,
+          "height": 1489.6551724137933
+        }
+      },
+      {
+        "id": "curve-camera-2",
+        "segmentId": "curve",
+        "startMs": 125508,
+        "durationMs": 780,
+        "scale": 1.72,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#declarationCurveTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 220.09302325581393,
+          "width": 2232.5581395348836,
+          "height": 1255.8139534883721
+        }
+      },
+      {
+        "id": "recommendation-camera-1",
+        "segmentId": "recommendation",
+        "startMs": 133040,
+        "durationMs": 820,
+        "scale": 1.72,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#recommendationTitle"
+          }
+        ],
+        "crop": {
+          "x": 1607.4418604651164,
+          "y": 212.09302325581393,
+          "width": 2232.5581395348836,
+          "height": 1255.8139534883721
+        }
+      },
+      {
+        "id": "open-evidence-camera-1",
+        "segmentId": "open-evidence",
+        "startMs": 149262,
+        "durationMs": 1200,
+        "scale": 1.48,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#evidenceTitle"
+          }
+        ],
+        "sourceStartMs": 138718,
+        "crop": {
+          "x": 1607.4418604651164,
+          "y": 212.09302325581393,
+          "width": 2232.5581395348836,
+          "height": 1255.8139534883721
+        }
+      },
+      {
+        "id": "open-evidence-camera-2",
+        "segmentId": "open-evidence",
+        "startMs": 157999,
+        "durationMs": 800,
+        "scale": 1.75,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".evidence-drawer"
+          }
+        ],
+        "crop": {
+          "x": 2720,
+          "y": 120,
+          "width": 1120,
+          "height": 630
+        }
+      },
+      {
+        "id": "close-evidence-camera-1",
+        "segmentId": "close-evidence",
+        "startMs": 166065,
+        "durationMs": 1100,
+        "scale": 1.15,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ],
+        "sourceStartMs": 173530,
+        "crop": {
+          "x": 0,
+          "y": 425.4545454545454,
+          "width": 2327.2727272727275,
+          "height": 1309.0909090909092
+        }
+      },
+      {
+        "id": "human-review-camera-1",
+        "segmentId": "human-review",
+        "startMs": 171676,
+        "durationMs": 820,
+        "scale": 1.65,
+        "focus": [
+          {
+            "type": "css",
+            "value": "#optimizationFlowTitle"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 425.4545454545454,
+          "width": 2327.2727272727275,
+          "height": 1309.0909090909092
+        }
+      },
+      {
+        "id": "audit-mode-camera-1",
+        "segmentId": "audit-mode",
+        "startMs": 186113,
+        "durationMs": 820,
+        "scale": 1.75,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".review-rule"
+          }
+        ],
+        "crop": {
+          "x": 822.8571428571429,
+          "y": 462.8415178571429,
+          "width": 2194.285714285714,
+          "height": 1234.2857142857142
+        }
+      },
+      {
+        "id": "open-evolution-camera-1",
+        "segmentId": "open-evolution",
+        "startMs": 202992,
+        "durationMs": 1150,
+        "scale": 1.45,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".evolution-version.is-champion"
+          }
+        ],
+        "crop": {
+          "x": 0,
+          "y": 335.2036637931034,
+          "width": 2648.2758620689656,
+          "height": 1489.6551724137933
+        }
+      },
+      {
+        "id": "evolution-proof-camera-1",
+        "segmentId": "evolution-proof",
+        "startMs": 209045,
+        "durationMs": 800,
+        "scale": 1.68,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".evolution-version.is-challenger"
+          }
+        ],
+        "crop": {
+          "x": 1554.2857142857142,
+          "y": 437.1741071428571,
+          "width": 2285.714285714286,
+          "height": 1285.7142857142858
+        }
+      },
+      {
+        "id": "evolution-proof-camera-2",
+        "segmentId": "evolution-proof",
+        "startMs": 214638,
+        "durationMs": 1200,
+        "scale": 1.48,
+        "focus": [
+          {
+            "type": "css",
+            "value": ".evolution-loop"
+          }
+        ],
+        "crop": {
+          "x": 622.7027027027027,
+          "y": 265.0515202702703,
+          "width": 2594.5945945945946,
+          "height": 1459.4594594594594
+        }
+      },
+      {
+        "id": "film-close-wide",
+        "segmentId": "outro",
+        "startMs": 219801,
+        "durationMs": 500,
+        "scale": 1,
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 3840,
+          "height": 2160
+        }
+      }
+    ]
+  },
+  "focusCoordinateSpace": "video-pixels"
 }

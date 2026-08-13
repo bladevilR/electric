@@ -73,14 +73,3 @@ trading-ai-system/start-ukey-assistant.bat
 work_crops/
 对话.txt
 企业转型与能源服务.txt
-**/node_modules/
-**/.cache/
-**/test-results/
-**/output/
-*.dmg
-*.exe
-*.rar
-*.zip
-Library/
-Temp/
-Logs/

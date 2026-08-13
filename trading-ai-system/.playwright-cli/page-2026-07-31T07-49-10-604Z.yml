@@ -1,0 +1,171 @@
+- generic [ref=f1e3]:
+  - status [ref=f1e4]: 演示状态 · 策略待复核 · 仅用于界面测试，不用于交易
+  - complementary [ref=f1e5]:
+    - generic [ref=f1e6]: ϟ
+    - navigation "AI 申报工作区" [ref=f1e8]:
+      - button [ref=f1e9] [cursor=pointer]:
+        - generic [ref=f1e10]: ⌁
+      - button [ref=f1e11] [cursor=pointer]:
+        - generic [ref=f1e12]: ▦
+      - button [ref=f1e13] [cursor=pointer]:
+        - generic [ref=f1e14]: ⌁
+      - button [ref=f1e15] [cursor=pointer]:
+        - generic [ref=f1e16]: ◇
+    - button [ref=f1e19] [cursor=pointer]:
+      - generic [ref=f1e20]: ◎
+  - main [ref=f1e21]:
+    - generic [ref=f1e22]:
+      - generic [ref=f1e23]:
+        - generic [ref=f1e24]: 交易日
+        - textbox [ref=f1e25]: 2026-07-31
+      - generic [ref=f1e26]: 数据已就绪
+      - group "工作模式" [ref=f1e29]:
+        - button "决策" [ref=f1e30] [cursor=pointer]
+        - button "审计" [ref=f1e31] [cursor=pointer]
+    - generic [ref=f1e32]:
+      - region [ref=f1e33]:
+        - generic [ref=f1e34]:
+          - text: POWER DECLARATION INTELLIGENCE
+          - heading "AI申报优化" [level=1] [ref=f1e35]
+          - paragraph [ref=f1e36]: 基于历史申报与实际负荷偏差，生成可解释建议并交由人工复核
+        - list "申报优化流程" [ref=f1e37]:
+          - listitem [ref=f1e38]:
+            - generic [ref=f1e39]: "1"
+            - generic [ref=f1e40]:
+              - strong [ref=f1e41]: AI 生成建议
+              - generic [ref=f1e42]: 已完成
+          - listitem [ref=f1e43]:
+            - generic [ref=f1e44]: "2"
+            - generic [ref=f1e45]:
+              - strong [ref=f1e46]: 人工复核
+              - generic [ref=f1e47]: 待处理
+          - listitem [ref=f1e48]:
+            - generic [ref=f1e49]: "3"
+            - generic [ref=f1e50]:
+              - strong [ref=f1e51]: 提交申报
+              - generic [ref=f1e52]: 待提交
+      - region "申报优化核心指标" [ref=f1e53]:
+        - article [ref=f1e54]:
+          - generic [ref=f1e55]: ↗
+          - generic [ref=f1e56]:
+            - generic [ref=f1e57]: 偏差改善
+            - strong [ref=f1e58]: +9.64%
+            - generic [ref=f1e59]: 相对默认申报基线
+        - article [ref=f1e60]:
+          - generic [ref=f1e61]: ✓
+          - generic [ref=f1e62]:
+            - generic [ref=f1e63]: 交易日胜率
+            - strong [ref=f1e64]: 86.05%
+            - generic [ref=f1e65]: 独立留出集验证
+        - article [ref=f1e66]:
+          - generic [ref=f1e67]: ∿
+          - generic [ref=f1e68]:
+            - generic [ref=f1e69]: 优化规模
+            - strong [ref=f1e70]: 4,128 点 / 43 日
+            - generic [ref=f1e71]: 覆盖申报点 / 交易日
+        - article [ref=f1e72]:
+          - generic [ref=f1e73]: ★
+          - generic [ref=f1e74]:
+            - generic [ref=f1e75]: 决策可信度
+            - strong [ref=f1e76]: 88/100
+            - generic [ref=f1e77]: 真实数据综合评分
+      - generic [ref=f1e78]:
+        - region [ref=f1e79]:
+          - generic [ref=f1e80]:
+            - generic [ref=f1e81]:
+              - text: REAL 96-POINT EVIDENCE
+              - heading "96 点申报曲线对比" [level=2] [ref=f1e82]
+            - generic "曲线图例" [ref=f1e83]:
+              - generic [ref=f1e84]: 历史申报
+              - generic [ref=f1e85]: AI 建议申报
+          - img "历史申报与 AI 建议申报曲线" [ref=f1e87]:
+            - generic "00:15：基线 420 MWh，AI 建议 438 MWh" [ref=f1e92]
+            - generic "02:15：基线 455 MWh，AI 建议 471 MWh" [ref=f1e95]
+            - generic "04:15：基线 520 MWh，AI 建议 550 MWh" [ref=f1e98]
+            - generic "06:15：基线 690 MWh，AI 建议 720 MWh" [ref=f1e101]
+            - generic "08:15：基线 860 MWh，AI 建议 905 MWh" [ref=f1e104]
+            - generic "10:15：基线 910 MWh，AI 建议 880 MWh" [ref=f1e107]
+            - generic "12:15：基线 840 MWh，AI 建议 805 MWh" [ref=f1e110]
+            - generic "14:15：基线 710 MWh，AI 建议 740 MWh" [ref=f1e113]
+            - generic "16:15：基线 570 MWh，AI 建议 600 MWh" [ref=f1e116]
+            - generic "18:15：基线 450 MWh，AI 建议 420 MWh" [ref=f1e119]
+            - generic "20:15：基线 510 MWh，AI 建议 548 MWh" [ref=f1e122]
+            - generic "24:00：基线 430 MWh，AI 建议 445 MWh" [ref=f1e125]
+          - generic [ref=f1e128]:
+            - generic [ref=f1e129]: 00:15
+            - generic [ref=f1e130]: 时段（15 分钟 / 点）
+            - generic [ref=f1e131]: 24:00
+          - generic [ref=f1e132]:
+            - generic [ref=f1e133]: ✦
+            - paragraph [ref=f1e134]: 识别到 12 个连续调整窗口，所有点位均可追溯。
+            - button "查看偏差分析" [ref=f1e135] [cursor=pointer]: 查看偏差分析 →
+        - complementary [ref=f1e136]:
+          - generic [ref=f1e137]:
+            - generic [ref=f1e138]:
+              - text: DECISION BRIEF
+              - heading "AI 优化建议" [level=2] [ref=f1e139]
+            - generic [ref=f1e140]: 已生成
+          - generic [ref=f1e141]:
+            - generic [ref=f1e142]: 预计偏差改善
+            - strong [ref=f1e143]: +9.64%
+            - generic [ref=f1e144]: 42 日同点位均值模型
+          - generic [ref=f1e145]:
+            - generic [ref=f1e146]:
+              - generic [ref=f1e147]: 关键调整时段
+              - generic [ref=f1e148]: 影响 TOP 5
+            - article [ref=f1e149]:
+              - generic [ref=f1e150]: 00:15
+              - strong [ref=f1e153]: 上调
+            - article [ref=f1e154]:
+              - generic [ref=f1e155]: 02:15
+              - strong [ref=f1e158]: 上调
+            - article [ref=f1e159]:
+              - generic [ref=f1e160]: 04:15
+              - strong [ref=f1e163]: 上调
+            - article [ref=f1e164]:
+              - generic [ref=f1e165]: 06:15
+              - strong [ref=f1e168]: 上调
+            - article [ref=f1e169]:
+              - generic [ref=f1e170]: 08:15
+              - strong [ref=f1e173]: 上调
+          - generic [ref=f1e174]:
+            - generic [ref=f1e175]: 当前运行状态
+            - strong [ref=f1e176]: 已生成 12 点复核建议
+            - generic [ref=f1e177]: 进入人工复核后方可采用
+          - generic [ref=f1e178]:
+            - button "查看详情" [ref=f1e179] [cursor=pointer]
+            - button "进入人工复核" [ref=f1e180] [cursor=pointer]
+          - paragraph [ref=f1e181]: 偏差改善不等于已实现人民币节省；未经人工复核不会提交申报。
+      - region "优化流程" [ref=f1e182]:
+        - list [ref=f1e183]:
+          - listitem [ref=f1e184]:
+            - generic [ref=f1e185]: ▣
+            - generic [ref=f1e186]:
+              - strong [ref=f1e187]: 数据准备
+              - generic [ref=f1e188]: 已完成
+          - generic [ref=f1e189]: →
+          - listitem [ref=f1e190]:
+            - generic [ref=f1e191]: ⌘
+            - generic [ref=f1e192]:
+              - strong [ref=f1e193]: AI 建模预测
+              - generic [ref=f1e194]: 已验证
+          - generic [ref=f1e195]: →
+          - listitem [ref=f1e196]:
+            - generic [ref=f1e197]: ◷
+            - generic [ref=f1e198]:
+              - strong [ref=f1e199]: 生成优化建议
+              - generic [ref=f1e200]: 已完成
+          - generic [ref=f1e201]: →
+          - listitem [ref=f1e202]:
+            - generic [ref=f1e203]: ♙
+            - generic [ref=f1e204]:
+              - strong [ref=f1e205]: 人工复核
+              - generic [ref=f1e206]: 待处理
+          - generic [ref=f1e207]: →
+          - listitem [ref=f1e208]:
+            - generic [ref=f1e209]: ➤
+            - generic [ref=f1e210]:
+              - strong [ref=f1e211]: 提交申报
+              - generic [ref=f1e212]: 待提交
+      - group [ref=f1e213]:
+        - generic "展开历史策略验证与执行门禁" [ref=f1e214] [cursor=pointer]

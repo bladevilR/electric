@@ -1,0 +1,7 @@
+{
+  "minQuantityMwh": null,
+  "maxDraftQuantityMwh": null,
+  "buyPriceCeilingYuanPerMwh": null,
+  "sellPriceFloorYuanPerMwh": null,
+  "notes": "人工填写交易限额后，提案草稿会用这些字段预填电量和限价。"
+}
