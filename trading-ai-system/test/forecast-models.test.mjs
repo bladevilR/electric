@@ -25,6 +25,24 @@ test('summarizeForecastReadiness reports insufficient history before modeling', 
   assert.ok(readiness.missingReasons.includes('historical_dates_below_5'));
 });
 
+test('summarizeForecastReadiness counts only historical dates with usable realtime prices', () => {
+  const readiness = summarizeForecastReadiness(
+    featureStore([
+      { date: '2026-06-23', pointIndex: 1, declarationPower: 20 },
+      { date: '2026-06-24', pointIndex: 1, realTimeAvgPrice: 100 },
+      { date: '2026-06-25', pointIndex: 1, realTimeAvgPrice: 110 },
+      { date: '2026-06-26', pointIndex: 1, realTimeAvgPrice: 120 },
+      { date: '2026-06-27', pointIndex: 1, realTimeAvgPrice: 130 },
+      { date: '2026-06-28', pointIndex: 1, realTimeAvgPrice: 140 },
+      { date: '2026-06-29', pointIndex: 1, realTimeAvgPrice: 150 },
+    ]),
+    '2026-06-29'
+  );
+
+  assert.equal(readiness.historicalDateCount, 5);
+  assert.equal(readiness.status, 'baseline_ready');
+});
+
 test('forecast baselines use prior same-slot data and exclude target date truth', () => {
   const rows = [
     { date: '2026-06-24', pointIndex: 1, realTimeAvgPrice: 100, priceSpread: 1 },

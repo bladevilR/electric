@@ -28,6 +28,11 @@ import {
   mergeVisibleSnapshot,
   validateVisibleSnapshot,
 } from './lib/ukey-assistant.mjs';
+import {
+  mergeVisibleHistory,
+  readVisibleHistory,
+  writeVisibleHistoryAtomic,
+} from './lib/visible-history.mjs';
 import { buildBackfillPlan, createUkeyBrowserCollector } from './lib/ukey-browser-collector.mjs';
 import { buildModelConfig, requestStrategyModelPrediction } from './lib/ai-model-client.mjs';
 import { buildInventoryFromDirectories } from './lib/data-assets.mjs';
@@ -62,11 +67,18 @@ const visibleSnapshotPath = path.resolve(
     process.env.TRADING_VISIBLE_SNAPSHOT_PATH || path.resolve(rootDir, 'data/ukey-visible-snapshot.json')
   )
 );
+const visibleHistoryPath = path.resolve(
+  getArgValue(
+    '--visible-history',
+    process.env.TRADING_VISIBLE_HISTORY_PATH || path.resolve(rootDir, 'data/ukey-visible-history.json')
+  )
+);
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 let settlementReferenceCache = null;
 let strategyValidationCache = null;
 let declarationOptimizerValidationCache = null;
+let visibleHistoryWrite = Promise.resolve();
 
 function getArgValue(name, defaultValue) {
   const index = process.argv.indexOf(name);
@@ -154,7 +166,15 @@ function safeStaticPath(urlPath) {
 
 async function loadDataset() {
   const dataset = compactDataset(await readStandardDataset(standardPath));
-  return mergeVisibleSnapshot(dataset, await loadVisibleSnapshot());
+  const history = await loadVisibleHistory();
+  return mergeVisibleSnapshot(dataset, {
+    ...history,
+    accepted: history.rowCount > 0,
+  });
+}
+
+async function loadVisibleHistory() {
+  return readVisibleHistory(visibleHistoryPath, visibleSnapshotPath);
 }
 
 async function loadVisibleSnapshot() {
@@ -173,6 +193,17 @@ async function saveVisibleSnapshot(snapshot) {
   await writeFile(visibleSnapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
 }
 
+async function appendVisibleHistory(snapshot) {
+  const operation = visibleHistoryWrite.then(async () => {
+    const history = await loadVisibleHistory();
+    const merged = mergeVisibleHistory(history, snapshot);
+    await writeVisibleHistoryAtomic(visibleHistoryPath, merged);
+    return merged;
+  });
+  visibleHistoryWrite = operation.catch(() => {});
+  return operation;
+}
+
 async function persistVisibleSnapshotPayload(payload, actor) {
   const snapshot = validateVisibleSnapshot(payload);
   if (!snapshot.accepted && Array.isArray(payload?.errors) && payload.errors.length) {
@@ -183,7 +214,7 @@ async function persistVisibleSnapshotPayload(payload, actor) {
   }
 
   if (snapshot.accepted) {
-    await saveVisibleSnapshot(snapshot);
+    await Promise.all([saveVisibleSnapshot(snapshot), appendVisibleHistory(snapshot)]);
     await appendAuditEvent(auditLogPath, {
       type: 'ukey_visible_snapshot_accepted',
       actor,
@@ -385,9 +416,10 @@ async function loadProductionReadiness(date = '') {
 }
 
 async function loadUkeyStatus(dataset = null) {
-  const [resolvedDataset, visibleSnapshot] = await Promise.all([
+  const [resolvedDataset, visibleSnapshot, visibleHistory] = await Promise.all([
     dataset ? Promise.resolve(dataset) : loadDataset(),
     loadVisibleSnapshot(),
+    loadVisibleHistory(),
   ]);
   return {
     ...buildUkeyAssistantStatus({
@@ -400,6 +432,13 @@ async function loadUkeyStatus(dataset = null) {
       rowCount: visibleSnapshot.rowCount || 0,
       generatedAt: visibleSnapshot.generatedAt || null,
       storagePath: visibleSnapshotPath,
+    },
+    visibleHistory: {
+      rowCount: visibleHistory.rowCount || 0,
+      dateCount: visibleHistory.dateCount || 0,
+      dates: visibleHistory.dates || [],
+      generatedAt: visibleHistory.generatedAt || null,
+      storagePath: visibleHistoryPath,
     },
   };
 }
@@ -416,6 +455,7 @@ async function handleApi(request, response, url) {
       standardPath,
       integrationSummaryPath,
       auditLogPath,
+      visibleHistoryPath,
       businessInputsDir,
       pythonPath: await resolvePythonPath(pythonPath),
       modelRuntime: buildModelConfig(process.env),

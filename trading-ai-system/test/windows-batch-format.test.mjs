@@ -27,6 +27,7 @@ test('Windows onboarding package declares every browser boot dependency', async 
 
   assert.match(packageScript, /['"]workbench-motion\.js['"]/);
   assert.match(packageScript, /['"]vendor['"]/);
+  assert.match(packageScript, /spawnSync\(['"]zip['"]/);
 });
 
 test('Windows launcher prefers a modern browser instead of the system default', async () => {
@@ -34,7 +35,17 @@ test('Windows launcher prefers a modern browser instead of the system default', 
 
   assert.match(launcher, /msedge\.exe/);
   assert.match(launcher, /chrome\.exe/);
+  assert.ok(launcher.indexOf('chrome.exe') < launcher.indexOf('msedge.exe'));
   assert.match(launcher, /function Open-WorkbenchBrowser/);
+});
+
+test('Windows launcher stores cumulative trading history in LocalAppData', async () => {
+  const launcher = await readFile(powershellLauncherPath, 'utf8');
+
+  assert.match(launcher, /LOCALAPPDATA/);
+  assert.match(launcher, /ElectricTradingAI/);
+  assert.match(launcher, /TRADING_VISIBLE_HISTORY_PATH/);
+  assert.match(launcher, /ukey-visible-history\.json/);
 });
 
 test('legacy browsers show an actionable compatibility error instead of permanent loading', async () => {

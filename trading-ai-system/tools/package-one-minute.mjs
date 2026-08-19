@@ -39,6 +39,31 @@ function psQuote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
+function createZipArchive() {
+  if (process.platform !== 'win32') {
+    const result = spawnSync('zip', ['-qr', zipPath, '.'], {
+      cwd: outputRoot,
+      stdio: 'inherit',
+    });
+    if (result.status !== 0) {
+      throw new Error(`zip failed with exit code ${result.status}`);
+    }
+    return;
+  }
+
+  const command = [
+    '$ErrorActionPreference = "Stop"',
+    `if (Test-Path -LiteralPath ${psQuote(zipPath)}) { Remove-Item -LiteralPath ${psQuote(zipPath)} -Force }`,
+    `Compress-Archive -Path ${psQuote(path.join(outputRoot, '*'))} -DestinationPath ${psQuote(zipPath)} -Force`,
+  ].join('; ');
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command], {
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    throw new Error(`Compress-Archive failed with exit code ${result.status}`);
+  }
+}
+
 async function copyFileIfExists(relativePath) {
   const source = path.join(systemRoot, relativePath);
   if (!existsSync(source)) return;
@@ -117,17 +142,7 @@ async function main() {
     throw new Error('Missing present by Si hang signature in guide.');
   }
 
-  const command = [
-    '$ErrorActionPreference = "Stop"',
-    `if (Test-Path -LiteralPath ${psQuote(zipPath)}) { Remove-Item -LiteralPath ${psQuote(zipPath)} -Force }`,
-    `Compress-Archive -Path ${psQuote(path.join(outputRoot, '*'))} -DestinationPath ${psQuote(zipPath)} -Force`,
-  ].join('; ');
-  const result = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command], {
-    stdio: 'inherit',
-  });
-  if (result.status !== 0) {
-    throw new Error(`Compress-Archive failed with exit code ${result.status}`);
-  }
+  createZipArchive();
 
   console.log(JSON.stringify({ ok: true, outputRoot, zipPath, includesNodeRuntime: hasRuntime }, null, 2));
 }

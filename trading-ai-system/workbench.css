@@ -3306,6 +3306,136 @@ body {
   }
 }
 
+.forecast-dashboard {
+  display: grid;
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 26px 28px 56px;
+}
+
+.forecast-hero,
+.forecast-readiness,
+.forecast-results,
+.forecast-empty {
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.forecast-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+}
+
+.forecast-hero h1 {
+  margin: 5px 0 8px;
+  font-size: clamp(30px, 4vw, 48px);
+}
+
+.forecast-hero p,
+.forecast-boundary,
+.forecast-empty p,
+.forecast-readiness small {
+  color: var(--text-muted);
+}
+
+.forecast-state {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 750;
+}
+
+.forecast-state.is-ready {
+  color: #0a7557;
+  background: #e8f8f1;
+}
+
+.forecast-state.is-waiting {
+  color: #9a6500;
+  background: #fff5d9;
+}
+
+.forecast-readiness {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.42fr) 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 28px;
+}
+
+.forecast-readiness div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.forecast-readiness strong {
+  font-size: 22px;
+}
+
+.forecast-progress {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8edf7;
+}
+
+.forecast-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2867e8;
+}
+
+.forecast-results {
+  padding: 24px 28px;
+}
+
+.forecast-boundary {
+  margin: 4px 0 18px;
+}
+
+.forecast-table {
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+}
+
+.forecast-row {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(4, minmax(80px, 1fr));
+  gap: 12px;
+  align-items: center;
+  min-width: 620px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.forecast-row.is-header {
+  border-top: 0;
+  color: var(--text-muted);
+  background: #f6f8fc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.forecast-empty {
+  padding: 32px;
+}
+
+.forecast-empty strong {
+  font-size: 21px;
+}
+
+.forecast-empty.is-error {
+  border-color: #f1b4ad;
+  background: #fff7f6;
+}
+
 @media (max-width: 760px) {
   .workbench-shell.dashboard-shell {
     grid-template-columns: 1fr;
@@ -3337,7 +3467,7 @@ body {
   .dashboard-nav {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 4px;
   }
 
@@ -3418,6 +3548,24 @@ body {
 
   .flow-arrow {
     display: none;
+  }
+
+  .forecast-dashboard {
+    padding: 18px 0 90px;
+  }
+
+  .forecast-hero,
+  .forecast-readiness {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-hero {
+    display: grid;
+  }
+
+  .forecast-results {
+    overflow-x: auto;
+    padding: 18px 14px;
   }
 }
 

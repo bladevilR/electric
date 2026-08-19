@@ -47,6 +47,13 @@ function formatMoney(value) {
     : `¥${moneyFormatter.format(numeric)}`;
 }
 
+function formatForecastNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric)
+    ? numeric.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+    : '—';
+}
+
 export function buildSavingsProjection(
   dailyYuan,
   { monthlyTradingDays = 22, annualTradingDays = 264 } = {}
@@ -956,12 +963,15 @@ function dashboardSidebar(payload, activeStage) {
     { id: 'curve', stage: 'connect', label: 'AI申报优化', icon: '⌁' },
     { id: 'validate', stage: 'validate', label: '申报总览', icon: '▦' },
     { id: 'curve', stage: 'execute', label: '曲线对比', icon: '⌁' },
+    { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
     { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
     { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
   ];
   const activeNavigation =
     activeStage === 'validate'
       ? 'validate'
+      : activeStage === 'forecast'
+        ? 'forecast'
       : activeStage === 'settle'
         ? 'review'
         : activeStage === 'evolve'
@@ -1582,6 +1592,109 @@ export function renderStrategyEvolutionDashboard(payload) {
   `;
 }
 
+function forecastMissingReason(reason) {
+  return (
+    {
+      target_date_missing: '尚未确定目标交易日。',
+      target_date_rows_missing: '目标交易日还没有成功采集的业务行。',
+      historical_dates_below_5: '有效历史交易日还没有累计到 5 天。',
+      comparable_points_missing: '历史日期与目标日期之间没有可比较的价格点位。',
+    }[reason] || reason
+  );
+}
+
+export function renderPriceForecastDashboard(report, options = {}) {
+  const readiness = report?.readiness || {};
+  const historicalDateCount = Math.max(0, Number(readiness.historicalDateCount || 0));
+  const progressCount = Math.min(5, historicalDateCount);
+  const remaining = Math.max(0, 5 - historicalDateCount);
+  const ready = report?.status === 'baseline_ready';
+  const forecastRows = (report?.forecasts || [])
+    .filter((item) => item.target === 'realTimeAvgPrice')
+    .sort((left, right) => Number(left.pointIndex || 0) - Number(right.pointIndex || 0));
+
+  return `
+    <section class="forecast-dashboard" aria-labelledby="forecastDashboardTitle">
+      <header class="forecast-hero">
+        <div>
+          <span class="hero-kicker">PRICE FORECAST</span>
+          <h1 id="forecastDashboardTitle">价格预测</h1>
+          <p>成功采集并保存每天的价格数据后，系统会持续累计；满 5 个历史交易日，在下一交易日自动启用预测。</p>
+        </div>
+        <span class="forecast-state ${ready ? 'is-ready' : 'is-waiting'}">
+          ${ready ? '预测已自动启用' : '正在累计历史'}
+        </span>
+      </header>
+      <section class="forecast-readiness" aria-label="预测准备进度">
+        <div>
+          <span>历史数据进度</span>
+          <strong>累计 ${escapeHtml(progressCount)}/5 个历史交易日</strong>
+          <small>${
+            ready
+              ? `目标日 ${escapeHtml(report.targetDate || options.targetDate || '—')} 已具备可比较点位。`
+              : `还差 ${escapeHtml(remaining)} 个有效历史交易日；仅打开程序不会增加进度。`
+          }</small>
+        </div>
+        <div class="forecast-progress" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="${escapeHtml(progressCount)}">
+          <span style="width: ${escapeHtml(progressCount * 20)}%"></span>
+        </div>
+      </section>
+      ${
+        options.forecastLoading
+          ? '<div class="forecast-empty" role="status"><strong>正在读取价格预测…</strong><p>正在核对历史交易日和目标日点位。</p></div>'
+          : options.forecastError
+            ? `<div class="forecast-empty is-error" role="alert"><strong>价格预测暂时没有加载成功</strong><p>${escapeHtml(options.forecastError)}</p></div>`
+            : ready
+              ? `
+                <section class="forecast-results" aria-labelledby="forecastResultsTitle">
+                  <div class="section-heading">
+                    <div>
+                      <span class="hero-kicker">ROLLING BASELINE</span>
+                      <h2 id="forecastResultsTitle">历史同点位中位数基线</h2>
+                    </div>
+                    <span>${escapeHtml(forecastRows.length)} 个实时均价点</span>
+                  </div>
+                  <p class="forecast-boundary">这是可复核的历史基线，不等于已实现节省，也不会自动提交申报或交易。</p>
+                  <div class="forecast-table" role="table" aria-label="实时均价预测结果">
+                    <div class="forecast-row is-header" role="row">
+                      <span role="columnheader">点位</span>
+                      <span role="columnheader">预测价</span>
+                      <span role="columnheader">P10</span>
+                      <span role="columnheader">P90</span>
+                      <span role="columnheader">历史证据</span>
+                    </div>
+                    ${forecastRows
+                      .map(
+                        (row) => `
+                          <div class="forecast-row" role="row" data-forecast-row="${escapeHtml(row.pointIndex)}">
+                            <strong role="cell">第 ${escapeHtml(row.pointIndex)} 点</strong>
+                            <span role="cell">${escapeHtml(formatForecastNumber(row.pointForecast))}</span>
+                            <span role="cell">${escapeHtml(formatForecastNumber(row.p10))}</span>
+                            <span role="cell">${escapeHtml(formatForecastNumber(row.p90))}</span>
+                            <span role="cell">${escapeHtml(row.evidenceRows || 0)} 天</span>
+                          </div>
+                        `
+                      )
+                      .join('')}
+                  </div>
+                </section>
+              `
+              : `
+                <section class="forecast-empty" role="status">
+                  <strong>历史数据还不够，暂不生成价格预测</strong>
+                  <p>每天成功采集一次有效价格数据即可累计；同一天重复采集只会补齐点位，不会重复计天。</p>
+                  <ul>
+                    ${(readiness.missingReasons || [])
+                      .map((reason) => `<li>${escapeHtml(forecastMissingReason(reason))}</li>`)
+                      .join('')}
+                  </ul>
+                </section>
+              `
+      }
+    </section>
+  `;
+}
+
 export function renderWorkbenchMarkup(payload, options = {}) {
   const mode = options.mode === 'review' ? 'review' : 'operation';
   const activeStage = options.activeStage || payload.currentStage || 'connect';
@@ -1589,6 +1702,12 @@ export function renderWorkbenchMarkup(payload, options = {}) {
   const mainContent =
     mode === 'review'
       ? reviewPanel(payload)
+      : activeStage === 'forecast'
+        ? renderPriceForecastDashboard(options.forecastReport, {
+            forecastLoading: options.forecastLoading,
+            forecastError: options.forecastError,
+            targetDate: payload.date,
+          })
       : activeStage === 'evolve'
         ? renderStrategyEvolutionDashboard(payload)
         : renderDeclarationDashboard(payload, { activeStage });
@@ -1611,6 +1730,9 @@ const browserState = {
   activeStage: null,
   evidenceOpen: false,
   loading: true,
+  forecastReport: null,
+  forecastLoading: false,
+  forecastError: '',
   actionMessage: '',
   error: '',
 };
@@ -1729,6 +1851,24 @@ async function loadWorkbench(date = '') {
   }
 }
 
+async function loadForecastReport(date = '') {
+  browserState.forecastLoading = true;
+  browserState.forecastError = '';
+  renderBrowser();
+  try {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    browserState.forecastReport = await fetch(`/api/forecast/model${query}`, {
+      cache: 'no-store',
+    }).then(responseJson);
+  } catch (error) {
+    browserState.forecastReport = null;
+    browserState.forecastError = error.message;
+  } finally {
+    browserState.forecastLoading = false;
+    renderBrowser();
+  }
+}
+
 async function runPrimaryAction(actionId) {
   browserState.error = '';
   browserState.actionMessage = '';
@@ -1827,6 +1967,13 @@ function bindBrowserEvents() {
         renderBrowser();
         return;
       }
+      if (destination === 'forecast') {
+        browserState.mode = 'operation';
+        browserState.activeStage = 'forecast';
+        renderBrowser();
+        await loadForecastReport(browserState.payload?.date || '');
+        return;
+      }
       browserState.mode = 'operation';
       browserState.activeStage =
         destination === 'validate'
@@ -1885,7 +2032,12 @@ function bindBrowserEvents() {
   });
   root.addEventListener('change', async (event) => {
     if (event.target.matches('[data-date-input]')) {
+      const previousStage = browserState.activeStage;
       await loadWorkbench(event.target.value);
+      if (previousStage === 'forecast') {
+        browserState.activeStage = 'forecast';
+        await loadForecastReport(event.target.value);
+      }
     }
   });
 }

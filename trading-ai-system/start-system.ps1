@@ -77,15 +77,15 @@ function Open-WorkbenchBrowser {
 
   if ($isWindowsHost) {
     $browserCandidates = @(
-      @{ Name = "Microsoft Edge"; Command = "msedge.exe"; Paths = @(
-        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
-        "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-        "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
-      ) },
       @{ Name = "Google Chrome"; Command = "chrome.exe"; Paths = @(
         "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
         "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
         "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+      ) },
+      @{ Name = "Microsoft Edge"; Command = "msedge.exe"; Paths = @(
+        "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+        "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+        "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"
       ) }
     )
 
@@ -154,6 +154,24 @@ function Stop-ExistingTradingService {
   }
 
   Stop-Startup -Message "The existing trading assistant did not release port $ServicePort." -Details "Stopped process ID: $existingProcessId"
+}
+
+if (-not $env:TRADING_VISIBLE_HISTORY_PATH) {
+  if ($isWindowsHost) {
+    if (-not $env:LOCALAPPDATA) {
+      Stop-Startup -Message "The Windows user data directory is unavailable." -Details "LOCALAPPDATA is empty, so cumulative trading history cannot be stored safely."
+    }
+    $tradingUserDataRoot = Join-Path $env:LOCALAPPDATA "ElectricTradingAI\data"
+  } else {
+    $tradingUserDataRoot = Join-Path $root "data"
+  }
+
+  try {
+    New-Item -ItemType Directory -Path $tradingUserDataRoot -Force | Out-Null
+  } catch {
+    Stop-Startup -Message "The cumulative trading history directory could not be created." -Details $_.Exception.Message
+  }
+  $env:TRADING_VISIBLE_HISTORY_PATH = Join-Path $tradingUserDataRoot "ukey-visible-history.json"
 }
 
 $portableNode = Join-Path $root "runtime\node\node.exe"

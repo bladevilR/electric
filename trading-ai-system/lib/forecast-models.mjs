@@ -109,7 +109,16 @@ export function forecastRollingSameSlot(rows = [], targetDate = '', targetField 
 export function summarizeForecastReadiness(featureStore = {}, targetDate = '') {
   const rows = Array.isArray(featureStore.rows) ? featureStore.rows : [];
   const date = targetDate || uniqueSorted(rows.map((row) => row.date)).at(-1) || '';
-  const historicalDates = uniqueSorted(rows.map((row) => cleanDate(row.date)).filter((rowDate) => rowDate && rowDate < date));
+  const historicalDates = uniqueSorted(
+    rows
+      .filter(
+        (row) =>
+          cleanDate(row.date) &&
+          cleanDate(row.date) < date &&
+          numeric(row.realTimeAvgPrice) !== null
+      )
+      .map((row) => cleanDate(row.date))
+  );
   const targetRows = rows.filter((row) => cleanDate(row.date) === date);
   const comparablePointCount = targetPointIndices(rows, date).filter((pointIndex) =>
     historicalRows(rows, date, 'realTimeAvgPrice').some((row) => Number(row.pointIndex) === Number(pointIndex))

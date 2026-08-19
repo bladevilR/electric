@@ -324,13 +324,13 @@
         </article>
         <article class="card">
           <span class="num">2</span>
-          <strong>先看数据</strong>
-          <p>进入“数据进度”“结算参考”“价格预测”“预测验证”，先确认当前数据够不够、哪里还缺。</p>
+          <strong>查看预测进度</strong>
+          <p>在工作台左侧“价格预测”查看累计进度。每天成功采集并保存有效价格数据才会计入，累计 5/5 后自动解锁。</p>
         </article>
         <article class="card">
           <span class="num">3</span>
-          <strong>再看策略</strong>
-          <p>进入“策略建议”，查看低价窗口、高价风险、三档策略和不可执行原因。所有建议都需要人工复核。</p>
+          <strong>再看申报建议</strong>
+          <p>回到“AI申报优化”查看曲线和建议；进入“申报总览”核对数据缺口。所有建议都需要人工复核。</p>
         </article>
       </div>
     </section>
@@ -357,7 +357,7 @@
         <div>
           <strong>一键全量慢采</strong>
           <p>
-            插上 UKey 并登录 JSPEC 后，点击“一键全量慢采”。系统会按完整清单逐页读取，每页间隔不低于 20 秒。你可以去做别的，只要保持 UKey、数据窗口和本地服务打开即可。
+            插上 UKey 并用 Chrome 登录 JSPEC 后，点击“一键全量慢采”。系统会按完整清单逐页读取，每页间隔不低于 20 秒。你可以去做别的，只要保持 UKey、数据窗口和本地服务打开即可。
           </p>
         </div>
         <a href="http://127.0.0.1:5177/">去工作台操作</a>
@@ -368,28 +368,28 @@
       <h2 class="section-title">全量功能一眼看懂</h2>
       <div class="features">
         <article class="card">
-          <strong>数据资产</strong>
-          <p>告诉你本地已经有什么：实时均价、日前出清、申报曲线、系统负荷、合同、交易序列和结算参考。</p>
+          <strong>AI申报优化</strong>
+          <p>查看 96 点申报曲线、偏差改善证据和需要人工复核的建议，不会自动提交交易。</p>
         </article>
         <article class="card">
-          <strong>结算参考</strong>
-          <p>把本地现货核对单、交易计算表、月度表整理成可复盘的证据，方便追溯历史实际负荷和结算金额。</p>
+          <strong>申报总览与曲线对比</strong>
+          <p>核对当前交易日的数据缺口，并比较默认申报与建议申报曲线。</p>
         </article>
         <article class="card">
           <strong>价格预测</strong>
-          <p>在数据足够时给出基线预测；数据不够时会明确告诉你历史样本不足，不会假装模型已经很准。</p>
+          <p>左侧有真实入口，显示“累计 N/5”。成功采集 5 个有效历史交易日后，第 6 个交易日有目标日数据时会自动启用历史同点位中位数基线预测。</p>
         </article>
         <article class="card">
-          <strong>预测验证</strong>
-          <p>用历史日期做 walk-forward 回测，只用过去预测未来，避免拿未来数据作弊。</p>
+          <strong>策略进化</strong>
+          <p>查看当前策略与候选策略的历史验证结果；候选策略不会自动上线。</p>
         </article>
         <article class="card">
-          <strong>省钱策略</strong>
-          <p>识别低价窗口和高价暴露，给出保守、均衡、激进三档建议；没有实际负荷、结算和约束时不会给可执行电量。</p>
+          <strong>复盘回顾</strong>
+          <p>查看结算后的成本证据与审计记录；没有完整结算数据时不会声称已经省钱。</p>
         </article>
         <article class="card">
-          <strong>报告和草稿</strong>
-          <p>可以生成建议报告和交易草稿复核材料。它只帮你整理和提醒，最终操作仍由人在 JSPEC 里确认。</p>
+          <strong>跨版本保留历史</strong>
+          <p>新版把累计历史保存在 Windows 当前用户数据目录。覆盖升级新包不会清空已经保存的交易日。</p>
         </article>
       </div>
     </section>

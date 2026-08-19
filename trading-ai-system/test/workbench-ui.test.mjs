@@ -136,8 +136,8 @@ function blockedPayload() {
 test('blocked workbench renders navigation stages, one action, and no invented savings', () => {
   const html = renderWorkbenchMarkup(blockedPayload(), { mode: 'operation', evidenceOpen: true });
 
-  // 侧栏：申报优化 / 总览 / 曲线 / 策略进化 / 复盘
-  assert.equal([...html.matchAll(/data-stage=/g)].length, 5);
+  // 侧栏：申报优化 / 总览 / 曲线 / 价格预测 / 策略进化 / 复盘
+  assert.equal([...html.matchAll(/data-stage=/g)].length, 6);
   assert.match(html, /策略进化/);
   assert.equal([...html.matchAll(/data-primary-action=/g)].length, 1);
   assert.match(html, /预计综合成本优化额/);
@@ -382,9 +382,72 @@ test('dashboard exposes only functional navigation actions', () => {
 
   assert.match(html, /data-dashboard-nav="curve"/);
   assert.match(html, /data-dashboard-nav="validate"/);
+  assert.match(html, /data-dashboard-nav="forecast"/);
   assert.match(html, /data-dashboard-nav="review"/);
   assert.match(html, /data-action="open-evidence"/);
   assert.doesNotMatch(html, /href="#"/);
+});
+
+test('price forecast stage shows five-day readiness without inventing predictions', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    activeStage: 'forecast',
+    evidenceOpen: false,
+    forecastReport: {
+      status: 'insufficient_history',
+      targetDate: '2026-08-19',
+      readiness: {
+        status: 'insufficient_history',
+        historicalDateCount: 3,
+        comparablePointCount: 96,
+        missingReasons: ['historical_dates_below_5'],
+      },
+      forecasts: [],
+    },
+  });
+
+  assert.match(html, /价格预测/);
+  assert.match(html, /累计 3\/5 个历史交易日/);
+  assert.match(html, /还差 2 个有效历史交易日/);
+  assert.match(html, /成功采集并保存/);
+  assert.doesNotMatch(html, /data-forecast-row=/);
+});
+
+test('price forecast stage renders baseline results after five historical dates', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    activeStage: 'forecast',
+    evidenceOpen: false,
+    forecastReport: {
+      status: 'baseline_ready',
+      targetDate: '2026-08-19',
+      readiness: {
+        status: 'baseline_ready',
+        historicalDateCount: 5,
+        comparablePointCount: 96,
+        missingReasons: [],
+      },
+      models: [{ id: 'rolling_same_slot_median', label: 'Rolling same-slot median baseline', enabled: true }],
+      forecasts: [
+        {
+          target: 'realTimeAvgPrice',
+          pointIndex: 1,
+          pointForecast: 328.5,
+          p10: 310,
+          p90: 345,
+          evidenceRows: 5,
+        },
+      ],
+    },
+  });
+
+  assert.match(html, /累计 5\/5 个历史交易日/);
+  assert.match(html, /预测已自动启用/);
+  assert.match(html, /历史同点位中位数基线/);
+  assert.match(html, /328\.5/);
+  assert.match(html, /data-forecast-row="1"/);
+  assert.match(html, /不等于已实现节省/);
+  assert.doesNotMatch(html, /已实现节省[：:]\s*¥/);
 });
 
 test('96-point curve keeps interaction coverage without rendering a bead on every point', () => {

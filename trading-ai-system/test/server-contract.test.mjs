@@ -25,9 +25,22 @@ async function startServer(options = {}) {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-server-'));
   const auditPath = path.join(temp, 'audit-log.ndjson');
   const visibleSnapshotPath = path.join(temp, 'ukey-visible-snapshot.json');
+  const visibleHistoryPath = path.join(temp, 'ukey-visible-history.json');
+  const args = [
+    'server.mjs',
+    '--port',
+    String(port),
+    '--audit',
+    auditPath,
+    '--visible-snapshot',
+    visibleSnapshotPath,
+    '--visible-history',
+    visibleHistoryPath,
+  ];
+  if (options.standard) args.push('--standard', options.standard);
   const server = spawn(
     process.execPath,
-    ['server.mjs', '--port', String(port), '--audit', auditPath, '--visible-snapshot', visibleSnapshotPath],
+    args,
     {
       cwd: systemRoot,
       env: {
@@ -58,11 +71,19 @@ async function startServer(options = {}) {
   await ready;
   return {
     baseUrl: `http://${options.clientHost || '127.0.0.1'}:${port}`,
+    visibleHistoryPath,
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
       await rm(temp, { recursive: true, force: true });
     },
+  };
+}
+
+function visibleSnapshot(date, price) {
+  return {
+    source: 'visible_page_snapshot',
+    rows: [{ date, pointIndex: 1, timePoint: '00:15', realTimeAvgPrice: price }],
   };
 }
 
@@ -102,6 +123,40 @@ test('the production server remains loopback-only when HOST is unset', async (co
     await assert.rejects(
       fetch(`${server.baseUrl}/api/health`, { signal: AbortSignal.timeout(1500) })
     );
+  } finally {
+    await server.close();
+  }
+});
+
+test('accepted visible snapshots accumulate across trading dates in persistent history', async () => {
+  const server = await startServer({
+    standard: path.join(systemRoot, 'data/standard-96.sample.json'),
+  });
+
+  try {
+    for (const [date, price] of [
+      ['2026-08-17', 320],
+      ['2026-08-18', 330],
+    ]) {
+      const response = await fetch(`${server.baseUrl}/api/ukey-assistant/visible-snapshot`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(visibleSnapshot(date, price)),
+      });
+      assert.equal(response.status, 200);
+    }
+
+    const history = JSON.parse(await readFile(server.visibleHistoryPath, 'utf8'));
+    assert.deepEqual(history.dates, ['2026-08-17', '2026-08-18']);
+    assert.equal(history.rowCount, 2);
+
+    const dataset = await fetch(`${server.baseUrl}/api/dataset`).then((response) => response.json());
+    assert.equal(dataset.rows.some((row) => row.date === '2026-08-17' && row.realTimeAvgPrice === 320), true);
+    assert.equal(dataset.rows.some((row) => row.date === '2026-08-18' && row.realTimeAvgPrice === 330), true);
+
+    const status = await fetch(`${server.baseUrl}/api/ukey-assistant`).then((response) => response.json());
+    assert.equal(status.visibleHistory.dateCount, 2);
+    assert.equal(status.visibleHistory.rowCount, 2);
   } finally {
     await server.close();
   }
@@ -527,6 +582,11 @@ test('one-minute onboarding page is friendly and launchable', async () => {
   assert.match(guideHtml, /全量功能/);
   assert.match(guideHtml, /全量慢采/);
   assert.match(guideHtml, /价格预测/);
+  assert.match(guideHtml, /左侧“价格预测”/);
+  assert.match(guideHtml, /累计 5\/5/);
+  assert.match(guideHtml, /第 6 个交易日/);
+  assert.match(guideHtml, /成功采集/);
+  assert.doesNotMatch(guideHtml, /进入“数据进度”“结算参考”“价格预测”“预测验证”/);
   assert.match(guideHtml, /省钱策略/);
   assert.match(guideHtml, /UKey/);
   assert.match(guideHtml, /不会自动提交/);
@@ -547,5 +607,6 @@ test('one-minute onboarding page is friendly and launchable', async () => {
   assert.match(launcherBat, /standard-96\.sample\.json/);
   assert.match(packageScript, /start-system\.ps1/);
   assert.match(packageScript, /trading-ai-system-one-minute/);
+  assert.doesNotMatch(packageScript, /ukey-visible-history\.json/);
   assert.ok(iconInfo.size > 1000);
 });
