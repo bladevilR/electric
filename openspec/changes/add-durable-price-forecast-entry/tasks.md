@@ -15,4 +15,4 @@
 - [x] 3.1 Run focused tests, full automated tests and OpenSpec validation
 - [x] 3.2 Run real local service and browser acceptance for insufficient-history and baseline-ready data
 - [x] 3.3 Build the Windows package, verify extracted contents/runtime/startup contract and calculate SHA-256
-- [ ] 3.4 Send the verified package and concise upgrade instructions to engineering-group Wang Ying through DingTalk
+- [x] 3.4 Send the verified package and concise upgrade instructions to engineering-group Wang Ying through DingTalk
