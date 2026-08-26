@@ -38,6 +38,7 @@ async function startServer(options = {}) {
     visibleHistoryPath,
   ];
   if (options.standard) args.push('--standard', options.standard);
+  if (options.python) args.push('--python', options.python);
   const server = spawn(
     process.execPath,
     args,
@@ -79,6 +80,23 @@ async function startServer(options = {}) {
     },
   };
 }
+
+test('forecast API stays available when the optional settlement reference runtime fails', async () => {
+  const server = await startServer({
+    python: process.execPath,
+    standard: path.resolve(systemRoot, 'data/standard-96.sample.json'),
+  });
+
+  try {
+    const response = await fetch(`${server.baseUrl}/api/forecast/model`);
+    const report = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.ok(['insufficient_history', 'baseline_ready'].includes(report.status));
+  } finally {
+    await server.close();
+  }
+});
 
 function visibleSnapshot(date, price) {
   return {

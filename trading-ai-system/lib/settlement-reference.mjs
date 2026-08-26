@@ -75,3 +75,29 @@ export async function buildSettlementReference(options = {}) {
     });
   });
 }
+
+export async function buildOptionalSettlementReference(options = {}) {
+  try {
+    return await buildSettlementReference(options);
+  } catch (error) {
+    options.onUnavailable?.(error);
+    return {
+      generatedAt: new Date().toISOString(),
+      status: 'unavailable',
+      summary: summarizeSettlementReference(),
+      workbooks: [],
+      featureRows: [],
+      monthlyOverviewRows: [],
+      longTermOverviewRows: [],
+      transactionCalculationStandardized: {
+        summary: {},
+        files: [],
+        featureRows: [],
+        hourlyBusinessRows: [],
+      },
+      manualExports: [],
+      usageBoundaries: [],
+      upgradeHooks: [],
+    };
+  }
+}

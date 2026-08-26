@@ -40,7 +40,7 @@ import { buildForecastFeatureStore } from './lib/forecast-feature-store.mjs';
 import { buildForecastModelReport } from './lib/forecast-models.mjs';
 import { buildStrategyValidation, runForecastBacktest } from './lib/backtest-engine.mjs';
 import { buildCostStrategy } from './lib/cost-optimizer.mjs';
-import { buildSettlementReference } from './lib/settlement-reference.mjs';
+import { buildOptionalSettlementReference } from './lib/settlement-reference.mjs';
 import { buildSavingsWorkbench } from './lib/savings-workbench.mjs';
 import { buildDeclarationReplay } from './lib/declaration-replay.mjs';
 import {
@@ -304,12 +304,12 @@ async function loadDataAssets() {
 
 async function loadSettlementReference() {
   if (!settlementReferenceCache) {
-    settlementReferenceCache = buildSettlementReference({
+    settlementReferenceCache = buildOptionalSettlementReference({
       projectRoot,
       pythonPath,
-    }).catch((error) => {
-      settlementReferenceCache = null;
-      throw error;
+      onUnavailable(error) {
+        console.warn(`Optional settlement reference unavailable: ${error?.message || String(error)}`);
+      },
     });
   }
   return settlementReferenceCache;
