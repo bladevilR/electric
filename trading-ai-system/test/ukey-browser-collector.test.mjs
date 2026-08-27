@@ -272,6 +272,203 @@ test('parseVisibleBusinessSnapshot handles JSPEC split header and body tables', 
   assert.equal(snapshot.rows[0].date, '2026-06-29');
 });
 
+test('parseVisibleBusinessSnapshot maps the real user day-ahead clearing headers and prefers final prices', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://jspec.com.cn/#/dashboard',
+    title: '电力交易平台',
+    bodyText: '用户日前出清 日期：2026-08-26',
+    tables: [
+      {
+        headers: [
+          '时间',
+          '出清电力',
+          '统一结算点电价临时结果',
+          '统一结算点电价最终结果',
+        ],
+        rows: [
+          ['00:15', '64.800', '372.5', '-'],
+          ['00:30', '64.800', '368.4', '369.1'],
+        ],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.matchedTableCount, 1);
+  assert.equal(snapshot.rowCount, 2);
+  assert.deepEqual(snapshot.rows, [
+    {
+      date: '2026-08-26',
+      pointIndex: 1,
+      timePoint: '00:15',
+      dayAheadUserPrice: 372.5,
+      sourceTargets: ['visible_page_snapshot'],
+    },
+    {
+      date: '2026-08-26',
+      pointIndex: 2,
+      timePoint: '00:30',
+      dayAheadUserPrice: 369.1,
+      sourceTargets: ['visible_page_snapshot'],
+    },
+  ]);
+});
+
+test('parseVisibleBusinessSnapshot uses JSPEC clearing-page context for generic settlement price headers', () => {
+  const cases = [
+    {
+      url: 'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/DayClearingResult',
+      bodyText: '日前公开出清 日期：2026-08-26',
+      field: 'dayAheadPublicPrice',
+    },
+    {
+      url: 'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/CurClearingResult',
+      bodyText: '实时公开出清 日期：2026-08-26',
+      field: 'realTimePointPriceCurrent',
+    },
+  ];
+
+  for (const item of cases) {
+    const snapshot = parseVisibleBusinessSnapshot({
+      url: item.url,
+      title: '电力交易平台',
+      bodyText: item.bodyText,
+      tables: [
+        {
+          headers: ['时间', '统一结算点电价最终结果'],
+          rows: [['00:15', '371.2']],
+        },
+      ],
+    });
+
+    assert.equal(snapshot.rowCount, 1, item.field);
+    assert.equal(snapshot.rows[0][item.field], 371.2, item.field);
+  }
+});
+
+test('parseVisibleBusinessSnapshot gives an explicit JSPEC route priority over noisy navigation text', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/CurClearingResult',
+    title: '电力交易平台',
+    bodyText:
+      '用户侧日前出清 日前公开出清 实时公开出清 当前页面 日期：2026-08-26',
+    tables: [
+      {
+        headers: ['时间', '统一结算点电价最终结果'],
+        rows: [['00:15', '371.2']],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rowCount, 1);
+  assert.equal(snapshot.rows[0].realTimePointPriceCurrent, 371.2);
+  assert.equal(snapshot.rows[0].dayAheadUserPrice, undefined);
+});
+
+test('parseVisibleBusinessSnapshot uses the active SPA menu before noisy dashboard navigation text', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://jspec.com.cn/#/dashboard',
+    title: '电力交易平台',
+    activeLabels: ['实时公开出清'],
+    bodyText:
+      '用户侧日前出清 日前公开出清 实时公开出清 当前页面 日期：2026-08-26',
+    tables: [
+      {
+        headers: ['时间', '统一结算点电价最终结果'],
+        rows: [['00:15', '371.2']],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rowCount, 1);
+  assert.equal(snapshot.rows[0].realTimePointPriceCurrent, 371.2);
+  assert.equal(snapshot.rows[0].dayAheadUserPrice, undefined);
+});
+
+test('parseVisibleBusinessSnapshot rejects conflicting active SPA clearing labels instead of misclassifying prices', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://jspec.com.cn/#/dashboard',
+    title: '电力交易平台',
+    activeLabels: ['用户侧日前出清', '实时公开出清'],
+    bodyText: '用户侧日前出清 实时公开出清 日期：2026-08-26',
+    tables: [
+      {
+        headers: ['时间', '统一结算点电价最终结果'],
+        rows: [['00:15', '371.2']],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rowCount, 0);
+  assert.match(snapshot.errors.join('\n'), /统一结算点电价最终结果/);
+});
+
+test('parseVisibleBusinessSnapshot prefers realtime final prices regardless of column order', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/afterDiscloseInformation/xrdClearingResultOnlyJiesuan/CurClearingResult',
+    title: '电力交易平台',
+    bodyText: '实时公开出清 日期：2026-08-26',
+    tables: [
+      {
+        headers: ['时间', '统一结算点电价最终结果', '统一结算点电价临时结果'],
+        rows: [
+          ['00:15', '371.2', '370.1'],
+          ['00:30', '-', '369.4'],
+        ],
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    snapshot.rows.map((row) => row.realTimePointPriceCurrent),
+    [371.2, 369.4]
+  );
+});
+
+test('parseVisibleBusinessSnapshot explains unsupported visible tables without recording cell values', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://jspec.com.cn/#/dashboard',
+    title: '持仓量查询 - 电力交易平台',
+    bodyText: '日期：2026-08-26',
+    tables: [
+      {
+        headers: ['时间', '未知业务指标'],
+        rows: [['00:15', '987654.321']],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rowCount, 0);
+  assert.match(snapshot.errors.join('\n'), /持仓量查询/);
+  assert.match(snapshot.errors.join('\n'), /未知业务指标/);
+  assert.doesNotMatch(snapshot.errors.join('\n'), /987654\.321/);
+});
+
+test('parseVisibleBusinessSnapshot truncates every credential-like suffix from diagnostic page labels', () => {
+  const cases = [
+    ['持仓量查询 token=secret-value', /secret-value/i],
+    ['持仓量查询 Authorization: Bearer topsecret', /Bearer|topsecret/i],
+    ['持仓量查询 password = correct horse battery staple', /correct|horse|battery|staple/i],
+    ['持仓量查询 token secret-without-separator', /secret-without-separator/i],
+  ];
+
+  for (const [title, secretPattern] of cases) {
+    const snapshot = parseVisibleBusinessSnapshot({
+      url: 'https://jspec.com.cn/#/dashboard',
+      title,
+      bodyText: '日期：2026-08-26',
+      tables: [
+        {
+          headers: ['时间', '未知业务指标'],
+          rows: [['00:15', '1']],
+        },
+      ],
+    });
+
+    assert.match(snapshot.errors.join('\n'), /持仓量查询/);
+    assert.doesNotMatch(snapshot.errors.join('\n'), secretPattern);
+  }
+});
+
 test('parseVisibleBusinessSnapshot rejects sensitive visible-table headers', () => {
   const snapshot = parseVisibleBusinessSnapshot({
     url: 'https://www.jspec.com.cn/realtime',
@@ -288,4 +485,22 @@ test('parseVisibleBusinessSnapshot rejects sensitive visible-table headers', () 
   assert.equal(snapshot.rows.length, 0);
   assert.match(snapshot.errors.join('\n'), /sensitive/i);
   assert.match(snapshot.errors.join('\n'), /cookie/i);
+});
+
+test('parseVisibleBusinessSnapshot never copies a credential value from a sensitive header into errors', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://www.jspec.com.cn/realtime',
+    title: '江苏电力交易中心',
+    bodyText: '交易日期：2026-05-09',
+    tables: [
+      {
+        headers: ['时段', 'Authorization: Bearer topsecret', '实时加权均价'],
+        rows: [['00:15', 'unused', '301.5']],
+      },
+    ],
+  });
+
+  assert.equal(snapshot.rows.length, 0);
+  assert.match(snapshot.errors.join('\n'), /sensitive/i);
+  assert.doesNotMatch(snapshot.errors.join('\n'), /Bearer|topsecret/i);
 });

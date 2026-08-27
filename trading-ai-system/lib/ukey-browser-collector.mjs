@@ -165,6 +165,12 @@ const NUMERIC_FIELDS = new Set([
   'actualKwh',
   'settleAmount',
 ]);
+const PRICE_FIELDS = new Set([
+  'realTimeAvgPrice',
+  'realTimePointPriceCurrent',
+  'dayAheadPublicPrice',
+  'dayAheadUserPrice',
+]);
 
 const VISIBLE_TABLE_EXPRESSION = `(() => {
   const clean = (value) => String(value == null ? '' : value).replace(/\\s+/g, ' ').trim();
@@ -186,10 +192,18 @@ const VISIBLE_TABLE_EXPRESSION = `(() => {
       const dataRows = headers.length && rows.length && rows[0].join('|') === headers.join('|') ? rows.slice(1) : rows;
       return { headers, rows: dataRows };
     });
+  const activeLabels = Array.from(document.querySelectorAll(
+    '[aria-current="page"], [aria-selected="true"], .el-menu-item.is-active, .ant-menu-item-selected, .router-link-active'
+  ))
+    .filter(isVisible)
+    .map((element) => clean(element.innerText || element.textContent))
+    .filter(Boolean)
+    .slice(0, 12);
   return {
     url: window.location.href,
     title: document.title,
     bodyText: clean(document.body ? document.body.innerText : '').slice(0, 4000),
+    activeLabels,
     tables,
     capturedAt: new Date().toISOString()
   };
@@ -204,6 +218,16 @@ function cleanString(value) {
 
 function normalizeHeader(value) {
   return cleanString(value).replace(/[：:（）()\[\]【】\s]/g, '');
+}
+
+function redactDiagnosticText(value) {
+  const text = cleanString(value);
+  const sensitiveMatch = text.match(SENSITIVE_FIELD_PATTERN);
+  if (!sensitiveMatch || sensitiveMatch.index === undefined) {
+    return text;
+  }
+  const safePrefix = text.slice(0, sensitiveMatch.index).trim();
+  return `${safePrefix}${safePrefix ? ' ' : ''}[REDACTED]`;
 }
 
 function numberOrNull(value) {
@@ -243,7 +267,50 @@ function extractDateFromText(...values) {
   return '';
 }
 
-function mapHeaderToField(header) {
+function priceFieldFromContext(value) {
+  const context = cleanString(value);
+  if (/用户(?:侧)?日前出清/.test(context)) {
+    return 'dayAheadUserPrice';
+  }
+  if (/实时(?:公开)?出清/.test(context)) {
+    return 'realTimePointPriceCurrent';
+  }
+  if (/日前(?:公开)?出清|日前出清结果公开/.test(context)) {
+    return 'dayAheadPublicPrice';
+  }
+  return '';
+}
+
+function inferContextualPriceField(pageSnapshot = {}) {
+  const url = cleanString(pageSnapshot.url);
+  if (/Dd2jyUserClearingResult\/Dd2jyRqClearing/i.test(url)) {
+    return 'dayAheadUserPrice';
+  }
+  if (/CurClearingResult|RealTimeClearingReleasePublic/i.test(url)) {
+    return 'realTimePointPriceCurrent';
+  }
+  if (/DayClearingResult|RqClearingReleasePublic/i.test(url)) {
+    return 'dayAheadPublicPrice';
+  }
+
+  const activeFields = uniqueStrings(
+    (Array.isArray(pageSnapshot.activeLabels) ? pageSnapshot.activeLabels : [])
+      .map(priceFieldFromContext)
+      .filter(Boolean)
+  );
+  if (activeFields.length > 1) {
+    return '';
+  }
+  if (activeFields.length === 1) {
+    return activeFields[0];
+  }
+  return (
+    priceFieldFromContext(pageSnapshot.title) ||
+    priceFieldFromContext(pageSnapshot.bodyText)
+  );
+}
+
+function mapHeaderToField(header, contextualPriceField = '') {
   const normalized = normalizeHeader(header);
   if (!normalized) {
     return '';
@@ -253,7 +320,27 @@ function mapHeaderToField(header) {
       return rule.field;
     }
   }
+  if (
+    contextualPriceField &&
+    /统一结算点电价(?:临时|最终)?结果|统一结算点电价/.test(normalized)
+  ) {
+    return contextualPriceField;
+  }
   return '';
+}
+
+function fieldValuePriority(field, header) {
+  if (!PRICE_FIELDS.has(field)) {
+    return 0;
+  }
+  const normalized = normalizeHeader(header);
+  if (/最终/.test(normalized)) {
+    return 2;
+  }
+  if (/临时/.test(normalized)) {
+    return 1;
+  }
+  return 0;
 }
 
 function inferPointIndex(value) {
@@ -652,6 +739,7 @@ export function buildManagedBrowserLaunch(options = {}) {
 
 export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
   const tables = Array.isArray(pageSnapshot.tables) ? pageSnapshot.tables : [];
+  const contextualPriceField = inferContextualPriceField(pageSnapshot);
   const defaultDate =
     cleanDate(options.defaultDate) ||
     extractDateFromText(pageSnapshot.bodyText, pageSnapshot.title, pageSnapshot.url);
@@ -666,14 +754,19 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
     let prependDataRow = [];
     const sensitiveHeaders = headers.filter((header) => SENSITIVE_FIELD_PATTERN.test(header));
     if (sensitiveHeaders.length) {
-      errors.push(`Table ${tableIndex + 1} contains sensitive headers: ${sensitiveHeaders.join(', ')}`);
+      const sensitiveKinds = uniqueStrings(
+        sensitiveHeaders.map(
+          (header) => header.match(SENSITIVE_FIELD_PATTERN)?.[0]?.toLowerCase() || 'credential'
+        )
+      );
+      errors.push(`Table ${tableIndex + 1} contains sensitive headers: ${sensitiveKinds.join(', ')}`);
       return;
     }
 
-    let fieldByIndex = headers.map(mapHeaderToField);
+    let fieldByIndex = headers.map((header) => mapHeaderToField(header, contextualPriceField));
     if (!fieldByIndex.some(Boolean) && rawHeaders.length && carryForwardHeaders.length) {
       headers = carryForwardHeaders;
-      fieldByIndex = headers.map(mapHeaderToField);
+      fieldByIndex = headers.map((header) => mapHeaderToField(header, contextualPriceField));
       prependDataRow = rawHeaders;
     }
     if (!fieldByIndex.some(Boolean)) {
@@ -691,18 +784,34 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
     tableRows.forEach((rawCells) => {
       const cells = Array.isArray(rawCells) ? rawCells.map(cleanString) : [];
       const row = {};
+      const fieldPriorities = {};
       fieldByIndex.forEach((field, index) => {
         if (!field) {
           return;
         }
         const value = cells[index];
+        let parsedValue;
         if (NUMERIC_FIELDS.has(field)) {
-          row[field] = numberOrNull(value);
+          parsedValue = numberOrNull(value);
         } else if (field === 'date') {
-          row[field] = cleanDate(value);
+          parsedValue = cleanDate(value);
         } else {
-          row[field] = cleanString(value);
+          parsedValue = cleanString(value);
         }
+        if (parsedValue === null || parsedValue === undefined || parsedValue === '') {
+          return;
+        }
+        const priority = fieldValuePriority(field, headers[index]);
+        if (
+          row[field] !== null &&
+          row[field] !== undefined &&
+          row[field] !== '' &&
+          priority < (fieldPriorities[field] || 0)
+        ) {
+          return;
+        }
+        row[field] = parsedValue;
+        fieldPriorities[field] = priority;
       });
 
       if (!row.date) {
@@ -735,6 +844,20 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
       matchedTableCount += 1;
     }
   });
+
+  if (tables.length && !rows.length && !errors.length) {
+    const visibleHeaders = uniqueStrings(
+      tables.flatMap((table) => (Array.isArray(table.headers) ? table.headers : []))
+    )
+      .slice(0, 12)
+      .map((header) => redactDiagnosticText(header).slice(0, 80));
+    const pageName = redactDiagnosticText(pageSnapshot.title).slice(0, 120) || 'unknown page';
+    errors.push(
+      `No supported business rows were detected on ${pageName}; visible headers: ${
+        visibleHeaders.join(' | ') || 'none'
+      }.`
+    );
+  }
 
   return {
     source: SNAPSHOT_SOURCE,
