@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const launcherPath = fileURLToPath(new URL('../启动系统.bat', import.meta.url));
 const powershellLauncherPath = fileURLToPath(new URL('../start-system.ps1', import.meta.url));
+const fallbackLauncherPath = fileURLToPath(new URL('../run-system.ps1', import.meta.url));
 const homePath = fileURLToPath(new URL('../index.html', import.meta.url));
 const packageScriptPath = fileURLToPath(new URL('../tools/package-one-minute.mjs', import.meta.url));
 
@@ -46,6 +47,18 @@ test('Windows launcher stores cumulative trading history in LocalAppData', async
   assert.match(launcher, /ElectricTradingAI/);
   assert.match(launcher, /TRADING_VISIBLE_HISTORY_PATH/);
   assert.match(launcher, /ukey-visible-history\.json/);
+});
+
+test('Windows launchers never depend on a developer-specific user profile', async () => {
+  const launchers = await Promise.all([
+    readFile(powershellLauncherPath, 'utf8'),
+    readFile(fallbackLauncherPath, 'utf8'),
+  ]);
+
+  for (const launcher of launchers) {
+    assert.match(launcher, /runtime\\node\\node\.exe/);
+    assert.doesNotMatch(launcher, /C:\\Users\\[^\\]+\\\.cache/i);
+  }
 });
 
 test('legacy browsers show an actionable compatibility error instead of permanent loading', async () => {

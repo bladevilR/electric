@@ -4,8 +4,7 @@ param(
 )
 
 $portableNode = Join-Path $PSScriptRoot "runtime\node\node.exe"
-$bundledNode = "C:\Users\R\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
-$node = if (Test-Path $portableNode) { $portableNode } elseif (Test-Path $bundledNode) { $bundledNode } else { "node" }
+$node = if (Test-Path $portableNode) { $portableNode } else { "node" }
 
 $argsList = @(
   ".\server.mjs",

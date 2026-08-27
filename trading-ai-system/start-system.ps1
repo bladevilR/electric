@@ -175,7 +175,6 @@ if (-not $env:TRADING_VISIBLE_HISTORY_PATH) {
 }
 
 $portableNode = Join-Path $root "runtime\node\node.exe"
-$bundledNode = "C:\Users\R\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe"
 $node = ""
 if ($NodePath) {
   if (-not (Test-Path -LiteralPath $NodePath -PathType Leaf)) {
@@ -184,8 +183,6 @@ if ($NodePath) {
   $node = $NodePath
 } elseif (Test-Path -LiteralPath $portableNode -PathType Leaf) {
   $node = $portableNode
-} elseif (Test-Path -LiteralPath $bundledNode -PathType Leaf) {
-  $node = $bundledNode
 } else {
   $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
   if ($nodeCommand) {
