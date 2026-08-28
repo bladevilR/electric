@@ -35,6 +35,21 @@ test('buildManagedBrowserLaunch binds CDP to localhost and uses the managed JSPE
   assert.ok(launch.args.includes('https://www.jspec.com.cn/'));
 });
 
+test('buildManagedBrowserLaunch discovers a per-user Chrome install on Windows', () => {
+  const localAppData = 'C:\\Users\\operator\\AppData\\Local';
+  const localChrome = `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`;
+  const launch = buildManagedBrowserLaunch({
+    rootDir: 'E:\\electric\\trading-ai-system',
+    platform: 'win32',
+    env: { LOCALAPPDATA: localAppData },
+    existsSync: (candidate) => candidate === localChrome,
+  });
+
+  assert.equal(launch.available, true);
+  assert.equal(launch.browserName, 'Chrome');
+  assert.equal(launch.executablePath, localChrome);
+});
+
 test('collector source avoids credential and network interception APIs', async () => {
   const source = await readFile(
     new URL('../lib/ukey-browser-collector.mjs', import.meta.url),

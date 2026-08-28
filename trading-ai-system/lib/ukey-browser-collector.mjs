@@ -394,19 +394,25 @@ function browserNameFromPath(executablePath = '') {
   return executablePath ? 'Browser' : 'Unavailable';
 }
 
-function standardBrowserCandidates(env = process.env) {
+function standardBrowserCandidates(env = process.env, platform = process.platform) {
   const candidates = [];
   if (env.JSPEC_BROWSER_PATH) {
     candidates.push(env.JSPEC_BROWSER_PATH);
   }
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     candidates.push(
       'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
       'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
       'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
       'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
     );
-  } else if (process.platform === 'darwin') {
+    if (env.LOCALAPPDATA) {
+      candidates.push(
+        path.win32.join(env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.win32.join(env.LOCALAPPDATA, 'Microsoft', 'Edge', 'Application', 'msedge.exe')
+      );
+    }
+  } else if (platform === 'darwin') {
     candidates.push(
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
@@ -421,7 +427,8 @@ function findBrowserExecutable(options = {}) {
   if (options.executablePath) {
     return options.executablePath;
   }
-  return standardBrowserCandidates(options.env).find((candidate) => existsSync(candidate)) || '';
+  const pathExists = options.existsSync || existsSync;
+  return standardBrowserCandidates(options.env, options.platform).find((candidate) => pathExists(candidate)) || '';
 }
 
 function jspecOrigin(baseUrl = DEFAULT_JSPEC_URL) {

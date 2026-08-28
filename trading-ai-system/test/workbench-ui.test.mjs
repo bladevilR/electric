@@ -6,6 +6,21 @@ import {
   buildStandaloneDemoWorkbenchPayload,
   renderWorkbenchMarkup,
 } from '../workbench.js';
+import * as workbenchModule from '../workbench.js';
+
+test('collector failure message exposes the concrete browser collection error', () => {
+  assert.equal(typeof workbenchModule.buildCollectorActionMessage, 'function');
+  assert.equal(
+    workbenchModule.buildCollectorActionMessage({
+      ok: false,
+      error: 'fetch failed',
+      browserWindow: {
+        lastError: 'Chrome or Edge was not found on this computer.',
+      },
+    }),
+    '采集未完成：未找到用于采集的 Chrome 或 Edge，请确认浏览器已安装后重新启动系统。'
+  );
+});
 
 function blockedPayload() {
   return {

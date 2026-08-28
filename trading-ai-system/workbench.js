@@ -1869,6 +1869,25 @@ async function loadForecastReport(date = '') {
   }
 }
 
+export function buildCollectorActionMessage(result = {}) {
+  if (result.ok) {
+    return `已采集 ${result.snapshot?.rowCount || 0} 行，正在重新校验。`;
+  }
+  const rawDetail = String(
+    result.browserWindow?.lastError ||
+      result.collector?.lastError ||
+      result.error ||
+      result.snapshot?.errors?.[0] ||
+      ''
+  ).trim();
+  const detail = rawDetail.includes('Chrome or Edge was not found')
+    ? '未找到用于采集的 Chrome 或 Edge，请确认浏览器已安装后重新启动系统。'
+    : rawDetail;
+  return detail
+    ? `采集未完成：${detail}`
+    : '没有读到业务表格：请在打开的数据窗口完成 UKey 登录并停在业务页面，再点击一次。';
+}
+
 async function runPrimaryAction(actionId) {
   browserState.error = '';
   browserState.actionMessage = '';
@@ -1909,9 +1928,7 @@ async function runPrimaryAction(actionId) {
         method: 'POST',
         cache: 'no-store',
       }).then(responseJson);
-      browserState.actionMessage = result.ok
-        ? `已采集 ${result.snapshot?.rowCount || 0} 行，正在重新校验。`
-        : '没有读到业务表格：请在打开的数据窗口完成 UKey 登录并停在业务页面，再点击一次。';
+      browserState.actionMessage = buildCollectorActionMessage(result);
       await loadWorkbench(browserState.payload?.date || '');
     } catch (error) {
       browserState.error = `采集失败：${error.message}`;
