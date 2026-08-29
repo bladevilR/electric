@@ -343,6 +343,64 @@ test('submission dashboard opens as a task-first trading workstation', async () 
   assert.equal((html.match(/data-primary-action="review_strategy"/g) || []).length, 1);
 });
 
+test('submission dashboard explains the decision in one readable full-width chain', async () => {
+  const module = await import('../workbench.js');
+  const payload = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'submission'
+  );
+  const html = module.renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    activeStage: 'execute',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /class="submission-derivation-summary"/);
+  assert.match(html, /这套建议是怎么得出的/);
+  assert.match(html, /历史基线/);
+  assert.match(html, /多因素修正/);
+  assert.match(html, /场景风险求解/);
+  assert.match(html, /data-action="open-derivation"/);
+  assert.doesNotMatch(html, /class="submission-evidence-row"/);
+});
+
+test('complete derivation page exposes inputs formulas constraints and holdout evidence', async () => {
+  const module = await import('../workbench.js');
+  const payload = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'submission'
+  );
+  const html = module.renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    activeStage: 'derive',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /完整推导/);
+  assert.match(html, /data-action="close-derivation"/);
+  assert.match(html, /输入数据/);
+  assert.match(html, /同点位基线/);
+  assert.match(html, /因素修正/);
+  assert.match(html, /联合场景/);
+  assert.match(html, /目标函数/);
+  assert.match(html, /CVaR 风险约束/);
+  assert.match(html, /60% \/ 20% \/ 20%/);
+  assert.match(html, /7、14、21、28、42、56/);
+  assert.match(html, /0\.5、0\.75、1/);
+  assert.match(html, /至少 30 个交易日/);
+  assert.match(html, /至少 2,880 个点/);
+  assert.match(html, /改善不低于 3%/);
+  assert.match(html, /日胜率不低于 60%/);
+  assert.match(html, /4,128/);
+  assert.match(html, /1\.64/);
+  assert.match(html, /1\.48/);
+  assert.match(html, /9\.64%/);
+  assert.match(html, /86\.05%/);
+  assert.match(html, /解释边界/);
+  assert.doesNotMatch(html, /留出集拟合/);
+  assert.doesNotMatch(html, /自动提交|已实现收益/);
+});
+
 test('strategy evolution dashboard renders four centers and safe governance actions', async () => {
   const module = await import('../workbench.js');
   const payload = module.buildDemoWorkbenchScenario(

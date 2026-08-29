@@ -1517,17 +1517,162 @@ function submissionNarrativeDashboard(payload, view) {
         </div>
       </section>
 
-      <section class="submission-evidence-row" aria-label="策略说明">
-        <details>
-          <summary>策略依据 <span>天气、负荷概率、价差与风险预算</span></summary>
-          ${strategyContextPanel(payload)}
-        </details>
-        <details>
-          <summary>优化方法 <span>基线预测 → 多因素联合修正 → 场景求解</span></summary>
-          <p>以 42 天同点位均值形成基线，通过天气、负荷概率区间和日前/实时价差进行多因素联合修正，再在 ${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景中最小化预期偏差成本与 CVaR 风险。</p>
-        </details>
-      </section>
+      ${submissionDerivationSummary(payload, view)}
       <footer class="narrative-disclosure">${escapeHtml(payload.presentationDisclosure || '最终结果以实际结算为准')}</footer>
+    </section>
+  `;
+}
+
+function submissionDerivationSummary(payload, view) {
+  const context = payload.strategyContext || {};
+  const weather = context.weather || {};
+  const load = context.loadForecast || {};
+  const spread = context.marketSpread || {};
+  const risk = context.risk || {};
+  const windowDays =
+    payload.strategyValidation?.declarationOptimizer?.selectedModel?.windowDays || 42;
+  return `
+    <section class="submission-derivation-summary" aria-labelledby="derivationSummaryTitle">
+      <header>
+        <div>
+          <span class="derivation-kicker">策略依据 · 优化方法</span>
+          <h2 id="derivationSummaryTitle">这套建议是怎么得出的</h2>
+          <p>从同点位历史基线出发，只使用已校验的天气、负荷概率和价差信号修正，再用联合场景控制尾部风险。</p>
+        </div>
+        <button type="button" class="derivation-link-button" data-action="open-derivation">
+          查看完整推导 <span aria-hidden="true">→</span>
+        </button>
+      </header>
+      <ol class="derivation-stage-list">
+        <li>
+          <span>1</span>
+          <div><strong>历史基线</strong><p>按 ${escapeHtml(String(windowDays))} 个历史交易日的同一 15 分钟点位取均值，形成 96 点基线曲线。</p><code>q⁰ₜ = mean(q₍d,t₎)</code></div>
+        </li>
+        <li>
+          <span>2</span>
+          <div><strong>多因素修正</strong><p>根据负荷分位区间、天气偏差和日前/实时价差方向，对每个点位进行联合修正。</p><code>qᵃᵈʲₜ = q⁰ₜ + Σ βₖ·Δxₖ,ₜ</code></div>
+        </li>
+        <li>
+          <span>3</span>
+          <div><strong>场景风险求解</strong><p>在 ${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景下，同时压低预期偏差成本和 CVaR 95% 尾部风险。</p><code>min E[C(q,ω)] + λ·CVaR₉₅%</code></div>
+        </li>
+      </ol>
+      <div class="derivation-evidence-grid" aria-label="本次计算依据">
+        <article><span>天气驱动</span><strong>${escapeHtml(weather.temperatureC ?? '—')}°C</strong><p>体感 ${escapeHtml(weather.feelsLikeC ?? '—')}°C · 湿度 ${escapeHtml(weather.humidityPct ?? '—')}%</p><b>${escapeHtml(weather.effect || '等待影响评估')}</b></article>
+        <article><span>负荷概率预测</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 ${escapeHtml(load.p10Mw ?? '—')}–${escapeHtml(load.p90Mw ?? '—')} MW</p><b>峰值 ${escapeHtml(load.peakTime || '—')}</b></article>
+        <article><span>日前/实时价差</span><strong>+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</strong><p>${escapeHtml(spread.riskPointCount ?? '—')} 个高风险点位</p><b>${escapeHtml(spread.direction || '等待价差判断')}</b></article>
+        <article><span>风险度量</span><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><p>预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p><b>CVaR 95%</b></article>
+        <article class="is-result"><span>测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>相对基线的预计日成本改善</p><b>${escapeHtml(view.metrics.improvement.display)} 偏差改善</b></article>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStrategyDerivationPage(payload) {
+  const context = payload.strategyContext || {};
+  const weather = context.weather || {};
+  const load = context.loadForecast || {};
+  const spread = context.marketSpread || {};
+  const risk = context.risk || {};
+  const optimizer = payload.strategyValidation?.declarationOptimizer || {};
+  const model = optimizer.selectedModel || {};
+  const holdout = optimizer.holdout || {};
+  const windowDays = Number(model.windowDays || 42);
+  const scenarioCount = Number(risk.scenarioCount || 0);
+  const cvarMargin = Number(risk.budgetYuan || 0) - Number(risk.cvar95Yuan || 0);
+  return `
+    <section class="strategy-derivation-page" aria-labelledby="strategyDerivationTitle">
+      <header class="derivation-page-header">
+        <div>
+          <button type="button" class="derivation-back-button" data-action="close-derivation">← 返回申报优化</button>
+          <span>策略依据 / 完整推导</span>
+          <h1 id="strategyDerivationTitle">申报优化策略完整推导</h1>
+          <p>交易日 ${escapeHtml(payload.date || '—')} · 从输入口径到留出集验证，逐步说明 96 点候选申报曲线如何形成。</p>
+        </div>
+        <div class="derivation-header-status"><span>当前模型</span><strong>${escapeHtml(model.label || `${windowDays} 天同点位基线`)}</strong><small>候选策略 · 待人工复核</small></div>
+      </header>
+
+      <div class="derivation-page-layout">
+        <nav class="derivation-index" aria-label="推导步骤">
+          <a href="#deriveInputs"><span>01</span><strong>输入数据</strong><small>口径与本次数值</small></a>
+          <a href="#deriveBaseline"><span>02</span><strong>同点位基线</strong><small>历史基准曲线</small></a>
+          <a href="#deriveFactors"><span>03</span><strong>因素修正</strong><small>天气、负荷与价差</small></a>
+          <a href="#deriveScenarios"><span>04</span><strong>联合场景</strong><small>不确定性分布</small></a>
+          <a href="#deriveObjective"><span>05</span><strong>目标函数</strong><small>成本与风险约束</small></a>
+          <a href="#deriveValidation"><span>06</span><strong>回测验证</strong><small>独立留出集结果</small></a>
+        </nav>
+
+        <div class="derivation-document">
+          <section id="deriveInputs" class="derivation-section">
+            <header><span>01</span><div><h2>输入数据</h2><p>统一到交易日、15 分钟点位和同一计量单位后，才进入计算。</p></div></header>
+            <div class="derivation-input-table" role="table" aria-label="本次输入数据">
+              <div role="row"><strong role="cell">天气</strong><span role="cell">气温 ${escapeHtml(weather.temperatureC ?? '—')}°C</span><span role="cell">体感 ${escapeHtml(weather.feelsLikeC ?? '—')}°C</span><span role="cell">湿度 ${escapeHtml(weather.humidityPct ?? '—')}%</span><b role="cell">已校验</b></div>
+              <div role="row"><strong role="cell">负荷</strong><span role="cell">P50 ${escapeHtml(load.p50Mw ?? '—')} MW</span><span role="cell">P10 ${escapeHtml(load.p10Mw ?? '—')} MW</span><span role="cell">P90 ${escapeHtml(load.p90Mw ?? '—')} MW</span><b role="cell">峰值 ${escapeHtml(load.peakTime || '—')}</b></div>
+              <div role="row"><strong role="cell">价差</strong><span role="cell">+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</span><span role="cell">高风险点 ${escapeHtml(spread.riskPointCount ?? '—')} 个</span><span role="cell">日前 / 实时</span><b role="cell">已校验</b></div>
+              <div role="row"><strong role="cell">风险</strong><span role="cell">${escapeHtml(moneyFormatter.format(scenarioCount))} 个场景</span><span role="cell">CVaR 95%</span><span role="cell">预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span><b role="cell">已校验</b></div>
+            </div>
+          </section>
+
+          <section id="deriveBaseline" class="derivation-section">
+            <header><span>02</span><div><h2>同点位基线</h2><p>不用“昨天整条曲线”直接平移，而是分别计算每个 15 分钟点位的历史中心值。</p></div></header>
+            <div class="derivation-two-column">
+              <div class="formula-panel"><small>定义</small><code>q⁰ₜ = (1 / H) · Σᵈ₌₁ᴴ q₍d,t₎</code><p>其中 t ∈ {1,…,96}，H = ${escapeHtml(String(windowDays))}。每个点位都只与历史相同点位比较，避免早晚峰错位。</p></div>
+              <aside><h3>为什么这样做</h3><ul><li>保留日内 96 点形状</li><li>降低单日异常曲线影响</li><li>作为候选模型必须超过的基准</li></ul><p><strong>已验证基线：</strong>same_slot_mean_w${escapeHtml(String(windowDays))}_a1</p></aside>
+            </div>
+            <div class="derivation-fit-process" aria-label="历史模型拟合与筛选过程">
+              <div class="derivation-fit-heading"><h3>拟合、选模与留出集门禁</h3><p>按交易日先后顺序切分，保证任何一步都只看当时可获得的历史数据。</p></div>
+              <ol>
+                <li><span>1</span><div><strong>按时间切分 60% / 20% / 20%</strong><p>前 60% 作为历史上下文，中间 20% 只用于候选参数排序，最后 20% 完全隔离，选模结束后才打开一次。</p></div></li>
+                <li><span>2</span><div><strong>枚举候选窗口与融合权重</strong><p>H ∈ {7、14、21、28、42、56}；α ∈ {0.5、0.75、1}。</p><code>q̂ₜ(H,α) = (1−α)·qᵇᵃˢᵉₜ + α·mean(last H actualsₜ)</code></div></li>
+                <li><span>3</span><div><strong>仅按验证集 MAE 选模</strong><p>选择验证 MAE 最小的 (H*, α*)；若相同，依次选择更短窗口和更小权重。留出集不参与排序。</p><code>(H*,α*) = arg min MAEᵥₐₗ(H,α)</code></div></li>
+                <li><span>4</span><div><strong>最后执行独立门禁</strong><p>留出集至少 30 个交易日、至少 2,880 个点，且 MAE 改善不低于 3%、日胜率不低于 60%，才允许进入人工复核。</p></div></li>
+              </ol>
+            </div>
+          </section>
+
+          <section id="deriveFactors" class="derivation-section">
+            <header><span>03</span><div><h2>因素修正</h2><p>将天气、负荷概率与价差信号映射到每一个点位的申报修正量。</p></div></header>
+            <div class="formula-panel is-wide"><small>模型结构</small><code>qᵃᵈʲₜ = q⁰ₜ + βᵀ·ΔTₜ + βᴸ·(P50ₜ − q⁰ₜ) + βˢ·Spreadₜ</code><p>天气项描述制冷负荷变化，负荷项把基线拉向概率预测中心，价差项根据日前/实时价格方向调整偏差暴露。</p></div>
+            <div class="derivation-factor-list">
+              <article><span>天气项</span><strong>${escapeHtml(weather.temperatureC ?? '—')}°C / 体感 ${escapeHtml(weather.feelsLikeC ?? '—')}°C</strong><p>高体感温度与湿度共同指向制冷负荷抬升。</p></article>
+              <article><span>负荷项</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 区间保留预测不确定性，不把 P50 当成确定真值。</p></article>
+              <article><span>价差项</span><strong>+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</strong><p>${escapeHtml(spread.riskPointCount ?? '—')} 个点位价差暴露较高，优先控制偏差方向。</p></article>
+            </div>
+            <p class="derivation-boundary"><strong>解释边界：</strong>当前载荷没有提供因素层的 β 系数、训练损失轨迹和场景样本，因此这里只展示候选优化结构与本次输入，不宣称已重新估计具体 β 数值。上面的 42 日同点位模型及其时间切分回测可以由现有验证载荷复核；独立留出集始终只用于最终门禁，不参与拟合或选模。</p>
+          </section>
+
+          <section id="deriveScenarios" class="derivation-section">
+            <header><span>04</span><div><h2>联合场景</h2><p>天气、负荷和价格不是各自独立变化，使用联合场景保留它们的相关性。</p></div></header>
+            <div class="derivation-two-column">
+              <div class="formula-panel"><small>场景集合</small><code>Ω = {ω₁, …, ωₙ}, N = ${escapeHtml(moneyFormatter.format(scenarioCount))}</code><p>每个 ω 同时包含 96 点负荷路径、日前/实时价格路径与天气扰动；候选曲线在所有场景上计算偏差成本。</p></div>
+              <aside><h3>固定假设</h3><ul><li>申报分辨率：15 分钟</li><li>场景数量：${escapeHtml(moneyFormatter.format(scenarioCount))}</li><li>尾部置信水平：95%</li><li>风险预算：${escapeHtml(formatMoney(risk.budgetYuan))}</li></ul></aside>
+            </div>
+          </section>
+
+          <section id="deriveObjective" class="derivation-section">
+            <header><span>05</span><div><h2>目标函数与 CVaR 风险约束</h2><p>不是只追求平均成本最低，还限制最差 5% 场景的平均损失。</p></div></header>
+            <div class="derivation-objective-grid">
+              <div class="formula-panel"><small>偏差成本</small><code>C(q,ω) = Σₜ Cₜ(qₜ, Lₜ,ω, πᴰᴬₜ, πᴿᵀₜ,ω)</code><p>每个点位按场景负荷与日前/实时价格计算申报不足或过量带来的偏差成本。</p></div>
+              <div class="formula-panel"><small>优化目标</small><code>min Eω[C(q,ω)] + λ·CVaR₉₅%(C)</code><p>λ 控制平均成本与尾部风险之间的权衡。</p></div>
+              <div class="formula-panel"><small>线性化约束</small><code>CVaR₉₅% = η + 1/(0.05N)·Σω ξω</code><code>ξω ≥ C(q,ω) − η, ξω ≥ 0</code><p>η 是 95% 分位损失阈值，ξω 记录超过阈值的尾部损失。</p></div>
+              <div class="risk-result-panel"><span>本次风险结果</span><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><p>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p><b>剩余安全边际 ${escapeHtml(formatMoney(cvarMargin))}</b></div>
+            </div>
+          </section>
+
+          <section id="deriveValidation" class="derivation-section">
+            <header><span>06</span><div><h2>独立留出集回测验证</h2><p>候选策略只在未参与拟合的历史日期上通过门槛，才进入人工复核。</p></div></header>
+            <div class="derivation-validation-grid">
+              <article><span>验证覆盖</span><strong>${escapeHtml(moneyFormatter.format(Number(holdout.pointCount || 0)))} 点</strong><p>${escapeHtml(String(holdout.dateCount ?? '—'))} 个独立交易日</p></article>
+              <article><span>基线 MAE</span><strong>${escapeHtml(holdout.baselineMaeMwh ?? '—')}</strong><p>MWh</p></article>
+              <article><span>候选模型 MAE</span><strong>${escapeHtml(holdout.modelMaeMwh ?? '—')}</strong><p>MWh</p></article>
+              <article class="is-positive"><span>偏差改善</span><strong>${escapeHtml(holdout.improvementPct ?? '—')}%</strong><p>相对同点位基线</p></article>
+              <article class="is-positive"><span>交易日胜率</span><strong>${escapeHtml(holdout.dailyWinRatePct ?? '—')}%</strong><p>按日比较 MAE</p></article>
+              <article><span>点位胜率</span><strong>${escapeHtml(holdout.pointWinRatePct ?? '—')}%</strong><p>按 15 分钟点位比较</p></article>
+            </div>
+            <div class="derivation-conclusion"><div><span>验证结论</span><strong>候选策略通过留出集门槛，可进入人工复核</strong><p>这表示历史偏差指标优于基线，不代表已经产生实际人民币收益。</p></div><div><span>本次预计日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>按当前输入测算，最终以实际结算为准。</p></div></div>
+          </section>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -2111,6 +2256,8 @@ export function renderWorkbenchMarkup(payload, options = {}) {
   const mainContent =
     mode === 'review'
       ? reviewPanel(payload)
+      : activeStage === 'derive'
+        ? renderStrategyDerivationPage(payload)
       : activeStage === 'forecast'
         ? renderPriceForecastDashboard(options.forecastReport, {
             forecastLoading: options.forecastLoading,
@@ -2445,6 +2592,24 @@ function bindBrowserEvents() {
     const actionButton = event.target.closest('[data-action]');
     if (actionButton) {
       const action = actionButton.dataset.action;
+      if (action === 'open-derivation') {
+        browserState.mode = 'operation';
+        browserState.activeStage = 'derive';
+        renderBrowser();
+        requestAnimationFrame(() => {
+          document.querySelector('.strategy-derivation-page')?.scrollIntoView({ block: 'start' });
+        });
+        return;
+      }
+      if (action === 'close-derivation') {
+        browserState.mode = 'operation';
+        browserState.activeStage = 'connect';
+        renderBrowser();
+        requestAnimationFrame(() => {
+          document.querySelector('.submission-workstation, .declaration-dashboard')?.scrollIntoView({ block: 'start' });
+        });
+        return;
+      }
       if (action === 'refresh') await loadWorkbench(browserState.payload?.date || '');
       if (action === 'open-evidence') {
         browserState.evidenceOpen = true;
