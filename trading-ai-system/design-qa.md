@@ -6,7 +6,7 @@
 - 桌面实现：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-申报优化工作台-v2-1440.png`
 - 手机实现：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-申报优化工作台-v2-mobile.png`
 - 并排证据：`/Users/r/Documents/electric/trading-ai-system/output/design/对照-申报优化工作台-v2.png`
-- 页面：`http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v6`
+- 页面：`http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v7`
 - 状态：96 点候选申报策略默认态，待人工复核。
 
 **视口与归一化**
@@ -36,7 +36,7 @@
 - 主操作：点击“进入人工复核”后进入复核态，并显示“策略草稿已生成并进入人工复核”。
 - 桌面：1440 CSS px 宽，页面 `scrollWidth` 与 `clientWidth` 一致，无横向溢出。
 - 手机：358 CSS px 宽，扫描工作台全部后代元素，未发现越过视口左右边界的元素。
-- 缓存：入口资源使用 `workstation-v6` 版本参数，静态响应为 `cache-control: no-store`。
+- 缓存：入口资源使用 `workstation-v7` 版本参数，静态响应为 `cache-control: no-store`。
 
 **对照迭代记录**
 

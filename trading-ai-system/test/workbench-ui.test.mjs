@@ -548,6 +548,17 @@ test('price forecast stage renders baseline results after five historical dates'
   assert.doesNotMatch(html, /已实现节省[：:]\s*¥/);
 });
 
+test('standalone submission forecast does not require a public API call', async () => {
+  const module = await import('../workbench.js');
+  const report = module.buildStandaloneDemoForecastReport('2026-07-31');
+
+  assert.equal(report.status, 'baseline_ready');
+  assert.equal(report.targetDate, '2026-07-31');
+  assert.equal(report.readiness.historicalDateCount, 5);
+  assert.equal(report.forecasts.length, 96);
+  assert.ok(report.forecasts.every((row) => row.target === 'realTimeAvgPrice'));
+});
+
 test('96-point curve keeps interaction coverage without rendering a bead on every point', () => {
   const payload = buildStandaloneDemoWorkbenchPayload();
   const html = renderWorkbenchMarkup(payload, {

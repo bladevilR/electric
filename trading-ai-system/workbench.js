@@ -852,6 +852,35 @@ export function buildStandaloneDemoWorkbenchPayload() {
   };
 }
 
+export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
+  const forecasts = Array.from({ length: 96 }, (_, index) => {
+    const pointIndex = index + 1;
+    const hour = index / 4;
+    const morningPeak = 150 * Math.exp(-((hour - 10) ** 2) / 12);
+    const eveningPeak = 220 * Math.exp(-((hour - 18) ** 2) / 10);
+    const pointForecast = Math.round((320 + morningPeak + eveningPeak) * 100) / 100;
+    return {
+      target: 'realTimeAvgPrice',
+      pointIndex,
+      pointForecast,
+      p10: Math.round((pointForecast * 0.88) * 100) / 100,
+      p90: Math.round((pointForecast * 1.12) * 100) / 100,
+      evidenceRows: 5,
+    };
+  });
+  return {
+    status: 'baseline_ready',
+    targetDate,
+    readiness: {
+      status: 'baseline_ready',
+      historicalDateCount: 5,
+      comparablePointCount: 96,
+      missingReasons: [],
+    },
+    forecasts,
+  };
+}
+
 export function buildDemoWorkbenchScenario(payload, scenario) {
   const base = structuredClone(payload || {});
   if (scenario === 'submission') {
@@ -2235,6 +2264,14 @@ async function loadForecastReport(date = '') {
   browserState.forecastLoading = true;
   browserState.forecastError = '';
   renderBrowser();
+  if (demoScenario()) {
+    browserState.forecastReport = buildStandaloneDemoForecastReport(
+      date || browserState.payload?.date || '2026-07-31'
+    );
+    browserState.forecastLoading = false;
+    renderBrowser();
+    return;
+  }
   try {
     const query = date ? `?date=${encodeURIComponent(date)}` : '';
     browserState.forecastReport = await fetch(`/api/forecast/model${query}`, {
