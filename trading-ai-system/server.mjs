@@ -862,7 +862,10 @@ async function handleStatic(response, urlPath) {
       return;
     }
 
-    response.writeHead(200, { 'content-type': contentType(filePath) });
+    response.writeHead(200, {
+      'content-type': contentType(filePath),
+      'cache-control': 'no-store',
+    });
     createReadStream(filePath).pipe(response);
   } catch (error) {
     if (error.code === 'ENOENT') {

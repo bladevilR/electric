@@ -854,6 +854,105 @@ export function buildStandaloneDemoWorkbenchPayload() {
 
 export function buildDemoWorkbenchScenario(payload, scenario) {
   const base = structuredClone(payload || {});
+  if (scenario === 'submission') {
+    return {
+      ...base,
+      demoMode: true,
+      demoLabel: '候选优化策略 · 策略验证中',
+      presentationDisclosure: '按当前输入测算，最终结果以实际结算为准',
+      status: 'review_required',
+      currentStage: 'execute',
+      execution: {
+        ...base.execution,
+        dataReady: true,
+        reviewed: false,
+        allowed: false,
+      },
+      stages: (base.stages || []).map((item) => ({
+        ...item,
+        status: item.id === 'execute' ? 'active' : item.id === 'settle' ? 'blocked' : 'complete',
+        description:
+          item.id === 'connect'
+            ? '多源数据已对齐'
+            : item.id === 'validate'
+              ? '质量门禁已通过'
+              : item.id === 'execute'
+                ? '候选策略待复核'
+                : '等待实际结算',
+      })),
+      dataEvidence: [
+        {
+          id: 'weather_forecast',
+          label: '天气预测数据',
+          status: 'ready',
+          value: '96/96 点',
+          detail: '温度、湿度与体感温度已按交易时点对齐。',
+        },
+        {
+          id: 'load_forecast',
+          label: '负荷概率预测',
+          status: 'ready',
+          value: 'P10 / P50 / P90',
+          detail: '负荷区间已进入候选策略计算。',
+        },
+        {
+          id: 'market_spread',
+          label: '日前与实时价差',
+          status: 'ready',
+          value: '96/96 点',
+          detail: '价差分布已按同一交易日口径对齐。',
+        },
+      ],
+      strategyContext: {
+        weather: {
+          temperatureC: 31.8,
+          feelsLikeC: 34.2,
+          humidityPct: 72,
+          effect: '制冷负荷抬升',
+        },
+        loadForecast: {
+          p10Mw: 571.8,
+          p50Mw: 612.4,
+          p90Mw: 656.2,
+          peakTime: '20:15',
+        },
+        marketSpread: {
+          expectedYuanPerMwh: 36.4,
+          riskPointCount: 19,
+          direction: '实时价格偏强',
+        },
+        risk: {
+          cvar95Yuan: 42_600,
+          budgetYuan: 50_000,
+          scenarioCount: 1_000,
+          status: '风险预算内',
+        },
+        estimatedDailyImprovementYuan: 24_000,
+      },
+      savings: {
+        ...base.savings,
+        estimatedNetYuan: 24_000,
+        realizedNetYuan: null,
+        formulaComplete: false,
+      },
+      strategyValidation: {
+        ...base.strategyValidation,
+        declarationOptimizer: {
+          ...base.strategyValidation?.declarationOptimizer,
+          selectedModel: {
+            id: 'multi_factor_joint_scenario_v1',
+            label: '多因素联合场景优化',
+            windowDays: null,
+            weight: null,
+          },
+        },
+      },
+      primaryAction: {
+        id: 'review_strategy',
+        label: '进入人工复核',
+      },
+    };
+  }
   if (scenario === 'reviewable') {
     return {
       ...base,
@@ -930,7 +1029,7 @@ export function buildDemoActionResult(payload, actionId) {
       handled: true,
       mode: 'review',
       evidenceOpen: true,
-      message: '演示：策略草稿已生成并进入人工复核。',
+      message: '策略草稿已生成并进入人工复核。',
     };
   }
   if (actionId === 'review_evidence') {
@@ -938,7 +1037,7 @@ export function buildDemoActionResult(payload, actionId) {
       handled: true,
       mode: 'review',
       evidenceOpen: true,
-      message: '演示：已打开结算证据链。',
+      message: '已打开结算证据链。',
     };
   }
   if (actionId === 'approve_challenger' || actionId === 'rollback_champion') {
@@ -960,23 +1059,19 @@ export function buildDemoActionResult(payload, actionId) {
 
 function dashboardSidebar(payload, activeStage) {
   const navItems = [
-    { id: 'curve', stage: 'connect', label: 'AI申报优化', icon: '⌁' },
-    { id: 'validate', stage: 'validate', label: '申报总览', icon: '▦' },
-    { id: 'curve', stage: 'execute', label: '曲线对比', icon: '⌁' },
+    { id: 'optimize', stage: 'connect', label: '申报优化', icon: '⌁' },
     { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
     { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
     { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
   ];
   const activeNavigation =
-    activeStage === 'validate'
-      ? 'validate'
-      : activeStage === 'forecast'
-        ? 'forecast'
+    activeStage === 'forecast'
+      ? 'forecast'
       : activeStage === 'settle'
         ? 'review'
         : activeStage === 'evolve'
           ? 'evolution'
-          : 'primary';
+          : 'optimize';
   return `
     <aside class="dashboard-sidebar">
       <div class="dashboard-brand">
@@ -992,13 +1087,7 @@ function dashboardSidebar(payload, activeStage) {
             (item) => `
               <button
                 type="button"
-                class="${
-                  (activeNavigation === 'primary' && item.stage === 'connect') ||
-                  (activeNavigation === item.id && item.stage !== 'connect') ||
-                  (activeNavigation === 'evolution' && item.stage === 'evolve')
-                    ? 'is-active'
-                    : ''
-                }"
+                class="${activeNavigation === item.id ? 'is-active' : ''}"
                 data-dashboard-nav="${escapeHtml(item.id)}"
                 data-stage="${escapeHtml(item.stage)}"
               >
@@ -1076,7 +1165,7 @@ function dashboardHero(payload, view) {
   `;
 }
 
-function dashboardMetrics(view) {
+function dashboardMetrics(view, payload = {}) {
   const metrics = [
     {
       label: '偏差改善',
@@ -1102,7 +1191,7 @@ function dashboardMetrics(view) {
     {
       label: '决策可信度',
       value: view.metrics.confidence.display,
-      detail: '真实数据综合评分',
+      detail: payload.presentationDisclosure ? '多源数据综合评分' : '真实数据综合评分',
       tone: 'amber',
       icon: '★',
     },
@@ -1127,6 +1216,293 @@ function dashboardMetrics(view) {
   `;
 }
 
+function strategyContextPanel(payload) {
+  const context = payload.strategyContext;
+  if (!context) return '';
+  const weather = context.weather || {};
+  const load = context.loadForecast || {};
+  const spread = context.marketSpread || {};
+  const risk = context.risk || {};
+  return `
+    <section class="strategy-context" aria-label="候选策略多因素摘要">
+      <article class="strategy-factor is-weather">
+        <span class="strategy-factor-icon" aria-hidden="true">☀</span>
+        <div>
+          <small>天气驱动</small>
+          <strong>${escapeHtml(formatForecastNumber(weather.temperatureC))}°C</strong>
+          <p>体感 ${escapeHtml(formatForecastNumber(weather.feelsLikeC))}°C · 湿度 ${escapeHtml(formatForecastNumber(weather.humidityPct))}%</p>
+          <b>${escapeHtml(weather.effect || '等待影响评估')}</b>
+        </div>
+      </article>
+      <article class="strategy-factor is-load">
+        <span class="strategy-factor-icon" aria-hidden="true">⌁</span>
+        <div>
+          <small>负荷概率预测</small>
+          <strong>P50 ${escapeHtml(formatForecastNumber(load.p50Mw))} MW</strong>
+          <p>P10–P90 ${escapeHtml(formatForecastNumber(load.p10Mw))}–${escapeHtml(formatForecastNumber(load.p90Mw))} MW</p>
+          <b>峰值时点 ${escapeHtml(load.peakTime || '—')}</b>
+        </div>
+      </article>
+      <article class="strategy-factor is-spread">
+        <span class="strategy-factor-icon" aria-hidden="true">⇄</span>
+        <div>
+          <small>日前/实时价差</small>
+          <strong>+${escapeHtml(formatForecastNumber(spread.expectedYuanPerMwh))} 元/MWh</strong>
+          <p>${escapeHtml(formatForecastNumber(spread.riskPointCount))} 个高风险点位</p>
+          <b>${escapeHtml(spread.direction || '等待价差判断')}</b>
+        </div>
+      </article>
+      <article class="strategy-factor is-risk">
+        <span class="strategy-factor-icon" aria-hidden="true">◇</span>
+        <div>
+          <small>CVaR 95%</small>
+          <strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong>
+          <p>${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景 · 预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p>
+          <b>${escapeHtml(risk.status || '等待风险评估')}</b>
+        </div>
+      </article>
+      <article class="strategy-impact">
+        <small>测算日成本改善</small>
+        <strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong>
+        <p>${escapeHtml(payload.presentationDisclosure || '最终结果以实际结算为准')}</p>
+      </article>
+    </section>
+  `;
+}
+
+function submissionNarrativeHeader(payload, view) {
+  const model = payload.strategyValidation?.declarationOptimizer?.selectedModel || {};
+  return `
+    <header class="narrative-header">
+      <div class="narrative-title">
+        <span>96 点申报推荐策略与验证</span>
+        <h1>今天为什么这样申报</h1>
+        <p>先看结论，再看数据如何进入策略，最后核对曲线、风险和验证结果。</p>
+      </div>
+      <div class="narrative-model-compare" aria-label="当前模型与候选策略对比">
+        <section>
+          <small>当前基线模型</small>
+          <strong>42 天同点位均值</strong>
+          <p>按历史同一时刻形成申报基线</p>
+        </section>
+        <section class="is-candidate">
+          <small>候选联合策略</small>
+          <strong>${escapeHtml(model.label || '多因素联合场景优化')}</strong>
+          <p>天气、负荷与价差共同修正基线</p>
+        </section>
+      </div>
+      <div class="narrative-primary-summary">
+        <div>
+          <small>测算日成本改善</small>
+          <strong>${escapeHtml(formatMoney(payload.strategyContext?.estimatedDailyImprovementYuan))}</strong>
+          <span>相对基线 ${escapeHtml(view.metrics.improvement.display)} · CVaR 95% ${escapeHtml(formatMoney(payload.strategyContext?.risk?.cvar95Yuan))}</span>
+        </div>
+        <button type="button" class="narrative-primary-action" data-primary-action="review_strategy">进入人工复核</button>
+      </div>
+    </header>
+  `;
+}
+
+function submissionInputChapter(payload) {
+  const context = payload.strategyContext || {};
+  const weather = context.weather || {};
+  const load = context.loadForecast || {};
+  const spread = context.marketSpread || {};
+  const risk = context.risk || {};
+  const inputs = [
+    ['天气驱动', `${formatForecastNumber(weather.temperatureC)}°C`, `体感 ${formatForecastNumber(weather.feelsLikeC)}°C · 湿度 ${formatForecastNumber(weather.humidityPct)}%`, weather.effect],
+    ['负荷概率预测', `P50 ${formatForecastNumber(load.p50Mw)} MW`, `P10–P90 ${formatForecastNumber(load.p10Mw)}–${formatForecastNumber(load.p90Mw)} MW`, `预计峰值 ${load.peakTime || '—'}`],
+    ['日前/实时价差', `+${formatForecastNumber(spread.expectedYuanPerMwh)} 元/MWh`, `${formatForecastNumber(spread.riskPointCount)} 个高风险点位`, spread.direction],
+    ['风险预算', formatMoney(risk.cvar95Yuan), `${moneyFormatter.format(Number(risk.scenarioCount || 0))} 个联合场景`, `上限 ${formatMoney(risk.budgetYuan)}`],
+  ];
+  return `
+    <section class="narrative-chapter narrative-inputs" aria-labelledby="narrativeInputsTitle">
+      <div class="narrative-chapter-heading">
+        <b>1</b>
+        <div><h2 id="narrativeInputsTitle">1. 输入依据</h2><p>用同一交易日口径的数据定义今天的边界条件。</p></div>
+      </div>
+      <div class="narrative-input-grid">
+        ${inputs.map(([label, value, detail, effect]) => `
+          <article>
+            <small>${escapeHtml(label)}</small>
+            <strong>${escapeHtml(value)}</strong>
+            <p>${escapeHtml(detail)}</p>
+            <span>${escapeHtml(effect || '等待判断')}</span>
+          </article>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function submissionMethodChapter(payload) {
+  const scenarioCount = payload.strategyContext?.risk?.scenarioCount || 0;
+  const steps = [
+    ['基线预测', '用 42 天同点位均值形成每个时刻的起点'],
+    ['多因素联合修正', '根据天气、负荷区间和价差方向修正基线'],
+    ['联合场景生成', `${moneyFormatter.format(Number(scenarioCount))} 个负荷与价格联合场景`],
+    ['风险约束求解', '最小化预期偏差成本 + CVaR 风险'],
+    ['生成候选策略', '输出 96 点建议和需要人工关注的时段'],
+  ];
+  return `
+    <section class="narrative-chapter narrative-method" aria-labelledby="narrativeMethodTitle">
+      <div class="narrative-chapter-heading">
+        <b>2</b>
+        <div><h2 id="narrativeMethodTitle">2. 优化怎么做</h2><p>不是直接猜一条曲线，而是从基线开始逐步加入可解释修正。</p></div>
+      </div>
+      <ol class="narrative-method-flow">
+        ${steps.map(([label, detail], index) => `
+          <li>
+            <span>${index + 1}</span>
+            <strong>${escapeHtml(label)}</strong>
+            <p>${escapeHtml(detail)}</p>
+          </li>
+        `).join('')}
+      </ol>
+      <p class="narrative-method-note"><strong>拟合逻辑：</strong>历史同点位给出稳定起点，多因素联合修正当天偏差；场景优化比较不同申报量的成本分布，并在风险预算内选择候选曲线。</p>
+    </section>
+  `;
+}
+
+function submissionWindowReason(window, index) {
+  const reasons = [
+    '低谷价差与负荷波动共同作用，减少不必要的偏差暴露。',
+    '日间负荷区间抬升，结合价格方向调整申报量。',
+    '晚峰负荷概率上移，在风险预算内保留供给余量。',
+  ];
+  return reasons[index % reasons.length];
+}
+
+function submissionValidationPanel(payload, view) {
+  const risk = payload.strategyContext?.risk || {};
+  return `
+    <aside class="narrative-validation" aria-labelledby="narrativeValidationTitle">
+      <div>
+        <small>验证证据</small>
+        <h3 id="narrativeValidationTitle">候选策略如何判断更好</h3>
+      </div>
+      <dl>
+        <div><dt>偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}<small>相对 42 天同点位基线</small></dd></div>
+        <div><dt>交易日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}<small>独立留出交易日</small></dd></div>
+        <div><dt>验证样本</dt><dd>${escapeHtml(view.metrics.coverage.display)}<small>申报点 / 交易日</small></dd></div>
+        <div><dt>CVaR 95%</dt><dd>${escapeHtml(formatMoney(risk.cvar95Yuan))}<small>预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</small></dd></div>
+      </dl>
+      <section class="narrative-truth-status">
+        <strong>当前结论</strong>
+        <p>候选联合策略在回测与风险指标上优于基线，现阶段进入人工复核；实际结果仍以结算为准。</p>
+      </section>
+    </aside>
+  `;
+}
+
+function submissionOutputChapter(payload, view) {
+  const windows = view.windows.slice(0, 3);
+  return `
+    <section class="narrative-chapter narrative-output" aria-labelledby="narrativeOutputTitle">
+      <div class="narrative-chapter-heading">
+        <b>3</b>
+        <div><h2 id="narrativeOutputTitle">3. 输出与验证</h2><p>曲线回答“报多少”，时段解释回答“为什么这样调”。</p></div>
+      </div>
+      <div class="narrative-output-grid">
+        <div class="narrative-curve-wrap">
+          ${declarationCurve(view, payload)}
+          <section class="narrative-reasons" aria-labelledby="narrativeReasonsTitle">
+            <div class="narrative-reasons-heading">
+              <h3 id="narrativeReasonsTitle">为什么这样调</h3>
+              <span>关键时段建议</span>
+            </div>
+            <div class="narrative-reason-grid">
+              ${windows.map((window, index) => `
+                <article>
+                  <header><b>${index + 1}</b><strong>${escapeHtml(window.label)}</strong><span>${window.direction === 'up' ? '上调' : '下调'}</span></header>
+                  <p>${escapeHtml(submissionWindowReason(window, index))}</p>
+                  <small>共 ${escapeHtml(String(window.pointCount))} 个 15 分钟点位，可逐点追溯。</small>
+                </article>
+              `).join('')}
+            </div>
+          </section>
+        </div>
+        ${submissionValidationPanel(payload, view)}
+      </div>
+    </section>
+  `;
+}
+
+function submissionNarrativeDashboard(payload, view) {
+  const context = payload.strategyContext || {};
+  const risk = context.risk || {};
+  const model = payload.strategyValidation?.declarationOptimizer?.selectedModel || {};
+  const windows = view.windows.slice(0, 3);
+  return `
+    <section class="submission-narrative submission-workstation" aria-labelledby="submissionWorkstationTitle">
+      <header class="submission-workstation-header">
+        <div>
+          <h1 id="submissionWorkstationTitle">申报优化</h1>
+          <span class="submission-review-state">96 点申报策略待复核</span>
+        </div>
+        <p>交易日 ${escapeHtml(payload.date || '2026/07/31')} · 数据已就绪 · 更新于 15:28</p>
+      </header>
+
+      <section class="submission-kpi-strip" aria-label="策略关键指标">
+        <article><small>预计日成本</small><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><span>候选策略测算</span></article>
+        <article><small>偏差改善</small><strong>${escapeHtml(view.metrics.improvement.display)}</strong><span>相对当前策略</span></article>
+        <article><small>CVaR 95%</small><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><span>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span></article>
+        <article><small>数据完整度</small><strong>100%</strong><span>${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景</span></article>
+      </section>
+
+      <div class="submission-decision-grid">
+        ${declarationCurve(view, payload)}
+        <aside class="submission-strategy-rail" aria-label="策略对比与复核">
+          <header><h2>策略对比</h2><span>待人工复核</span></header>
+          <section>
+            <small>当前策略</small>
+            <strong>42 天同点位均值</strong>
+            <p>以历史同点位均值作为当日申报基线。</p>
+          </section>
+          <section class="is-candidate">
+            <small>候选策略</small>
+            <strong>${escapeHtml(model.label || '多因素联合场景优化')}</strong>
+            <p>多因素联合修正天气、负荷区间与价差方向。</p>
+          </section>
+          <dl>
+            <div><dt>偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}</dd></div>
+            <div><dt>交易日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}</dd></div>
+            <div><dt>验证覆盖</dt><dd>${escapeHtml(view.metrics.coverage.display)}</dd></div>
+            <div><dt>风险状态</dt><dd>预算内</dd></div>
+          </dl>
+          <button type="button" class="narrative-primary-action" data-primary-action="review_strategy">进入人工复核</button>
+          <p class="submission-rail-note">未经人工复核不会提交申报；最终结果以实际结算为准。</p>
+        </aside>
+      </div>
+
+      <section class="submission-window-strip" aria-labelledby="submissionWindowsTitle">
+        <header><h2 id="submissionWindowsTitle">调整窗口</h2><span>重点复核 ${escapeHtml(String(windows.length))} 个连续时段</span></header>
+        <div>
+          ${windows.map((window, index) => `
+            <article>
+              <b>${String(index + 1).padStart(2, '0')}</b>
+              <div><strong>${escapeHtml(window.label)}</strong><p>${escapeHtml(submissionWindowReason(window, index))}</p></div>
+              <span class="is-${escapeHtml(window.direction)}">${window.direction === 'up' ? '建议上调' : '建议下调'}</span>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+
+      <section class="submission-evidence-row" aria-label="策略说明">
+        <details>
+          <summary>策略依据 <span>天气、负荷概率、价差与风险预算</span></summary>
+          ${strategyContextPanel(payload)}
+        </details>
+        <details>
+          <summary>优化方法 <span>基线预测 → 多因素联合修正 → 场景求解</span></summary>
+          <p>以 42 天同点位均值形成基线，通过天气、负荷概率区间和日前/实时价差进行多因素联合修正，再在 ${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景中最小化预期偏差成本与 CVaR 风险。</p>
+        </details>
+      </section>
+      <footer class="narrative-disclosure">${escapeHtml(payload.presentationDisclosure || '最终结果以实际结算为准')}</footer>
+    </section>
+  `;
+}
+
 function renderCurveGrid(geometry) {
   const horizontal = [0.12, 0.34, 0.56, 0.78, 1];
   return horizontal
@@ -1140,7 +1516,7 @@ function renderCurveGrid(geometry) {
     .join('');
 }
 
-function declarationCurve(view) {
+function declarationCurve(view, payload = {}) {
   const geometry = view.curve.geometry;
   const rows = view.curve.rows;
   const points = geometry.points
@@ -1168,7 +1544,7 @@ function declarationCurve(view) {
     <section class="declaration-curve-panel" aria-labelledby="declarationCurveTitle">
       <div class="curve-heading">
         <div>
-          <span class="hero-kicker">REAL 96-POINT EVIDENCE</span>
+          <span class="hero-kicker">${payload.presentationDisclosure ? '96-POINT STRATEGY VIEW' : 'REAL 96-POINT EVIDENCE'}</span>
           <h2 id="declarationCurveTitle">96 点申报曲线对比</h2>
         </div>
         <div class="curve-legend" aria-label="曲线图例">
@@ -1248,7 +1624,7 @@ function recommendationPanel(payload, view) {
       <section class="recommendation-impact">
         <span>预计偏差改善</span>
         <strong>${escapeHtml(view.metrics.improvement.display)}</strong>
-        <small>${model.windowDays ? `${escapeHtml(model.windowDays)} 日同点位均值模型` : '依据真实历史回测结果'}</small>
+        <small>${model.label ? escapeHtml(model.label) : model.windowDays ? `${escapeHtml(model.windowDays)} 日同点位均值模型` : '依据真实历史回测结果'}</small>
       </section>
       <section class="recommendation-windows">
         <div>
@@ -1319,17 +1695,21 @@ function optimizationFlow(payload, view) {
 export function renderDeclarationDashboard(payload, options = {}) {
   const view = buildDeclarationDashboardView(payload);
   const activeStage = options.activeStage || payload.currentStage || 'connect';
+  if (payload.presentationDisclosure) {
+    return submissionNarrativeDashboard(payload, view);
+  }
   return `
     <section class="declaration-dashboard">
       ${dashboardHero(payload, view)}
-      ${dashboardMetrics(view)}
+      ${strategyContextPanel(payload)}
+      ${dashboardMetrics(view, payload)}
       ${
         activeStage === 'validate'
           ? `<section class="dashboard-context-alert"><strong>执行前数据质量校验</strong><span>${payload.execution?.dataReady ? '关键数据已通过校验' : '仍有数据缺口，当前禁止下发'}</span></section>`
           : ''
       }
       <div class="dashboard-primary-grid">
-        ${declarationCurve(view)}
+        ${declarationCurve(view, payload)}
         ${recommendationPanel(payload, view)}
       </div>
       ${optimizationFlow(payload, view)}
@@ -1712,8 +2092,8 @@ export function renderWorkbenchMarkup(payload, options = {}) {
         ? renderStrategyEvolutionDashboard(payload)
         : renderDeclarationDashboard(payload, { activeStage });
   return `
-    <div class="workbench-shell dashboard-shell">
-      ${payload.demoMode ? `<div class="demo-banner" role="status">${escapeHtml(payload.demoLabel)} · 仅用于界面测试，不用于交易</div>` : ''}
+    <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
+      ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
       ${dashboardSidebar(payload, activeStage)}
       <main class="workbench-main dashboard-main">
         ${dashboardTopbar(payload, mode)}
@@ -1740,7 +2120,7 @@ const browserState = {
 function demoScenario() {
   if (typeof window === 'undefined') return '';
   const value = new URLSearchParams(window.location.search).get('demo') || '';
-  return ['reviewable', 'settled'].includes(value) ? value : '';
+  return ['reviewable', 'settled', 'submission'].includes(value) ? value : '';
 }
 
 function rootElement() {
@@ -1972,6 +2352,12 @@ function bindBrowserEvents() {
     const modeButton = event.target.closest('[data-mode]');
     if (modeButton) {
       browserState.mode = modeButton.dataset.mode;
+      browserState.activeStage =
+        browserState.mode === 'review'
+          ? 'settle'
+          : browserState.activeStage === 'settle'
+            ? 'connect'
+            : browserState.activeStage;
       renderBrowser();
       return;
     }
@@ -1993,17 +2379,15 @@ function bindBrowserEvents() {
       }
       browserState.mode = 'operation';
       browserState.activeStage =
-        destination === 'validate'
-          ? 'validate'
-          : destination === 'evolution'
+        destination === 'evolution'
             ? 'evolve'
-            : dashboardNav.dataset.stage || 'connect';
+            : 'connect';
       renderBrowser();
-      if (destination === 'curve') {
+      if (destination === 'optimize') {
         requestAnimationFrame(() => {
           document
-            .querySelector('#declarationCurveTitle')
-            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            .querySelector('.submission-workstation, .declaration-dashboard')
+            ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
         });
       }
       if (destination === 'evolution') {

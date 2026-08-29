@@ -274,7 +274,10 @@ test('local server exposes the P0 system loop', async () => {
     ]);
 
     assert.match(home, /电力交易智能决策平台/);
-    assert.match(home, /<script type="module" src="\.\/workbench\.js"><\/script>/);
+    assert.match(
+      home,
+      /<script type="module" src="\.\/workbench\.js(?:\?v=[^"]+)?"><\/script>/
+    );
     assert.match(home, /id="workbenchRoot"/);
     assert.doesNotMatch(home, /data\/standard-96\.js/);
     assert.match(workbenchScript, /当日交易决策中心/);

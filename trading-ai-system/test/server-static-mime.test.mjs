@@ -40,6 +40,16 @@ test('local server serves browser ESM modules with a JavaScript MIME type', asyn
       response.headers.get('content-type') || '',
       /^text\/javascript\b/
     );
+    assert.equal(
+      response.headers.get('cache-control'),
+      'no-store',
+      '本地材料页静态资源必须禁用缓存，避免浏览器继续运行旧版脚本'
+    );
+
+    const indexResponse = await fetch(`http://127.0.0.1:${port}/`);
+    const indexHtml = await indexResponse.text();
+    assert.match(indexHtml, /workbench\.css\?v=[^"']+/);
+    assert.match(indexHtml, /workbench\.js\?v=[^"']+/);
   } finally {
     server.kill();
     await once(server, 'exit').catch(() => {});

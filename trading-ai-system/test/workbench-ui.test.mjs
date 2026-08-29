@@ -151,8 +151,8 @@ function blockedPayload() {
 test('blocked workbench renders navigation stages, one action, and no invented savings', () => {
   const html = renderWorkbenchMarkup(blockedPayload(), { mode: 'operation', evidenceOpen: true });
 
-  // 侧栏：申报优化 / 总览 / 曲线 / 价格预测 / 策略进化 / 复盘
-  assert.equal([...html.matchAll(/data-stage=/g)].length, 6);
+  // 侧栏只保留具有独立目的地的四个模块。
+  assert.equal([...html.matchAll(/data-stage=/g)].length, 4);
   assert.match(html, /策略进化/);
   assert.equal([...html.matchAll(/data-primary-action=/g)].length, 1);
   assert.match(html, /预计综合成本优化额/);
@@ -208,7 +208,7 @@ test('demo scenarios are visibly labeled and never replace the default payload s
     handled: true,
     mode: 'review',
     evidenceOpen: true,
-    message: '演示：策略草稿已生成并进入人工复核。',
+    message: '策略草稿已生成并进入人工复核。',
   });
 });
 
@@ -261,6 +261,86 @@ test('standalone reviewable demo does not depend on external standard data', asy
   assert.equal(reviewable.execution.dataReady, true);
   assert.ok(reviewable.strategyEvolution?.centers?.evolution);
   assert.equal(reviewable.strategyEvolution.centers.governance.policy.autoPromote, false);
+});
+
+test('submission material mode presents the multi-factor candidate strategy without claiming realized results', async () => {
+  const module = await import('../workbench.js');
+  const payload = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'submission'
+  );
+
+  assert.equal(payload.demoMode, true);
+  assert.equal(payload.demoLabel, '候选优化策略 · 策略验证中');
+  assert.equal(payload.presentationDisclosure, '按当前输入测算，最终结果以实际结算为准');
+  assert.equal(payload.execution.allowed, false);
+  assert.equal(payload.execution.reviewed, false);
+  assert.equal(payload.strategyContext.weather.temperatureC, 31.8);
+  assert.equal(payload.strategyContext.loadForecast.p50Mw, 612.4);
+  assert.equal(payload.strategyContext.marketSpread.expectedYuanPerMwh, 36.4);
+  assert.equal(payload.strategyContext.risk.cvar95Yuan, 42_600);
+  assert.equal(payload.strategyContext.risk.scenarioCount, 1_000);
+  assert.equal(payload.strategyContext.estimatedDailyImprovementYuan, 24_000);
+  assert.equal(payload.savings.realizedNetYuan, null);
+
+  const html = module.renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    activeStage: 'execute',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /候选优化策略 · 策略验证中/);
+  assert.match(html, /按当前输入测算，最终结果以实际结算为准/);
+  assert.match(html, /天气驱动/);
+  assert.match(html, /31\.8°C/);
+  assert.match(html, /负荷概率预测/);
+  assert.match(html, /P10–P90 571\.8–656\.2 MW/);
+  assert.match(html, /日前\/实时价差/);
+  assert.match(html, /\+36\.4 元\/MWh/);
+  assert.match(html, /CVaR 95%/);
+  assert.match(html, /1,000 个联合场景/);
+  assert.match(html, /多因素联合场景优化/);
+  assert.match(html, /测算日成本改善/);
+  assert.match(html, /¥24,000/);
+  assert.doesNotMatch(html, /模拟数据|仅用于界面测试|演示状态/);
+  assert.doesNotMatch(html, /REAL 96-POINT EVIDENCE|真实数据综合评分/);
+  assert.doesNotMatch(html, /已实现收益[：:]\s*¥|自动提交交易已开启/);
+});
+
+test('submission dashboard opens as a task-first trading workstation', async () => {
+  const module = await import('../workbench.js');
+  const payload = module.buildDemoWorkbenchScenario(
+    module.buildStandaloneDemoWorkbenchPayload(),
+    'submission'
+  );
+  const html = module.renderWorkbenchMarkup(payload, {
+    mode: 'operation',
+    activeStage: 'execute',
+    evidenceOpen: false,
+  });
+
+  const titleIndex = html.indexOf('申报优化');
+  const metricIndex = html.indexOf('预计日成本');
+  const curveIndex = html.indexOf('96 点申报曲线');
+  const reviewIndex = html.indexOf('进入人工复核');
+
+  assert.ok(titleIndex >= 0, '页面标题应直接使用业务模块名称');
+  assert.ok(metricIndex > titleIndex, '关键指标应紧跟在业务标题之后');
+  assert.ok(curveIndex > metricIndex, '96 点曲线应进入首屏主工作区');
+  assert.ok(reviewIndex > curveIndex, '复核动作应和曲线处于同一工作区');
+  assert.doesNotMatch(html, /今天为什么这样申报/);
+  assert.doesNotMatch(html, /1\. 输入依据|2\. 优化怎么做|3\. 输出与验证/);
+  assert.doesNotMatch(html, /submission-story-chapter/);
+  assert.match(html, /96 点申报策略待复核/);
+  assert.match(html, /当前策略/);
+  assert.match(html, /42 天同点位均值/);
+  assert.match(html, /候选策略/);
+  assert.match(html, /多因素联合修正/);
+  assert.match(html, /调整窗口/);
+  assert.match(html, /策略依据/);
+  assert.match(html, /优化方法/);
+  assert.match(html, /workbench-shell dashboard-shell is-submission-shell/);
+  assert.equal((html.match(/data-primary-action="review_strategy"/g) || []).length, 1);
 });
 
 test('strategy evolution dashboard renders four centers and safe governance actions', async () => {
@@ -370,7 +450,7 @@ test('decision mode renders the AI declaration dashboard as the primary theme', 
     evidenceOpen: false,
   });
 
-  assert.match(html, /AI申报优化/);
+  assert.match(html, /申报优化/);
   assert.match(html, /96 点申报曲线对比/);
   assert.match(html, /\+9\.64%/);
   assert.match(html, /88\/100/);
@@ -395,10 +475,13 @@ test('dashboard exposes only functional navigation actions', () => {
     evidenceOpen: false,
   });
 
-  assert.match(html, /data-dashboard-nav="curve"/);
-  assert.match(html, /data-dashboard-nav="validate"/);
+  assert.match(html, /data-dashboard-nav="optimize"/);
   assert.match(html, /data-dashboard-nav="forecast"/);
+  assert.match(html, /data-dashboard-nav="evolution"/);
   assert.match(html, /data-dashboard-nav="review"/);
+  assert.doesNotMatch(html, /data-dashboard-nav="curve"/);
+  assert.doesNotMatch(html, /data-dashboard-nav="validate"/);
+  assert.equal((html.match(/data-dashboard-nav=/g) || []).length, 4);
   assert.match(html, /data-action="open-evidence"/);
   assert.doesNotMatch(html, /href="#"/);
 });
