@@ -373,7 +373,7 @@ test('五个连续章节保留源镜头并按实际音频时长生成章内字�
   assert.ok(captions[0].endMs <= captions[1].startMs);
 });
 
-test('章节连续旁白在静音边界切分后居中对齐每个真实镜头', () => {
+test('章节连续旁白在静音边界切分后前贴并保持镜头安全边距', () => {
   const timeline = {
     segments: [
       { id: 'intro', narrationChapter: 'chapter-value', narration: '成本问题。', startMs: 0, endMs: 7000 },
@@ -389,8 +389,8 @@ test('章节连续旁白在静音边界切分后居中对齐每个真实镜头',
   assert.deepEqual(clips.map((clip) => clip.id), ['intro', 'savings']);
   assert.deepEqual(clips.map((clip) => clip.trimStartMs), [0, 5200]);
   assert.deepEqual(clips.map((clip) => clip.durationMs), [5200, 6800]);
-  assert.equal(clips[0].startMs, 900);
-  assert.equal(clips[1].startMs, 7600);
+  assert.equal(clips[0].startMs, 120);
+  assert.equal(clips[1].startMs, 7120);
   assert.ok(clips.every((clip) => clip.endMs <= clip.segmentEndMs - 500));
 
   const args = buildNarrationMixArgs({

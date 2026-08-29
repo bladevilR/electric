@@ -1,4 +1,4 @@
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
@@ -51,10 +51,13 @@ import { buildStrategyEvolution } from './lib/strategy-evolution.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
-const defaultStandardPath = path.resolve(
+const localCaptureStandardPath = path.resolve(
   rootDir,
   '../jspec-capture/output/session-20260507-101645/standard/standard-96.json'
 );
+const defaultStandardPath = existsSync(localCaptureStandardPath)
+  ? localCaptureStandardPath
+  : path.resolve(rootDir, 'data/standard-96.sample.json');
 const browserDataPath = path.resolve(rootDir, 'data/standard-96.js');
 const integrationSummaryPath = path.resolve(rootDir, 'data/integration-summary.json');
 const integrationBuildScriptPath = path.resolve(rootDir, 'tools/build-integration-summary.py');

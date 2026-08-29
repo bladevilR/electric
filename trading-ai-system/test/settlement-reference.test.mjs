@@ -8,8 +8,13 @@ import { buildSettlementReference } from '../lib/settlement-reference.mjs';
 const systemRoot = fileURLToPath(new URL('..', import.meta.url));
 const projectRoot = path.resolve(systemRoot, '..');
 
-test('buildSettlementReference inventories local Excel and manual export references', async () => {
+test('buildSettlementReference inventories local Excel and manual export references', async (context) => {
   const reference = await buildSettlementReference({ projectRoot });
+
+  if (reference.summary.workbookCount === 0) {
+    context.skip('本机未提供被 Git 忽略的业务 Excel，不伪造真实结算集成验收');
+    return;
+  }
 
   assert.equal(reference.summary.canFillActualKwh, true);
   assert.equal(reference.summary.canFillSettleAmount, true);
