@@ -4507,6 +4507,54 @@ body {
   text-align: right;
 }
 
+.derivation-unit-guide,
+.derivation-metric-guide {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--story-line);
+  border-radius: 8px;
+  background: #f8faff;
+}
+
+.derivation-unit-guide h3,
+.derivation-metric-guide h3 {
+  margin: 0 0 12px;
+  color: var(--story-ink);
+  font-size: 15px;
+}
+
+.derivation-unit-guide > dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.derivation-unit-guide > dl > div {
+  padding: 12px;
+  border: 1px solid var(--story-line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.derivation-unit-guide dt,
+.derivation-unit-guide dd {
+  margin: 0;
+}
+
+.derivation-unit-guide dt {
+  color: #153b7a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.derivation-unit-guide dd {
+  margin-top: 5px;
+  color: var(--story-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .derivation-two-column {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.7fr);
@@ -4550,6 +4598,58 @@ body {
   color: var(--story-muted);
   font-size: 14px;
   line-height: 1.65;
+}
+
+.derivation-symbols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 16px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--story-line);
+}
+
+.derivation-symbols > div {
+  min-width: 0;
+}
+
+.derivation-symbols dt,
+.derivation-symbols dd {
+  margin: 0;
+}
+
+.derivation-symbols dt {
+  color: #153b7a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.derivation-symbols dd {
+  margin-top: 3px;
+  color: var(--story-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.derivation-symbols.is-fit-guide,
+.derivation-symbols.is-objective-guide {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--story-line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.derivation-symbols.is-objective-guide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: #f8faff;
+}
+
+.derivation-metric-guide .derivation-symbols {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .derivation-two-column aside h3 {
@@ -4968,6 +5068,9 @@ body {
   .derivation-two-column,
   .derivation-factor-list,
   .derivation-fit-process ol,
+  .derivation-unit-guide > dl,
+  .derivation-symbols,
+  .derivation-symbols.is-objective-guide,
   .derivation-objective-grid,
   .derivation-validation-grid,
   .derivation-conclusion {

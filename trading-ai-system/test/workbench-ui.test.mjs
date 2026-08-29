@@ -320,7 +320,7 @@ test('submission dashboard opens as a task-first trading workstation', async () 
   });
 
   const titleIndex = html.indexOf('申报优化');
-  const metricIndex = html.indexOf('预计日成本');
+  const metricIndex = html.indexOf('测算日成本改善');
   const curveIndex = html.indexOf('96 点申报曲线');
   const reviewIndex = html.indexOf('进入人工复核');
 
@@ -356,10 +356,15 @@ test('submission dashboard explains the decision in one readable full-width chai
   });
 
   assert.match(html, /class="submission-derivation-summary"/);
-  assert.match(html, /这套建议是怎么得出的/);
+  assert.match(html, /申报策略形成依据/);
+  assert.match(html, /历史模型状态/);
+  assert.match(html, /留出集通过/);
+  assert.doesNotMatch(html, /为什么|怎么得出|今天为什么/);
   assert.match(html, /历史基线/);
   assert.match(html, /多因素修正/);
   assert.match(html, /场景风险求解/);
+  assert.match(html, /测算日成本改善/);
+  assert.doesNotMatch(html, /<small>预计日成本<\/small>/);
   assert.match(html, /data-action="open-derivation"/);
   assert.doesNotMatch(html, /class="submission-evidence-row"/);
 });
@@ -384,6 +389,28 @@ test('complete derivation page exposes inputs formulas constraints and holdout e
   assert.match(html, /联合场景/);
   assert.match(html, /目标函数/);
   assert.match(html, /CVaR 风险约束/);
+  assert.match(html, /符号与单位口径/);
+  assert.match(html, /第 t 个 15 分钟点位的历史同点位均值/);
+  assert.match(html, /历史第 d 个交易日/);
+  assert.match(html, /历史窗口包含的交易日数/);
+  assert.match(html, /基线与历史均值之间的融合权重/);
+  assert.match(html, /βᵀ、βᴸ、βˢ/);
+  assert.match(html, /天气、负荷和价差三类因素的响应系数/);
+  assert.match(html, /ΔTₜ/);
+  assert.match(html, /P50ₜ/);
+  assert.match(html, /Spreadₜ/);
+  assert.match(html, /第 i 个联合场景/);
+  assert.match(html, /联合场景总数/);
+  assert.match(html, /πᴰᴬₜ/);
+  assert.match(html, /πᴿᵀₜ,ω/);
+  assert.match(html, /风险厌恶权重/);
+  assert.match(html, /95% 分位损失阈值/);
+  assert.match(html, /超过阈值的非负尾部损失/);
+  assert.match(html, /平均绝对误差/);
+  assert.match(html, /兆瓦，是功率单位/);
+  assert.match(html, /兆瓦时，是电量单位/);
+  assert.match(html, /偏差改善率 =/);
+  assert.match(html, /交易日胜率 =/);
   assert.match(html, /60% \/ 20% \/ 20%/);
   assert.match(html, /7、14、21、28、42、56/);
   assert.match(html, /0\.5、0\.75、1/);
@@ -398,6 +425,8 @@ test('complete derivation page exposes inputs formulas constraints and holdout e
   assert.match(html, /86\.05%/);
   assert.match(html, /解释边界/);
   assert.doesNotMatch(html, /留出集拟合/);
+  assert.doesNotMatch(html, /为什么|怎么得出|今天为什么/);
+  assert.doesNotMatch(html, /undefined|null|NaN/);
   assert.doesNotMatch(html, /自动提交|已实现收益/);
 });
 

@@ -6,7 +6,7 @@
 - 桌面实现：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-申报优化工作台-v2-1440.png`
 - 手机实现：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-申报优化工作台-v2-mobile.png`
 - 并排证据：`/Users/r/Documents/electric/trading-ai-system/output/design/对照-申报优化工作台-v2.png`
-- 页面：`http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v8`
+- 页面：`http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v9`
 - 状态：96 点候选申报策略默认态，待人工复核。
 
 **视口与归一化**
@@ -36,7 +36,7 @@
 - 主操作：点击“进入人工复核”后进入复核态，并显示“策略草稿已生成并进入人工复核”。
 - 桌面：1440 CSS px 宽，页面 `scrollWidth` 与 `clientWidth` 一致，无横向溢出。
 - 手机：358 CSS px 宽，扫描工作台全部后代元素，未发现越过视口左右边界的元素。
-- 缓存：入口资源使用 `workstation-v8` 版本参数，静态响应为 `cache-control: no-store`。
+- 缓存：入口资源使用 `workstation-v9` 版本参数，静态响应为 `cache-control: no-store`。
 
 **推导依据重做**
 
@@ -45,10 +45,14 @@
 - 首页实现图：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-推导依据-首页-v1.png`
 - 推导页实现图：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-推导依据-完整页面-v1.png`
 - 手机实现图：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-推导依据-移动端-v1.png`
+- 完整符号审校图：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-推导依据-完整页面-v2.png`
+- 手机符号审校图：`/Users/r/Documents/electric/trading-ai-system/output/design/实现图-推导依据-完整页面-移动端-v2.png`
 - 首页取消半宽双折叠框，改为全宽三步计算链与五项本次依据。
 - 独立推导页覆盖输入口径、同点位基线、因素修正、联合场景、目标函数、CVaR 约束和留出集验证。
 - 拟合过程按真实实现补充：60% / 20% / 20% 时间切分、6 个历史窗口、3 个融合权重、验证集 MAE 选模和四项独立留出门禁。
 - 未提供的单因素系数、训练损失轨迹和场景样本明确标注解释边界，不在界面中伪造数值；留出集不参与拟合或选模。
+- 公式审校覆盖 6 项单位/算子定义与 38 项就地符号定义；桌面 1920 px 与手机 390 px 均无横向溢出、未定义文本或控制台错误。
+- 文案区分历史留出集结果、场景风险结果和测算成本改善，不再把改善额写成“预计日成本”，也不再使用问句式标题。
 
 **对照迭代记录**
 

@@ -1139,8 +1139,8 @@ function dashboardSidebar(payload, activeStage) {
       <div class="dashboard-model-status">
         <span class="status-dot" aria-hidden="true"></span>
         <div class="brand-copy">
-          <small>AI 模型状态</small>
-          <strong>${payload.strategyValidation?.declarationOptimizer?.status === 'validated' ? '验证通过' : '等待验证'}</strong>
+          <small>${payload.presentationDisclosure ? '历史模型状态' : 'AI 模型状态'}</small>
+          <strong>${payload.strategyValidation?.declarationOptimizer?.status === 'validated' ? (payload.presentationDisclosure ? '留出集通过' : '验证通过') : '等待验证'}</strong>
         </div>
       </div>
       <button class="sidebar-evidence-button" type="button" data-action="open-evidence">
@@ -1305,7 +1305,7 @@ function submissionNarrativeHeader(payload, view) {
     <header class="narrative-header">
       <div class="narrative-title">
         <span>96 点申报推荐策略与验证</span>
-        <h1>今天为什么这样申报</h1>
+        <h1>申报策略形成依据</h1>
         <p>先看结论，再看数据如何进入策略，最后核对曲线、风险和验证结果。</p>
       </div>
       <div class="narrative-model-compare" aria-label="当前模型与候选策略对比">
@@ -1430,14 +1430,14 @@ function submissionOutputChapter(payload, view) {
     <section class="narrative-chapter narrative-output" aria-labelledby="narrativeOutputTitle">
       <div class="narrative-chapter-heading">
         <b>3</b>
-        <div><h2 id="narrativeOutputTitle">3. 输出与验证</h2><p>曲线回答“报多少”，时段解释回答“为什么这样调”。</p></div>
+        <div><h2 id="narrativeOutputTitle">3. 输出与验证</h2><p>曲线展示申报量，时段说明记录调整依据。</p></div>
       </div>
       <div class="narrative-output-grid">
         <div class="narrative-curve-wrap">
           ${declarationCurve(view, payload)}
           <section class="narrative-reasons" aria-labelledby="narrativeReasonsTitle">
             <div class="narrative-reasons-heading">
-              <h3 id="narrativeReasonsTitle">为什么这样调</h3>
+              <h3 id="narrativeReasonsTitle">时段调整依据</h3>
               <span>关键时段建议</span>
             </div>
             <div class="narrative-reason-grid">
@@ -1473,10 +1473,10 @@ function submissionNarrativeDashboard(payload, view) {
       </header>
 
       <section class="submission-kpi-strip" aria-label="策略关键指标">
-        <article><small>预计日成本</small><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><span>候选策略测算</span></article>
-        <article><small>偏差改善</small><strong>${escapeHtml(view.metrics.improvement.display)}</strong><span>相对当前策略</span></article>
-        <article><small>CVaR 95%</small><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><span>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span></article>
-        <article><small>数据完整度</small><strong>100%</strong><span>${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景</span></article>
+        <article><small>测算日成本改善</small><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><span>相对基线的改善额</span></article>
+        <article><small>历史留出集偏差改善</small><strong>${escapeHtml(view.metrics.improvement.display)}</strong><span>相对同点位基线</span></article>
+        <article><small>场景 CVaR 95%</small><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><span>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span></article>
+        <article><small>场景输入覆盖</small><strong>100%</strong><span>${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景</span></article>
       </section>
 
       <div class="submission-decision-grid">
@@ -1536,7 +1536,7 @@ function submissionDerivationSummary(payload, view) {
       <header>
         <div>
           <span class="derivation-kicker">策略依据 · 优化方法</span>
-          <h2 id="derivationSummaryTitle">这套建议是怎么得出的</h2>
+          <h2 id="derivationSummaryTitle">申报策略形成依据</h2>
           <p>从同点位历史基线出发，只使用已校验的天气、负荷概率和价差信号修正，再用联合场景控制尾部风险。</p>
         </div>
         <button type="button" class="derivation-link-button" data-action="open-derivation">
@@ -1562,7 +1562,7 @@ function submissionDerivationSummary(payload, view) {
         <article><span>负荷概率预测</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 ${escapeHtml(load.p10Mw ?? '—')}–${escapeHtml(load.p90Mw ?? '—')} MW</p><b>峰值 ${escapeHtml(load.peakTime || '—')}</b></article>
         <article><span>日前/实时价差</span><strong>+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</strong><p>${escapeHtml(spread.riskPointCount ?? '—')} 个高风险点位</p><b>${escapeHtml(spread.direction || '等待价差判断')}</b></article>
         <article><span>风险度量</span><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><p>预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p><b>CVaR 95%</b></article>
-        <article class="is-result"><span>测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>相对基线的预计日成本改善</p><b>${escapeHtml(view.metrics.improvement.display)} 偏差改善</b></article>
+        <article class="is-result"><span>测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>相对基线的测算改善额</p><b>历史留出集 ${escapeHtml(view.metrics.improvement.display)}</b></article>
       </div>
     </section>
   `;
@@ -1611,28 +1611,47 @@ export function renderStrategyDerivationPage(payload) {
               <div role="row"><strong role="cell">价差</strong><span role="cell">+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</span><span role="cell">高风险点 ${escapeHtml(spread.riskPointCount ?? '—')} 个</span><span role="cell">日前 / 实时</span><b role="cell">已校验</b></div>
               <div role="row"><strong role="cell">风险</strong><span role="cell">${escapeHtml(moneyFormatter.format(scenarioCount))} 个场景</span><span role="cell">CVaR 95%</span><span role="cell">预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span><b role="cell">已校验</b></div>
             </div>
+            <div class="derivation-unit-guide">
+              <h3>符号与单位口径</h3>
+              <dl>
+                <div><dt>MW</dt><dd>兆瓦，是功率单位；申报功率、实际负荷和 P10/P50/P90 均使用 MW。</dd></div>
+                <div><dt>MWh</dt><dd>兆瓦时，是电量单位；15 分钟点位的电量 = 平均功率 MW × 0.25 小时。</dd></div>
+                <div><dt>P10 / P50 / P90</dt><dd>负荷预测分位数：实际负荷低于对应数值的概率分别为 10%、50% 和 90%。P50 是中位预测，不是确定值。</dd></div>
+                <div><dt>元/MWh</dt><dd>每兆瓦时价格；本页价差指实时价格减去日前价格。</dd></div>
+                <div><dt>CVaR 95%</dt><dd>条件风险价值；损失超过 95% 分位阈值后，最差 5% 场景的平均损失。</dd></div>
+                <div><dt>Σ / mean / min / arg min</dt><dd>Σ 表示求和；mean 表示算术平均；min 表示最小化目标值；arg min 表示返回使目标最小的参数。</dd></div>
+              </dl>
+            </div>
           </section>
 
           <section id="deriveBaseline" class="derivation-section">
             <header><span>02</span><div><h2>同点位基线</h2><p>不用“昨天整条曲线”直接平移，而是分别计算每个 15 分钟点位的历史中心值。</p></div></header>
             <div class="derivation-two-column">
-              <div class="formula-panel"><small>定义</small><code>q⁰ₜ = (1 / H) · Σᵈ₌₁ᴴ q₍d,t₎</code><p>其中 t ∈ {1,…,96}，H = ${escapeHtml(String(windowDays))}。每个点位都只与历史相同点位比较，避免早晚峰错位。</p></div>
-              <aside><h3>为什么这样做</h3><ul><li>保留日内 96 点形状</li><li>降低单日异常曲线影响</li><li>作为候选模型必须超过的基准</li></ul><p><strong>已验证基线：</strong>same_slot_mean_w${escapeHtml(String(windowDays))}_a1</p></aside>
+              <div class="formula-panel"><small>历史同点位均值</small><code>q⁰ₜ = (1 / H) · Σᵈ₌₁ᴴ q₍d,t₎</code><p>每个点位只与历史相同点位比较，避免早晚峰错位。</p><dl class="derivation-symbols"><div><dt>q⁰ₜ</dt><dd>第 t 个 15 分钟点位的历史同点位均值，单位 MW；上标 0 表示尚未加入因素修正的基准值。</dd></div><div><dt>q₍d,t₎</dt><dd>历史第 d 个交易日在第 t 个点位的实际负荷，单位 MW。</dd></div><div><dt>t</dt><dd>日内点位编号，t ∈ {1,…,96}。</dd></div><div><dt>d</dt><dd>历史窗口内的交易日序号，d ∈ {1,…,H}。</dd></div><div><dt>H</dt><dd>历史窗口包含的交易日数；当前取 H = ${escapeHtml(String(windowDays))}。</dd></div></dl></div>
+              <aside><h3>基线设计原则</h3><ul><li>保留日内 96 点形状</li><li>降低单日异常曲线影响</li><li>作为候选模型必须超过的基准</li></ul><p><strong>已验证基线：</strong>same_slot_mean_w${escapeHtml(String(windowDays))}_a1</p></aside>
             </div>
             <div class="derivation-fit-process" aria-label="历史模型拟合与筛选过程">
               <div class="derivation-fit-heading"><h3>拟合、选模与留出集门禁</h3><p>按交易日先后顺序切分，保证任何一步都只看当时可获得的历史数据。</p></div>
               <ol>
                 <li><span>1</span><div><strong>按时间切分 60% / 20% / 20%</strong><p>前 60% 作为历史上下文，中间 20% 只用于候选参数排序，最后 20% 完全隔离，选模结束后才打开一次。</p></div></li>
-                <li><span>2</span><div><strong>枚举候选窗口与融合权重</strong><p>H ∈ {7、14、21、28、42、56}；α ∈ {0.5、0.75、1}。</p><code>q̂ₜ(H,α) = (1−α)·qᵇᵃˢᵉₜ + α·mean(last H actualsₜ)</code></div></li>
+                <li><span>2</span><div><strong>枚举候选窗口与融合权重</strong><p>H ∈ {7、14、21、28、42、56}；α ∈ {0.5、0.75、1}。</p><code>q̂ₜ(H,α) = (1−α)·qᵇᵃˢᵉₜ + α·q⁰ₜ</code></div></li>
                 <li><span>3</span><div><strong>仅按验证集 MAE 选模</strong><p>选择验证 MAE 最小的 (H*, α*)；若相同，依次选择更短窗口和更小权重。留出集不参与排序。</p><code>(H*,α*) = arg min MAEᵥₐₗ(H,α)</code></div></li>
                 <li><span>4</span><div><strong>最后执行独立门禁</strong><p>留出集至少 30 个交易日、至少 2,880 个点，且 MAE 改善不低于 3%、日胜率不低于 60%，才允许进入人工复核。</p></div></li>
               </ol>
+              <dl class="derivation-symbols is-fit-guide">
+                <div><dt>q̂ₜ(H,α)</dt><dd>窗口 H、权重 α 下，第 t 个点位的候选申报功率，单位 MW。</dd></div>
+                <div><dt>qᵇᵃˢᵉₜ</dt><dd>第 t 个点位的当前默认申报基线，单位 MW；上标 base 表示业务现行基线。</dd></div>
+                <div><dt>q⁰ₜ</dt><dd>第 t 个点位最近 H 个完整交易日的实际负荷均值，单位 MW。</dd></div>
+                <div><dt>α</dt><dd>基线与历史均值之间的融合权重；α 越大，候选值越接近历史均值。</dd></div>
+                <div><dt>MAEᵥₐₗ(H,α)</dt><dd>候选参数 (H, α) 在验证集上的平均绝对误差，单位 MWh。</dd></div>
+                <div><dt>H*、α*</dt><dd>使验证集 MAE 最小的窗口和权重；上标 * 表示最终选中的参数，下标 val 表示验证集。</dd></div>
+              </dl>
             </div>
           </section>
 
           <section id="deriveFactors" class="derivation-section">
             <header><span>03</span><div><h2>因素修正</h2><p>将天气、负荷概率与价差信号映射到每一个点位的申报修正量。</p></div></header>
-            <div class="formula-panel is-wide"><small>模型结构</small><code>qᵃᵈʲₜ = q⁰ₜ + βᵀ·ΔTₜ + βᴸ·(P50ₜ − q⁰ₜ) + βˢ·Spreadₜ</code><p>天气项描述制冷负荷变化，负荷项把基线拉向概率预测中心，价差项根据日前/实时价格方向调整偏差暴露。</p></div>
+            <div class="formula-panel is-wide"><small>候选因素修正结构</small><code>qᵃᵈʲₜ = q⁰ₜ + βᵀ·ΔTₜ + βᴸ·(P50ₜ − q⁰ₜ) + βˢ·Spreadₜ</code><p>天气项描述制冷负荷变化，负荷项把基线拉向概率预测中心，价差项根据日前/实时价格方向调整偏差暴露。</p><dl class="derivation-symbols"><div><dt>qᵃᵈʲₜ</dt><dd>因素修正后第 t 个点位的候选申报功率，单位 MW；上标 adj 是 adjusted（已修正）的缩写。</dd></div><div><dt>q⁰ₜ</dt><dd>第 t 个点位的历史同点位均值，单位 MW。</dd></div><div><dt>βᵀ、βᴸ、βˢ</dt><dd>天气、负荷和价差三类因素的响应系数；上标 T、L、S 分别对应 Temperature、Load、Spread。</dd></div><div><dt>ΔTₜ</dt><dd>第 t 个点位相对历史常态的温度或体感温度偏差，单位 °C；Δ 表示“当前值减基准值”的变化量。</dd></div><div><dt>P50ₜ</dt><dd>第 t 个点位负荷概率预测的中位数，单位 MW。</dd></div><div><dt>Spreadₜ</dt><dd>第 t 个点位的实时价格减日前价格，单位元/MWh。</dd></div></dl></div>
             <div class="derivation-factor-list">
               <article><span>天气项</span><strong>${escapeHtml(weather.temperatureC ?? '—')}°C / 体感 ${escapeHtml(weather.feelsLikeC ?? '—')}°C</strong><p>高体感温度与湿度共同指向制冷负荷抬升。</p></article>
               <article><span>负荷项</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 区间保留预测不确定性，不把 P50 当成确定真值。</p></article>
@@ -1644,7 +1663,7 @@ export function renderStrategyDerivationPage(payload) {
           <section id="deriveScenarios" class="derivation-section">
             <header><span>04</span><div><h2>联合场景</h2><p>天气、负荷和价格不是各自独立变化，使用联合场景保留它们的相关性。</p></div></header>
             <div class="derivation-two-column">
-              <div class="formula-panel"><small>场景集合</small><code>Ω = {ω₁, …, ωₙ}, N = ${escapeHtml(moneyFormatter.format(scenarioCount))}</code><p>每个 ω 同时包含 96 点负荷路径、日前/实时价格路径与天气扰动；候选曲线在所有场景上计算偏差成本。</p></div>
+              <div class="formula-panel"><small>场景集合</small><code>Ω = {ωᵢ | i = 1,…,N}, N = ${escapeHtml(moneyFormatter.format(scenarioCount))}</code><p>每个场景同时包含 96 点负荷路径、日前/实时价格路径与天气扰动；候选曲线在所有场景上计算偏差成本。</p><dl class="derivation-symbols"><div><dt>Ω</dt><dd>全部联合场景构成的集合。</dd></div><div><dt>ωᵢ</dt><dd>第 i 个联合场景，包含一组同步变化的负荷、价格和天气路径。</dd></div><div><dt>i</dt><dd>场景编号，i ∈ {1,…,N}。</dd></div><div><dt>N</dt><dd>联合场景总数；本次 N = ${escapeHtml(moneyFormatter.format(scenarioCount))}。</dd></div></dl></div>
               <aside><h3>固定假设</h3><ul><li>申报分辨率：15 分钟</li><li>场景数量：${escapeHtml(moneyFormatter.format(scenarioCount))}</li><li>尾部置信水平：95%</li><li>风险预算：${escapeHtml(formatMoney(risk.budgetYuan))}</li></ul></aside>
             </div>
           </section>
@@ -1657,10 +1676,25 @@ export function renderStrategyDerivationPage(payload) {
               <div class="formula-panel"><small>线性化约束</small><code>CVaR₉₅% = η + 1/(0.05N)·Σω ξω</code><code>ξω ≥ C(q,ω) − η, ξω ≥ 0</code><p>η 是 95% 分位损失阈值，ξω 记录超过阈值的尾部损失。</p></div>
               <div class="risk-result-panel"><span>本次风险结果</span><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><p>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p><b>剩余安全边际 ${escapeHtml(formatMoney(cvarMargin))}</b></div>
             </div>
+            <dl class="derivation-symbols is-objective-guide">
+              <div><dt>q</dt><dd>完整的 96 点候选申报功率向量；qₜ 是其中第 t 个点位，单位 MW。</dd></div>
+              <div><dt>ω</dt><dd>一个联合场景；场景内的实际负荷和实时价格具有共同的路径假设。</dd></div>
+              <div><dt>C(q,ω)</dt><dd>申报曲线 q 在场景 ω 下的全天偏差成本，单位元。</dd></div>
+              <div><dt>Cₜ(·)</dt><dd>第 t 个点位的偏差成本函数，汇总后得到全天成本。</dd></div>
+              <div><dt>Lₜ,ω</dt><dd>场景 ω 下第 t 个点位的实际负荷，单位 MW。</dd></div>
+              <div><dt>πᴰᴬₜ</dt><dd>第 t 个点位的日前价格，单位元/MWh。</dd></div>
+              <div><dt>πᴿᵀₜ,ω</dt><dd>场景 ω 下第 t 个点位的实时价格，单位元/MWh。</dd></div>
+              <div><dt>DA / RT</dt><dd>DA 是 Day-Ahead（日前）的缩写；RT 是 Real-Time（实时）的缩写。</dd></div>
+              <div><dt>Eω[·]</dt><dd>对全部联合场景按其概率求期望；等概率场景下即取算术平均。</dd></div>
+              <div><dt>λ</dt><dd>风险厌恶权重；λ 越大，优化越重视尾部风险而非仅追求平均成本。</dd></div>
+              <div><dt>η</dt><dd>95% 分位损失阈值，即 CVaR 线性化中的 VaR 辅助变量，单位元。</dd></div>
+              <div><dt>ξω</dt><dd>场景 ω 中超过阈值的非负尾部损失，单位元。</dd></div>
+              <div><dt>N</dt><dd>联合场景总数；0.05N 对应最差 5% 场景的等效样本数。</dd></div>
+            </dl>
           </section>
 
           <section id="deriveValidation" class="derivation-section">
-            <header><span>06</span><div><h2>独立留出集回测验证</h2><p>候选策略只在未参与拟合的历史日期上通过门槛，才进入人工复核。</p></div></header>
+            <header><span>06</span><div><h2>独立留出集回测验证</h2><p>可复算的 42 日同点位历史模型只在未参与拟合和选模的日期上通过门槛，才作为因素层的历史基准。</p></div></header>
             <div class="derivation-validation-grid">
               <article><span>验证覆盖</span><strong>${escapeHtml(moneyFormatter.format(Number(holdout.pointCount || 0)))} 点</strong><p>${escapeHtml(String(holdout.dateCount ?? '—'))} 个独立交易日</p></article>
               <article><span>基线 MAE</span><strong>${escapeHtml(holdout.baselineMaeMwh ?? '—')}</strong><p>MWh</p></article>
@@ -1669,7 +1703,16 @@ export function renderStrategyDerivationPage(payload) {
               <article class="is-positive"><span>交易日胜率</span><strong>${escapeHtml(holdout.dailyWinRatePct ?? '—')}%</strong><p>按日比较 MAE</p></article>
               <article><span>点位胜率</span><strong>${escapeHtml(holdout.pointWinRatePct ?? '—')}%</strong><p>按 15 分钟点位比较</p></article>
             </div>
-            <div class="derivation-conclusion"><div><span>验证结论</span><strong>候选策略通过留出集门槛，可进入人工复核</strong><p>这表示历史偏差指标优于基线，不代表已经产生实际人民币收益。</p></div><div><span>本次预计日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>按当前输入测算，最终以实际结算为准。</p></div></div>
+            <div class="derivation-metric-guide">
+              <h3>回测指标计算口径</h3>
+              <dl class="derivation-symbols">
+                <div><dt>MAE</dt><dd>平均绝对误差：先计算每个 15 分钟点位申报电量与实际电量之差的绝对值，再对全部点位取平均，单位 MWh。</dd></div>
+                <div><dt>偏差改善率</dt><dd>偏差改善率 = (基线 MAE − 候选模型 MAE) / 基线 MAE × 100%。</dd></div>
+                <div><dt>交易日胜率</dt><dd>交易日胜率 = 候选模型日 MAE 低于基线日 MAE 的交易日数 / 留出集交易日总数 × 100%。</dd></div>
+                <div><dt>点位胜率</dt><dd>点位胜率 = 候选模型绝对误差低于基线绝对误差的点位数 / 留出集点位总数 × 100%。</dd></div>
+              </dl>
+            </div>
+            <div class="derivation-conclusion"><div><span>历史模型验证结论</span><strong>42 日同点位候选模型通过留出集门槛</strong><p>这表示历史偏差指标优于基线；因素联合场景方案仍需人工复核，也不代表已经产生实际人民币收益。</p></div><div><span>本次测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>按当前输入测算，最终以实际结算为准。</p></div></div>
           </section>
         </div>
       </div>
