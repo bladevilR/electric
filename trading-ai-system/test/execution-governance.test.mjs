@@ -62,6 +62,67 @@ test('buildExecutionProposal hides draft lines when execution inputs are blocked
   assert.match(proposal.nextAction, /补齐数据/);
 });
 
+test('buildExecutionProposal blocks a draft when MW declaration limits are missing even if readiness is permissive', () => {
+  const proposal = buildExecutionProposal({
+    report: {
+      date: '2026-07-27',
+      suggestions: [
+        {
+          type: 'low_price',
+          title: '低价观察',
+          points: [1],
+          description: '测试建议',
+        },
+      ],
+    },
+    readiness: { capabilities: { proposalDraft: true }, blockers: [], warnings: [] },
+    businessInputs: {
+      forecastLoad96: { rows: [{ date: '2026-07-27', pointIndex: 1, forecastKwh: 1000 }] },
+      position96: { rows: [{ date: '2026-07-27', pointIndex: 1, availableBuyMwh: 1 }] },
+      tradeLimits: {
+        values: {
+          minQuantityMwh: 0.1,
+          maxDraftQuantityMwh: 1,
+          buyPriceCeilingYuanPerMwh: 180,
+          sellPriceFloorYuanPerMwh: 210,
+        },
+      },
+    },
+  });
+
+  assert.equal(proposal.status, 'blocked');
+  assert.deepEqual(proposal.proposalLines, []);
+  assert.ok(proposal.blockers.some((item) => item.includes('MW 申报功率边界')));
+});
+
+test('buildExecutionProposal blocks invalid MWh quantity limits before a negative draft can be emitted', () => {
+  const proposal = buildExecutionProposal({
+    report: {
+      date: '2026-07-27',
+      suggestions: [{ type: 'low_price', title: '低价观察', points: [1], description: '测试建议' }],
+    },
+    readiness: { capabilities: { proposalDraft: true }, blockers: [], warnings: [] },
+    businessInputs: {
+      forecastLoad96: { rows: [{ date: '2026-07-27', pointIndex: 1, forecastKwh: 1000 }] },
+      position96: { rows: [{ date: '2026-07-27', pointIndex: 1, availableBuyMwh: 1 }] },
+      tradeLimits: {
+        values: {
+          minDeclarationPowerMw: 0,
+          maxDeclarationPowerMw: 100,
+          minQuantityMwh: 1,
+          maxDraftQuantityMwh: -1,
+          buyPriceCeilingYuanPerMwh: 180,
+          sellPriceFloorYuanPerMwh: 210,
+        },
+      },
+    },
+  });
+
+  assert.equal(proposal.status, 'blocked');
+  assert.deepEqual(proposal.proposalLines, []);
+  assert.ok(proposal.blockers.some((item) => item.includes('MWh 交易数量边界')));
+});
+
 test('createExecutionProposal generates editable draft lines without auto submit', async () => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'trading-execution-'));
   const auditPath = path.join(temp, 'audit-log.ndjson');
@@ -97,6 +158,8 @@ test('createExecutionProposal generates editable draft lines without auto submit
         },
         tradeLimits: {
           values: {
+            minDeclarationPowerMw: 0,
+            maxDeclarationPowerMw: 100,
             minQuantityMwh: 0.1,
             maxDraftQuantityMwh: 0.8,
             buyPriceCeilingYuanPerMwh: 180,

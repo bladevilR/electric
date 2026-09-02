@@ -40,6 +40,12 @@ test('Windows launcher prefers a modern browser instead of the system default', 
   assert.match(launcher, /function Open-WorkbenchBrowser/);
 });
 
+test('Windows launcher opens the final submission demo directly', async () => {
+  const launcher = await readFile(powershellLauncherPath, 'utf8');
+
+  assert.match(launcher, /\?demo=submission&v=20260830-workstation-v12/);
+});
+
 test('Windows launcher stores cumulative trading history in LocalAppData', async () => {
   const launcher = await readFile(powershellLauncherPath, 'utf8');
 

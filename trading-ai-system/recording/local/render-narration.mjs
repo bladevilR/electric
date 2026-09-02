@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -11,6 +12,18 @@ import {
   buildSrt,
   buildTimedCaptionCues,
 } from './lib/video-production.mjs';
+
+const QWEN_PYTHON = '/Users/r/Models/qwen3-tts-runtime/bin/python';
+
+export function selectNarrationBackend({
+  qwenPythonAvailable,
+  macSayAvailable,
+  platform,
+}) {
+  if (qwenPythonAvailable) return 'qwen3-tts';
+  if (platform === 'darwin' && macSayAvailable) return 'macos-say';
+  throw new Error('没有可用的中文旁白引擎：Qwen 运行时不可用，且当前环境没有 macOS say');
+}
 
 function run(command, args, { cwd, env, log } = {}) {
   return new Promise((resolve, reject) => {
@@ -105,7 +118,7 @@ async function generateQwenSpeech({
     'utf8'
   );
   await run(
-    '/Users/r/Models/qwen3-tts-runtime/bin/python',
+    QWEN_PYTHON,
     [
       path.join(
         projectRoot,
@@ -214,6 +227,90 @@ async function generateQwenSpeech({
   return speech;
 }
 
+async function generateMacSpeech({
+  timeline,
+  paths,
+  projectRoot,
+  log,
+}) {
+  const manifest = buildQwenTtsManifest(
+    timeline,
+    paths.narrationDirectory
+  );
+  const speech = [];
+  for (const segment of manifest.segments) {
+    await run(
+      '/usr/bin/say',
+      [
+        '-v',
+        'Tingting',
+        '-r',
+        '195',
+        '--file-format=WAVE',
+        '--data-format=LEI16@24000',
+        '-o',
+        segment.output,
+        segment.text,
+      ],
+      { cwd: projectRoot, log }
+    );
+    let output = segment.output;
+    let durationMs = await probeDurationMs(output, {
+      cwd: projectRoot,
+      log,
+    });
+    const availableMs = Math.max(
+      1000,
+      segment.endMs - segment.startMs - 1000
+    );
+    let speedFactorApplied = 1;
+    if (durationMs > availableMs) {
+      const speedFactor = Math.min(
+        1.15,
+        Math.max(1.01, (durationMs / availableMs) * 1.01)
+      );
+      const fittedOutput = path.join(
+        paths.narrationDirectory,
+        `${segment.id}.fit.wav`
+      );
+      await run(
+        'ffmpeg',
+        buildSpeechFitArgs({
+          input: output,
+          output: fittedOutput,
+          speedFactor,
+        }),
+        { cwd: projectRoot, log }
+      );
+      await rename(fittedOutput, output);
+      speedFactorApplied = speedFactor;
+      durationMs = await probeDurationMs(output, {
+        cwd: projectRoot,
+        log,
+      });
+      if (durationMs > availableMs) {
+        throw new Error(
+          `${segment.id} macOS 旁白超出镜头安全区：${durationMs}ms > ${availableMs}ms`
+        );
+      }
+    }
+    speech.push({
+      id: segment.id,
+      file: output,
+      engine: 'macos-say',
+      model: 'macOS system voice',
+      voice: 'Tingting',
+      durationMs,
+      speedFactor: Number(speedFactorApplied.toFixed(4)),
+      sourceSegmentIds: segment.sourceSegmentIds,
+      startMs: segment.startMs,
+      endMs: segment.endMs,
+    });
+  }
+  log?.('Qwen 运行时不可用，已使用 macOS Tingting 中文声线生成旁白');
+  return speech;
+}
+
 export async function renderNarration({
   projectRoot,
   timeline,
@@ -221,12 +318,24 @@ export async function renderNarration({
   log,
 }) {
   await mkdir(paths.narrationDirectory, { recursive: true });
-  const speech = await generateQwenSpeech({
-    timeline,
-    paths,
-    projectRoot,
-    log,
+  const backend = selectNarrationBackend({
+    qwenPythonAvailable: existsSync(QWEN_PYTHON),
+    macSayAvailable: existsSync('/usr/bin/say'),
+    platform: process.platform,
   });
+  const speech = await (backend === 'qwen3-tts'
+    ? generateQwenSpeech({
+        timeline,
+        paths,
+        projectRoot,
+        log,
+      })
+    : generateMacSpeech({
+        timeline,
+        paths,
+        projectRoot,
+        log,
+      }));
   const speechById = new Map(speech.map((item) => [item.id, item]));
   const chapters = buildNarrationChapters(timeline);
   const narrationSegments = chapters.flatMap((chapter) => {

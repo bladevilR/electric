@@ -224,6 +224,7 @@ function blockedDecisionGate(payload) {
 }
 
 function strategyValidationPanel(payload) {
+  const isPresentation = Boolean(payload.presentationDisclosure);
   const validation = payload.strategyValidation || {};
   const price = validation.priceModel || {};
   const coverage = validation.sampleCoverage || {};
@@ -238,7 +239,7 @@ function strategyValidationPanel(payload) {
     <section class="strategy-validation" aria-labelledby="strategyValidationTitle">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">真实历史数据</span>
+          <span class="eyebrow">${isPresentation ? '模拟历史样本' : '真实历史数据'}</span>
           <h2 id="strategyValidationTitle">历史策略验证</h2>
         </div>
         <span class="inline-state ${validation.overallStatus === 'validated' ? 'is-success' : 'is-danger'}">
@@ -262,14 +263,14 @@ function strategyValidationPanel(payload) {
           <small>${escapeHtml(coverage.pricePointCount || price.sampleCount || 0)} 个价格点</small>
         </article>
         <article>
-          <span>策略成本回测</span>
-          <strong>${escapeHtml(cost.status === 'validated' ? '已验证' : '未验证')}</strong>
-          <small>${cost.estimatedSavingsYuan === null || cost.estimatedSavingsYuan === undefined ? '不声明节省金额' : escapeHtml(formatMoney(cost.estimatedSavingsYuan))}</small>
+          <span>${isPresentation ? '模拟成本评估' : '策略成本回测'}</span>
+          <strong>${escapeHtml(isPresentation ? '模拟成本评估完成' : cost.status === 'validated' ? '已验证' : '未验证')}</strong>
+          <small>${isPresentation ? `模拟结算净优化 ${escapeHtml(formatMoney(payload.savings?.realizedNetYuan))}` : cost.estimatedSavingsYuan === null || cost.estimatedSavingsYuan === undefined ? '不声明节省金额' : escapeHtml(formatMoney(cost.estimatedSavingsYuan))}</small>
         </article>
       </div>
       <div class="validation-verdict">
-        <strong>${priceRejected ? '验证结论：滚动中位数模型未优于同点位基线，系统已自动保留基线模型。' : '验证结论：只有优于基线且成本回测完整的策略，才能进入人工复核。'}</strong>
-        <span>${cost.status === 'validated' ? '策略节省已具备历史证据。' : '策略节省尚未验证，禁止把预测价差当作已实现收益。'}</span>
+        <strong>${isPresentation ? '模拟验证结论：价格、申报与成本指标均已完成校验。' : priceRejected ? '验证结论：滚动中位数模型未优于同点位基线，系统已自动保留基线模型。' : '验证结论：只有优于基线且成本回测完整的策略，才能进入人工复核。'}</strong>
+        <span>${isPresentation ? '模拟结算结果与 96 点申报曲线已形成完整证据链。' : cost.status === 'validated' ? '策略节省已具备历史证据。' : '策略节省尚未验证，禁止把预测价差当作已实现收益。'}</span>
       </div>
       <div class="declaration-replay">
         <div>
@@ -297,6 +298,7 @@ function strategyValidationPanel(payload) {
 }
 
 function declarationOptimizerPanel(payload) {
+  const isPresentation = Boolean(payload.presentationDisclosure);
   const validation = payload.strategyValidation || {};
   const optimizer = validation.declarationOptimizer || {};
   const model = optimizer.selectedModel || {};
@@ -311,7 +313,7 @@ function declarationOptimizerPanel(payload) {
     ? `${model.windowDays} 日同点位均值`
     : '默认申报基线';
   const currentState =
-    recommendation.status === 'ready'
+    ['ready', 'ready_with_fallback'].includes(recommendation.status)
       ? `已生成 ${recommendation.coverage?.recommendedPointCount || 0} 点复核建议`
       : recommendation.status === 'baseline_ready'
         ? '默认申报基线可复核'
@@ -321,8 +323,8 @@ function declarationOptimizerPanel(payload) {
       ? '补齐目标日 96 点默认申报'
       : recommendation.status === 'stale_inputs'
         ? '刷新最近 48 小时实际负荷后重新计算'
-        : recommendation.status === 'ready'
-          ? '进入人工复核后方可采用'
+        : ['ready', 'ready_with_fallback'].includes(recommendation.status)
+          ? isPresentation ? '模拟人工复核已完成' : '进入人工复核后方可采用'
           : '基线始终保留，优化失败自动回退';
 
   return `
@@ -365,7 +367,7 @@ function declarationOptimizerPanel(payload) {
           <small>${escapeHtml(holdout.dateCount || 0)} 个完整交易日</small>
         </article>
       </div>
-      <p class="optimizer-disclaimer">偏差改善不等于已实现人民币节省；结算成本字段未齐时不声明节省金额。</p>
+      <p class="optimizer-disclaimer">${isPresentation ? '模拟留出集、人工复核与模拟结算口径已完成一致性校验。' : '偏差改善不等于已实现人民币节省；结算成本字段未齐时不声明节省金额。'}</p>
     </section>
   `;
 }
@@ -423,7 +425,9 @@ function blockersPanel(payload, options = {}) {
 }
 
 function comparisonPanel(payload) {
+  const isPresentation = Boolean(payload.presentationDisclosure);
   const costs = payload.savings?.costs || {};
+  const risk = payload.strategyContext?.risk || {};
   return `
     <section class="comparison-panel" aria-labelledby="comparisonTitle">
       <div class="section-heading compact">
@@ -431,7 +435,7 @@ function comparisonPanel(payload) {
           <span class="eyebrow">成本对比</span>
           <h2 id="comparisonTitle">策略成本效益评估</h2>
         </div>
-        <button class="text-action" type="button" data-action="open-evidence">查看依据</button>
+        <button id="evidence-trigger-comparison" class="text-action" type="button" data-action="open-evidence">查看依据</button>
       </div>
       <div class="comparison-table" role="table" aria-label="成本方案对比">
         <div class="comparison-row is-header" role="row">
@@ -455,12 +459,12 @@ function comparisonPanel(payload) {
           <span role="cell">${escapeHtml(formatMoney(costs.deviationCostYuan))}</span>
         </div>
         <div class="comparison-row" role="row">
-          <strong role="cell">最坏情景</strong>
-          <span role="cell">未获取</span>
-          <span role="cell">未获取</span>
+          <strong role="cell">${isPresentation ? '尾部风险' : '最坏情景'}</strong>
+          <span role="cell">${isPresentation ? escapeHtml(formatMoney(risk.budgetYuan)) : '未获取'}</span>
+          <span role="cell">${isPresentation ? escapeHtml(formatMoney(risk.cvar95Yuan)) : '未获取'}</span>
         </div>
       </div>
-      <p class="panel-footnote">数据不完整时不估算节省金额，也不输出可执行 MWh。</p>
+      <p class="panel-footnote">${isPresentation ? `模拟成本评估完成，模拟结算净优化 ${escapeHtml(formatMoney(payload.savings?.realizedNetYuan))}。` : '数据不完整时不估算节省金额，也不输出可执行 MWh。'}</p>
     </section>
   `;
 }
@@ -555,12 +559,12 @@ function evidenceDrawer(payload, evidenceOpen) {
   if (!evidenceOpen) {
     return `
       <aside class="evidence-closed">
-        <button type="button" data-action="open-evidence">打开成本优化证据链</button>
+        <button id="evidence-trigger-closed" type="button" data-action="open-evidence">打开成本优化证据链</button>
       </aside>
     `;
   }
   return `
-    <aside class="evidence-drawer" aria-labelledby="evidenceTitle">
+    <aside class="evidence-drawer" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="evidenceTitle">
       <div class="drawer-heading">
         <div>
           <span class="eyebrow">复核层</span>
@@ -597,7 +601,7 @@ function evidenceDrawer(payload, evidenceOpen) {
         </div>
       </section>
       <section class="evidence-section">
-        <h3>最近留痕</h3>
+        <h3>${payload.presentationDisclosure ? '模拟操作留痕' : '最近留痕'}</h3>
         ${
           payload.auditEvents?.length
             ? `<ol class="audit-list">
@@ -613,21 +617,24 @@ function evidenceDrawer(payload, evidenceOpen) {
                   )
                   .join('')}
               </ol>`
-            : '<p class="empty-copy">还没有当日操作留痕。</p>'
+            : payload.presentationDisclosure
+              ? '<p class="empty-copy">模拟采集、校验、优化、复核与结算记录完整。</p>'
+              : '<p class="empty-copy">还没有当日操作留痕。</p>'
         }
       </section>
-      <div class="verification-note">仅在结算完成且成本口径完整后，计入已实现成本优化额。</div>
+      <div class="verification-note">${payload.presentationDisclosure ? '模拟结算完成，成本口径完整，结果已计入本次比赛演示。' : '仅在结算完成且成本口径完整后，计入已实现成本优化额。'}</div>
     </aside>
   `;
 }
 
 function reviewPanel(payload) {
+  const isPresentation = Boolean(payload.presentationDisclosure);
   return `
     <section class="review-workspace">
       <div class="review-summary">
         <span class="eyebrow">管理复核</span>
         <h1>策略绩效与审计证据</h1>
-        <p>预测结果、策略执行、实际结算和成本扣减必须采用同一主体、同一交易日、同一结算口径。</p>
+        <p>${isPresentation ? '模拟预测、申报优化、人工复核与模拟结算均采用同一主体、同一交易日、同一成本口径。' : '预测结果、策略执行、实际结算和成本扣减必须采用同一主体、同一交易日、同一结算口径。'}</p>
       </div>
       ${strategyValidationPanel(payload)}
       ${declarationOptimizerPanel(payload)}
@@ -884,55 +891,75 @@ export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
 export function buildDemoWorkbenchScenario(payload, scenario) {
   const base = structuredClone(payload || {});
   if (scenario === 'submission') {
+    const costs = {
+      baselineCostYuan: 1_302_400,
+      actualSettlementCostYuan: 1_258_520,
+      transactionFeesYuan: 8_520,
+      deviationCostYuan: 10_800,
+      systemOperatingCostYuan: 560,
+    };
     return {
       ...base,
       demoMode: true,
-      demoLabel: '候选优化策略 · 策略验证中',
-      presentationDisclosure: '按当前输入测算，最终结果以实际结算为准',
-      status: 'review_required',
+      demoLabel: '比赛演示 · 模拟数据',
+      presentationDisclosure: '全流程采用模拟数据',
+      status: 'verified',
       currentStage: 'execute',
       execution: {
         ...base.execution,
         dataReady: true,
-        reviewed: false,
+        reviewed: true,
         allowed: false,
       },
       stages: (base.stages || []).map((item) => ({
         ...item,
-        status: item.id === 'execute' ? 'active' : item.id === 'settle' ? 'blocked' : 'complete',
+        status: 'complete',
         description:
           item.id === 'connect'
-            ? '多源数据已对齐'
+            ? '数据接入完成'
             : item.id === 'validate'
-              ? '质量门禁已通过'
+              ? '质量校验完成'
               : item.id === 'execute'
-                ? '候选策略待复核'
-                : '等待实际结算',
+                ? '申报优化完成'
+                : '结算评估完成',
       })),
       dataEvidence: [
         {
-          id: 'weather_forecast',
-          label: '天气预测数据',
+          id: 'trading_platform',
+          label: '江苏电力交易平台',
           status: 'ready',
           value: '96/96 点',
-          detail: '温度、湿度与体感温度已按交易时点对齐。',
+          detail: '日前价格、实时价格与申报曲线采集完成。',
         },
         {
-          id: 'load_forecast',
-          label: '负荷概率预测',
+          id: 'weather_service',
+          label: '气象预测服务',
           status: 'ready',
-          value: 'P10 / P50 / P90',
-          detail: '负荷区间已进入候选策略计算。',
+          value: '24 小时',
+          detail: '温度、湿度与体感温度采集完成。',
         },
         {
-          id: 'market_spread',
-          label: '日前与实时价差',
+          id: 'load_system',
+          label: '企业负荷系统',
           status: 'ready',
           value: '96/96 点',
-          detail: '价差分布已按同一交易日口径对齐。',
+          detail: '负荷预测与历史负荷曲线采集完成。',
+        },
+        {
+          id: 'settlement_system',
+          label: '模拟结算系统',
+          status: 'ready',
+          value: '5 项成本',
+          detail: '结算成本、手续费、偏差成本与运行成本齐备。',
         },
       ],
       strategyContext: {
+        candidateModel: {
+          id: 'multi_factor_joint_scenario_v1',
+          label: '多因素联合场景优化',
+          validationStatus: 'demo_validated',
+          validationLabel: '模拟验证完成',
+        },
         weather: {
           temperatureC: 31.8,
           feelsLikeC: 34.2,
@@ -960,25 +987,29 @@ export function buildDemoWorkbenchScenario(payload, scenario) {
       },
       savings: {
         ...base.savings,
+        formula: '基准成本 − 模拟结算成本 − 手续费 − 偏差成本 − 系统运行成本',
         estimatedNetYuan: 24_000,
-        realizedNetYuan: null,
-        formulaComplete: false,
+        realizedNetYuan: 24_000,
+        formulaComplete: true,
+        costs,
       },
       strategyValidation: {
         ...base.strategyValidation,
-        declarationOptimizer: {
-          ...base.strategyValidation?.declarationOptimizer,
-          selectedModel: {
-            id: 'multi_factor_joint_scenario_v1',
-            label: '多因素联合场景优化',
-            windowDays: null,
-            weight: null,
-          },
+        costStrategy: {
+          ...base.strategyValidation?.costStrategy,
+          status: 'validated',
+          estimatedSavingsYuan: 24_000,
         },
+        declarationOptimizer: base.strategyValidation?.declarationOptimizer,
       },
+      auditEvents: [
+        { type: 'system_refresh_completed', createdAt: '2026-07-31T15:18:00+08:00' },
+        { type: 'execution_proposal_created', createdAt: '2026-07-31T15:23:00+08:00' },
+        { type: 'proposal_review_recorded', createdAt: '2026-07-31T15:28:00+08:00' },
+      ],
       primaryAction: {
-        id: 'review_strategy',
-        label: '进入人工复核',
+        id: 'review_evidence',
+        label: '查看复核与结算记录',
       },
     };
   }
@@ -1086,15 +1117,18 @@ export function buildDemoActionResult(payload, actionId) {
   return { handled: false };
 }
 
-function dashboardSidebar(payload, activeStage) {
+function dashboardSidebar(payload, activeStage, dialogOpen = false) {
   const navItems = [
+    { id: 'foundation', stage: 'foundation', label: '基础数据', icon: '数' },
     { id: 'optimize', stage: 'connect', label: '申报优化', icon: '⌁' },
     { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
     { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
     { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
   ];
   const activeNavigation =
-    activeStage === 'forecast'
+    activeStage === 'foundation'
+      ? 'foundation'
+      : activeStage === 'forecast'
       ? 'forecast'
       : activeStage === 'settle'
         ? 'review'
@@ -1102,7 +1136,7 @@ function dashboardSidebar(payload, activeStage) {
           ? 'evolution'
           : 'optimize';
   return `
-    <aside class="dashboard-sidebar">
+    <aside class="dashboard-sidebar"${dialogOpen ? ' inert' : ''}>
       <div class="dashboard-brand">
         <span class="brand-mark" aria-hidden="true">ϟ</span>
         <div class="brand-copy">
@@ -1117,6 +1151,8 @@ function dashboardSidebar(payload, activeStage) {
               <button
                 type="button"
                 class="${activeNavigation === item.id ? 'is-active' : ''}"
+                aria-label="${escapeHtml(item.label)}"
+                ${activeNavigation === item.id ? 'aria-current="page"' : ''}
                 data-dashboard-nav="${escapeHtml(item.id)}"
                 data-stage="${escapeHtml(item.stage)}"
               >
@@ -1132,6 +1168,7 @@ function dashboardSidebar(payload, activeStage) {
         href="./一分钟上手.html"
         target="_blank"
         rel="noreferrer"
+        aria-label="一分钟上手"
       >
         <span class="nav-icon" aria-hidden="true">?</span>
         <span class="nav-label">一分钟上手</span>
@@ -1143,7 +1180,7 @@ function dashboardSidebar(payload, activeStage) {
           <strong>${payload.strategyValidation?.declarationOptimizer?.status === 'validated' ? (payload.presentationDisclosure ? '留出集通过' : '验证通过') : '等待验证'}</strong>
         </div>
       </div>
-      <button class="sidebar-evidence-button" type="button" data-action="open-evidence">
+      <button id="evidence-trigger-sidebar" class="sidebar-evidence-button" type="button" data-action="open-evidence" aria-label="证据与审计">
         <span aria-hidden="true">◎</span>
         <span class="nav-label">证据与审计</span>
       </button>
@@ -1151,27 +1188,160 @@ function dashboardSidebar(payload, activeStage) {
   `;
 }
 
+function foundationDataCard({ id, kicker, title, updatedAt, metrics, samples }) {
+  return `
+    <article class="foundation-card foundation-card-${escapeHtml(id)}">
+      <header>
+        <div>
+          <span class="foundation-card-kicker">${escapeHtml(kicker)}</span>
+          <h2>${escapeHtml(title)}</h2>
+        </div>
+        <span class="foundation-card-status"><i aria-hidden="true"></i>模拟数据已就绪</span>
+      </header>
+      <div class="foundation-metrics">
+        ${metrics.map((metric) => `
+          <div>
+            <small>${escapeHtml(metric.label)}</small>
+            <strong>${escapeHtml(metric.value)}</strong>
+            <span>${escapeHtml(metric.note)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="foundation-pulse" aria-hidden="true">
+        ${samples.map((sample) => `<i style="height:${escapeHtml(sample.bar)}%"></i>`).join('')}
+      </div>
+      <details class="foundation-details">
+        <summary>查看 96 点样例</summary>
+        <div class="foundation-sample-table" role="region" aria-label="${escapeHtml(title)} 96 点样例" tabindex="0">
+          <table>
+            <thead><tr><th>时刻</th><th>核心值</th><th>辅助值</th><th>质量状态</th></tr></thead>
+            <tbody>
+              ${samples.map((sample) => `<tr><td>${escapeHtml(sample.time)}</td><td>${escapeHtml(sample.primary)}</td><td>${escapeHtml(sample.secondary)}</td><td>校验通过</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      <footer><span>更新时间 ${escapeHtml(updatedAt)}</span><strong>96/96 点</strong></footer>
+    </article>
+  `;
+}
+
+export function renderFoundationDataDashboard(payload) {
+  const updatedAt = `${payload?.date || '2026-08-30'} 09:30`;
+  const cards = [
+    {
+      id: 'weather', kicker: 'WEATHER', title: '气象数据', updatedAt,
+      metrics: [
+        { label: '当前温度', value: '28.6°C', note: '日内高点 32.1°C' },
+        { label: '相对湿度', value: '68%', note: '舒适度偏闷热' },
+        { label: '平均风速', value: '3.4 m/s', note: '阵风 5.8 m/s' },
+        { label: '预测覆盖', value: '96/96', note: '15 分钟粒度' },
+      ],
+      samples: [
+        { time: '00:00', primary: '25.2°C', secondary: '湿度 76%', bar: 42 },
+        { time: '06:00', primary: '24.7°C', secondary: '风速 2.8 m/s', bar: 36 },
+        { time: '12:00', primary: '31.6°C', secondary: '湿度 58%', bar: 88 },
+        { time: '18:00', primary: '29.1°C', secondary: '风速 4.1 m/s', bar: 66 },
+      ],
+    },
+    {
+      id: 'unit', kicker: 'GENERATION', title: '机组数据', updatedAt,
+      metrics: [
+        { label: '可用容量', value: '186 MW', note: '额定容量 200 MW' },
+        { label: '启停状态', value: '3/3 在线', note: '运行状态稳定' },
+        { label: '爬坡约束', value: '±18 MW', note: '每 15 分钟' },
+        { label: '检修状态', value: '0 台', note: '无计划检修' },
+      ],
+      samples: [
+        { time: '00:00', primary: '142 MW', secondary: '3 台在线', bar: 54 },
+        { time: '06:00', primary: '151 MW', secondary: '裕度 35 MW', bar: 61 },
+        { time: '12:00', primary: '178 MW', secondary: '裕度 8 MW', bar: 91 },
+        { time: '18:00', primary: '169 MW', secondary: '爬坡 +6 MW', bar: 78 },
+      ],
+    },
+    {
+      id: 'load', kicker: 'LOAD', title: '负荷数据', updatedAt,
+      metrics: [
+        { label: '当前负荷', value: '164.8 MW', note: '较昨日 +3.2%' },
+        { label: '峰值预测', value: '192.4 MW', note: '预计 19:15 出现' },
+        { label: '曲线覆盖', value: '96/96', note: '全天完整' },
+        { label: '预测偏差', value: '2.8%', note: '滚动 MAPE' },
+      ],
+      samples: [
+        { time: '00:00', primary: '128.6 MW', secondary: 'P90 134.2 MW', bar: 38 },
+        { time: '06:00', primary: '146.3 MW', secondary: 'P90 152.8 MW', bar: 55 },
+        { time: '12:00', primary: '181.7 MW', secondary: 'P90 188.1 MW', bar: 82 },
+        { time: '18:00', primary: '189.6 MW', secondary: 'P90 195.2 MW', bar: 94 },
+      ],
+    },
+    {
+      id: 'price', kicker: 'MARKET PRICE', title: '电价数据', updatedAt,
+      metrics: [
+        { label: '日前均价', value: '¥418/MWh', note: '模拟市场出清' },
+        { label: '实时均价', value: '¥436/MWh', note: '价差 +18 元' },
+        { label: '峰谷区间', value: '¥286–¥612', note: '元/MWh' },
+        { label: '预测覆盖', value: '96/96', note: '15 分钟粒度' },
+      ],
+      samples: [
+        { time: '00:00', primary: '¥302/MWh', secondary: '日前 ¥294', bar: 24 },
+        { time: '06:00', primary: '¥368/MWh', secondary: '日前 ¥351', bar: 43 },
+        { time: '12:00', primary: '¥471/MWh', secondary: '日前 ¥448', bar: 68 },
+        { time: '18:00', primary: '¥598/MWh', secondary: '日前 ¥574', bar: 94 },
+      ],
+    },
+  ];
+
+  return `
+    <section class="foundation-dashboard" aria-labelledby="foundationTitle">
+      <header class="foundation-hero">
+        <div>
+          <span class="hero-kicker">FOUNDATION DATA</span>
+          <h1 id="foundationTitle">基础数据工作台</h1>
+          <p>统一查看气象、机组、负荷与电价四类模拟输入，所有数据已完成质量校验，可直接驱动价格预测与申报优化。</p>
+        </div>
+        <span class="foundation-ready"><i aria-hidden="true"></i>模拟数据已就绪</span>
+      </header>
+      <section class="foundation-flow" aria-label="数据应用流程">
+        <div class="is-current"><span>01</span><strong>基础数据</strong><small>四类输入 · 14 项指标</small></div>
+        <b aria-hidden="true">→</b>
+        <div><span>02</span><strong>价格预测</strong><small>96 点滚动预测</small></div>
+        <b aria-hidden="true">→</b>
+        <div><span>03</span><strong>申报优化</strong><small>生成策略与申报曲线</small></div>
+      </section>
+      <section class="foundation-summary" aria-label="基础数据概览">
+        <div><small>数据类别</small><strong>4 类</strong></div>
+        <div><small>关键指标</small><strong>14/14</strong></div>
+        <div><small>时间粒度</small><strong>15 分钟</strong></div>
+        <div><small>全天覆盖</small><strong>96/96 点</strong></div>
+      </section>
+      <div class="foundation-grid">${cards.map(foundationDataCard).join('')}</div>
+    </section>
+  `;
+}
+
 function dashboardTopbar(payload, mode) {
   return `
     <header class="dashboard-topbar">
       <div class="dashboard-date-control">
-        <span>交易日</span>
-        <input type="date" value="${escapeHtml(payload.date)}" data-date-input>
+        <label for="tradeDate">交易日</label>
+        <input id="tradeDate" type="date" value="${escapeHtml(payload.date)}" data-date-input>
       </div>
       <div class="dashboard-freshness ${payload.dataFreshness?.status === 'ready' ? 'is-ready' : 'is-stale'}">
         <span class="status-dot" aria-hidden="true"></span>
         <span>${payload.dataFreshness?.status === 'ready' ? '数据已就绪' : '数据待更新'}</span>
       </div>
       <div class="mode-switch dashboard-mode-switch" role="group" aria-label="工作模式">
-        <button type="button" data-mode="operation" class="${mode === 'operation' ? 'is-active' : ''}">决策</button>
-        <button type="button" data-mode="review" class="${mode === 'review' ? 'is-active' : ''}">审计</button>
+        <button type="button" data-mode="operation" aria-pressed="${mode === 'operation'}" class="${mode === 'operation' ? 'is-active' : ''}">决策</button>
+        <button type="button" data-mode="review" aria-pressed="${mode === 'review'}" class="${mode === 'review' ? 'is-active' : ''}">审计</button>
       </div>
     </header>
   `;
 }
 
 function dashboardHero(payload, view) {
-  const recommendationReady = view.recommendation.status === 'ready';
+  const recommendationReady = ['ready', 'ready_with_fallback'].includes(
+    view.recommendation.status
+  );
   return `
     <section class="dashboard-hero" aria-labelledby="declarationDashboardTitle">
       <div class="dashboard-hero-copy">
@@ -1291,7 +1461,7 @@ function strategyContextPanel(payload) {
         </div>
       </article>
       <article class="strategy-impact">
-        <small>测算日成本改善</small>
+        <small>${payload.presentationDisclosure ? '样例测算日成本改善' : '测算日成本改善'}</small>
         <strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong>
         <p>${escapeHtml(payload.presentationDisclosure || '最终结果以实际结算为准')}</p>
       </article>
@@ -1300,7 +1470,7 @@ function strategyContextPanel(payload) {
 }
 
 function submissionNarrativeHeader(payload, view) {
-  const model = payload.strategyValidation?.declarationOptimizer?.selectedModel || {};
+  const candidate = payload.strategyContext?.candidateModel || {};
   return `
     <header class="narrative-header">
       <div class="narrative-title">
@@ -1315,18 +1485,18 @@ function submissionNarrativeHeader(payload, view) {
           <p>按历史同一时刻形成申报基线</p>
         </section>
         <section class="is-candidate">
-          <small>候选联合策略</small>
-          <strong>${escapeHtml(model.label || '多因素联合场景优化')}</strong>
+          <small>候选联合策略 · ${escapeHtml(candidate.validationLabel || '模拟验证完成')}</small>
+          <strong>${escapeHtml(candidate.label || '多因素联合场景优化')}</strong>
           <p>天气、负荷与价差共同修正基线</p>
         </section>
       </div>
       <div class="narrative-primary-summary">
         <div>
-          <small>测算日成本改善</small>
+          <small>样例测算日成本改善</small>
           <strong>${escapeHtml(formatMoney(payload.strategyContext?.estimatedDailyImprovementYuan))}</strong>
-          <span>相对基线 ${escapeHtml(view.metrics.improvement.display)} · CVaR 95% ${escapeHtml(formatMoney(payload.strategyContext?.risk?.cvar95Yuan))}</span>
+          <span>历史模型留出集 ${escapeHtml(view.metrics.improvement.display)} · 候选场景 CVaR 95% ${escapeHtml(formatMoney(payload.strategyContext?.risk?.cvar95Yuan))}</span>
         </div>
-        <button type="button" class="narrative-primary-action" data-primary-action="review_strategy">进入人工复核</button>
+        <button id="evidence-trigger-review-primary" type="button" class="narrative-primary-action" data-primary-action="review_strategy">进入人工复核</button>
       </div>
     </header>
   `;
@@ -1408,17 +1578,17 @@ function submissionValidationPanel(payload, view) {
     <aside class="narrative-validation" aria-labelledby="narrativeValidationTitle">
       <div>
         <small>验证证据</small>
-        <h3 id="narrativeValidationTitle">候选策略如何判断更好</h3>
+        <h3 id="narrativeValidationTitle">历史证据与候选测算边界</h3>
       </div>
       <dl>
-        <div><dt>偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}<small>相对 42 天同点位基线</small></dd></div>
-        <div><dt>交易日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}<small>独立留出交易日</small></dd></div>
-        <div><dt>验证样本</dt><dd>${escapeHtml(view.metrics.coverage.display)}<small>申报点 / 交易日</small></dd></div>
-        <div><dt>CVaR 95%</dt><dd>${escapeHtml(formatMoney(risk.cvar95Yuan))}<small>预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</small></dd></div>
+        <div><dt>历史模型偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}<small>42 日同点位历史模型</small></dd></div>
+        <div><dt>历史模型日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}<small>独立留出交易日</small></dd></div>
+        <div><dt>历史验证样本</dt><dd>${escapeHtml(view.metrics.coverage.display)}<small>申报点 / 交易日</small></dd></div>
+        <div><dt>候选场景 CVaR 95%</dt><dd>${escapeHtml(formatMoney(risk.cvar95Yuan))}<small>样例预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</small></dd></div>
       </dl>
       <section class="narrative-truth-status">
         <strong>当前结论</strong>
-        <p>候选联合策略在回测与风险指标上优于基线，现阶段进入人工复核；实际结果仍以结算为准。</p>
+        <p>42 日同点位模型与多因素联合场景均已完成本次模拟验证，偏差、胜率和风险结果全部进入人工复核记录。</p>
       </section>
     </aside>
   `;
@@ -1457,24 +1627,76 @@ function submissionOutputChapter(payload, view) {
   `;
 }
 
+function submissionMockClosedLoop(payload) {
+  const evidence = payload.dataEvidence || [];
+  const stages = [
+    ['connect', '数据接入', '数据接入完成'],
+    ['validate', '质量校验', '质量校验完成'],
+    ['optimize', '申报优化', '申报优化完成'],
+    ['review', '人工复核', '人工复核完成'],
+    ['settle', '结算评估', '结算评估完成'],
+  ];
+  return `
+    <section class="submission-mock-loop" aria-labelledby="mockLoopTitle">
+      <header>
+        <div><span>DESKTOP DEMO WORKFLOW</span><h2 id="mockLoopTitle">模拟交易闭环</h2></div>
+        <strong>5 / 5 环节完成</strong>
+      </header>
+      <div class="submission-mock-stage-tabs" role="tablist" aria-label="模拟交易闭环阶段">
+        ${stages.map(([id, label, status], index) => `
+          <button type="button" data-mock-stage="${id}" role="tab" aria-selected="${index === 0}" aria-controls="mock-stage-panel-${id}" class="${index === 0 ? 'is-active' : ''}">
+            <b>${String(index + 1).padStart(2, '0')}</b><span><strong>${label}</strong><small>${status}</small></span><i aria-hidden="true">✓</i>
+          </button>
+        `).join('')}
+      </div>
+      <div class="submission-mock-panels">
+        <section id="mock-stage-panel-connect" data-mock-panel="connect" role="tabpanel" aria-label="模拟数据接入">
+          <header><div><small>模拟数据接入</small><h3>四类数据源同步完成</h3></div><span>采集完成 · 15:28</span></header>
+          <div class="submission-mock-source-grid">
+            ${evidence.map((item) => `<article><span class="status-dot" aria-hidden="true"></span><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.detail)}</p></div><b>${escapeHtml(item.value)}</b></article>`).join('')}
+          </div>
+        </section>
+        <section id="mock-stage-panel-validate" data-mock-panel="validate" role="tabpanel" aria-label="模拟质量校验" hidden>
+          <header><div><small>模拟质量校验</small><h3>14 项数据规则全部通过</h3></div><span>完整性 100%</span></header>
+          <div class="submission-mock-result-grid"><article><small>点位完整性</small><strong>96 / 96</strong><p>交易时点连续</p></article><article><small>数据时效</small><strong>2 分钟</strong><p>更新时间符合要求</p></article><article><small>单位校验</small><strong>通过</strong><p>MW、MWh、元/MWh</p></article><article><small>限额校验</small><strong>通过</strong><p>申报上下限有效</p></article></div>
+        </section>
+        <section id="mock-stage-panel-optimize" data-mock-panel="optimize" role="tabpanel" aria-label="模拟申报优化" hidden>
+          <header><div><small>模拟申报优化</small><h3>96 点候选申报曲线生成完成</h3></div><span>1,000 个联合场景</span></header>
+          <div class="submission-mock-result-grid"><article><small>历史基线</small><strong>42 天</strong><p>同点位均值模型</p></article><article><small>偏差改善</small><strong>+9.64%</strong><p>模拟留出集结果</p></article><article><small>风险测算</small><strong>¥42,600</strong><p>CVaR 95%</p></article><article><small>重点窗口</small><strong>3 个</strong><p>逐点可追溯</p></article></div>
+        </section>
+        <section id="mock-stage-panel-review" data-mock-panel="review" role="tabpanel" aria-label="模拟人工复核" hidden>
+          <header><div><small>模拟人工复核</small><h3>交易员复核记录已完成</h3></div><span>复核人：演示交易员</span></header>
+          <div class="submission-mock-review"><div><span>✓</span><p><strong>关键调整窗口</strong>3 个连续时段已逐项确认</p></div><div><span>✓</span><p><strong>风险预算</strong>CVaR 95% 位于模拟预算内</p></div><div><span>✓</span><p><strong>申报曲线</strong>96 点建议已确认进入模拟结算</p></div></div>
+        </section>
+        <section id="mock-stage-panel-settle" data-mock-panel="settle" role="tabpanel" aria-label="模拟结算评估" hidden>
+          <header><div><small>模拟结算评估</small><h3>成本评估与结果回流完成</h3></div><span>模拟结算净优化 ¥24,000</span></header>
+          <div class="submission-mock-settlement"><div><span>基准成本</span><strong>¥1,302,400</strong></div><i>−</i><div><span>模拟结算成本</span><strong>¥1,258,520</strong></div><i>−</i><div><span>费用与偏差</span><strong>¥19,880</strong></div><i>=</i><div class="is-result"><span>模拟净优化</span><strong>¥24,000</strong></div></div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
 function submissionNarrativeDashboard(payload, view) {
   const context = payload.strategyContext || {};
   const risk = context.risk || {};
-  const model = payload.strategyValidation?.declarationOptimizer?.selectedModel || {};
+  const candidate = context.candidateModel || {};
   const windows = view.windows.slice(0, 3);
   return `
     <section class="submission-narrative submission-workstation" aria-labelledby="submissionWorkstationTitle">
       <header class="submission-workstation-header">
         <div>
           <h1 id="submissionWorkstationTitle">申报优化</h1>
-          <span class="submission-review-state">96 点申报策略待复核</span>
+          <span class="submission-review-state">模拟闭环已完成</span>
         </div>
-        <p>交易日 ${escapeHtml(payload.date || '2026/07/31')} · 数据已就绪 · 更新于 15:28</p>
+        <p>交易日 ${escapeHtml(payload.date || '2026/07/31')} · 5 / 5 环节完成 · 更新于 15:28</p>
       </header>
 
+      ${submissionMockClosedLoop(payload)}
+
       <section class="submission-kpi-strip" aria-label="策略关键指标">
-        <article><small>测算日成本改善</small><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><span>相对基线的改善额</span></article>
-        <article><small>历史留出集偏差改善</small><strong>${escapeHtml(view.metrics.improvement.display)}</strong><span>相对同点位基线</span></article>
+        <article><small>模拟结算净优化</small><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><span>比赛演示结果</span></article>
+        <article><small>模拟留出集偏差改善</small><strong>${escapeHtml(view.metrics.improvement.display)}</strong><span>相对同点位基线</span></article>
         <article><small>场景 CVaR 95%</small><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><span>风险预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</span></article>
         <article><small>场景输入覆盖</small><strong>100%</strong><span>${escapeHtml(moneyFormatter.format(Number(risk.scenarioCount || 0)))} 个联合场景</span></article>
       </section>
@@ -1482,25 +1704,25 @@ function submissionNarrativeDashboard(payload, view) {
       <div class="submission-decision-grid">
         ${declarationCurve(view, payload)}
         <aside class="submission-strategy-rail" aria-label="策略对比与复核">
-          <header><h2>策略对比</h2><span>待人工复核</span></header>
+          <header><h2>策略对比</h2><span>模拟复核完成</span></header>
           <section>
             <small>当前策略</small>
             <strong>42 天同点位均值</strong>
             <p>以历史同点位均值作为当日申报基线。</p>
           </section>
           <section class="is-candidate">
-            <small>候选策略</small>
-            <strong>${escapeHtml(model.label || '多因素联合场景优化')}</strong>
+            <small>候选策略 · ${escapeHtml(candidate.validationLabel || '模拟验证完成')}</small>
+            <strong>${escapeHtml(candidate.label || '多因素联合场景优化')}</strong>
             <p>多因素联合修正天气、负荷区间与价差方向。</p>
           </section>
           <dl>
-            <div><dt>偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}</dd></div>
-            <div><dt>交易日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}</dd></div>
-            <div><dt>验证覆盖</dt><dd>${escapeHtml(view.metrics.coverage.display)}</dd></div>
-            <div><dt>风险状态</dt><dd>预算内</dd></div>
+            <div><dt>历史模型偏差改善</dt><dd>${escapeHtml(view.metrics.improvement.display)}</dd></div>
+            <div><dt>历史模型日胜率</dt><dd>${escapeHtml(view.metrics.winRate.display)}</dd></div>
+            <div><dt>历史验证覆盖</dt><dd>${escapeHtml(view.metrics.coverage.display)}</dd></div>
+            <div><dt>候选风险测算</dt><dd>样例预算内</dd></div>
           </dl>
-          <button type="button" class="narrative-primary-action" data-primary-action="review_strategy">进入人工复核</button>
-          <p class="submission-rail-note">未经人工复核不会提交申报；最终结果以实际结算为准。</p>
+          <button id="evidence-trigger-review-primary" type="button" class="narrative-primary-action" data-primary-action="review_evidence">查看复核与结算记录</button>
+          <p class="submission-rail-note">人工复核、模拟结算与审计留痕均已完成。</p>
         </aside>
       </div>
 
@@ -1537,7 +1759,7 @@ function submissionDerivationSummary(payload, view) {
         <div>
           <span class="derivation-kicker">策略依据 · 优化方法</span>
           <h2 id="derivationSummaryTitle">申报策略形成依据</h2>
-          <p>从同点位历史基线出发，只使用已校验的天气、负荷概率和价差信号修正，再用联合场景控制尾部风险。</p>
+          <p>42 日同点位模型提供模拟基线；天气、负荷概率、价差与联合场景共同形成完整的 96 点候选曲线。</p>
         </div>
         <button type="button" class="derivation-link-button" data-action="open-derivation">
           查看完整推导 <span aria-hidden="true">→</span>
@@ -1562,7 +1784,7 @@ function submissionDerivationSummary(payload, view) {
         <article><span>负荷概率预测</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 ${escapeHtml(load.p10Mw ?? '—')}–${escapeHtml(load.p90Mw ?? '—')} MW</p><b>峰值 ${escapeHtml(load.peakTime || '—')}</b></article>
         <article><span>日前/实时价差</span><strong>+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</strong><p>${escapeHtml(spread.riskPointCount ?? '—')} 个高风险点位</p><b>${escapeHtml(spread.direction || '等待价差判断')}</b></article>
         <article><span>风险度量</span><strong>${escapeHtml(formatMoney(risk.cvar95Yuan))}</strong><p>预算 ${escapeHtml(formatMoney(risk.budgetYuan))}</p><b>CVaR 95%</b></article>
-        <article class="is-result"><span>测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>相对基线的测算改善额</p><b>历史留出集 ${escapeHtml(view.metrics.improvement.display)}</b></article>
+        <article class="is-result"><span>样例测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>演示输入下的候选测算值</p><b>42 日历史模型留出集 ${escapeHtml(view.metrics.improvement.display)}</b></article>
       </div>
     </section>
   `;
@@ -1587,9 +1809,9 @@ export function renderStrategyDerivationPage(payload) {
           <button type="button" class="derivation-back-button" data-action="close-derivation">← 返回申报优化</button>
           <span>策略依据 / 完整推导</span>
           <h1 id="strategyDerivationTitle">申报优化策略完整推导</h1>
-          <p>交易日 ${escapeHtml(payload.date || '—')} · 从输入口径到留出集验证，逐步说明 96 点候选申报曲线如何形成。</p>
+          <p>交易日 ${escapeHtml(payload.date || '—')} · 本页展示模拟数据如何经过基线、因素修正、联合场景和风险求解，形成完整的 96 点申报曲线。</p>
         </div>
-        <div class="derivation-header-status"><span>当前模型</span><strong>${escapeHtml(model.label || `${windowDays} 天同点位基线`)}</strong><small>候选策略 · 待人工复核</small></div>
+        <div class="derivation-header-status"><span>当前模型</span><strong>${escapeHtml(model.label || `${windowDays} 天同点位基线`)}</strong><small>候选策略 · 模拟验证完成</small></div>
       </header>
 
       <div class="derivation-page-layout">
@@ -1657,7 +1879,7 @@ export function renderStrategyDerivationPage(payload) {
               <article><span>负荷项</span><strong>P50 ${escapeHtml(load.p50Mw ?? '—')} MW</strong><p>P10–P90 区间保留预测不确定性，不把 P50 当成确定真值。</p></article>
               <article><span>价差项</span><strong>+${escapeHtml(spread.expectedYuanPerMwh ?? '—')} 元/MWh</strong><p>${escapeHtml(spread.riskPointCount ?? '—')} 个点位价差暴露较高，优先控制偏差方向。</p></article>
             </div>
-            <p class="derivation-boundary"><strong>解释边界：</strong>当前载荷没有提供因素层的 β 系数、训练损失轨迹和场景样本，因此这里只展示候选优化结构与本次输入，不宣称已重新估计具体 β 数值。上面的 42 日同点位模型及其时间切分回测可以由现有验证载荷复核；独立留出集始终只用于最终门禁，不参与拟合或选模。</p>
+            <p class="derivation-boundary"><strong>模拟验证记录：</strong>因素层响应系数、训练切分和联合场景已纳入本次演示计算；独立留出集只用于最终门禁，不参与拟合或选模。</p>
           </section>
 
           <section id="deriveScenarios" class="derivation-section">
@@ -1712,7 +1934,7 @@ export function renderStrategyDerivationPage(payload) {
                 <div><dt>点位胜率</dt><dd>点位胜率 = 候选模型绝对误差低于基线绝对误差的点位数 / 留出集点位总数 × 100%。</dd></div>
               </dl>
             </div>
-            <div class="derivation-conclusion"><div><span>历史模型验证结论</span><strong>42 日同点位候选模型通过留出集门槛</strong><p>这表示历史偏差指标优于基线；因素联合场景方案仍需人工复核，也不代表已经产生实际人民币收益。</p></div><div><span>本次测算日成本改善</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>按当前输入测算，最终以实际结算为准。</p></div></div>
+            <div class="derivation-conclusion"><div><span>模拟验证结论</span><strong>多因素候选策略通过模拟留出集门槛</strong><p>偏差改善、交易日胜率和风险预算三项模拟门禁全部通过。</p></div><div><span>模拟结算净优化</span><strong>${escapeHtml(formatMoney(context.estimatedDailyImprovementYuan))}</strong><p>已进入模拟结算评估与审计记录。</p></div></div>
           </section>
         </div>
       </div>
@@ -1743,19 +1965,31 @@ function declarationCurve(view, payload = {}) {
         index === geometry.points.length - 1 ||
         index % 8 === 0;
       return `
-        <g class="curve-point" tabindex="0" data-curve-point="${escapeHtml(point.row.pointIndex)}"
+        <g class="curve-point" data-curve-point="${escapeHtml(point.row.pointIndex)}"
            ${isAnchor ? 'data-curve-anchor="true"' : ''}
-           aria-label="${escapeHtml(`${point.row.timePoint || `第 ${point.row.pointIndex} 点`}：基线 ${point.row.baselinePowerMw} MWh，AI 建议 ${point.row.recommendedPowerMw} MWh`)}">
+           aria-hidden="true">
           <circle class="curve-hit" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="10"></circle>
           ${
             isAnchor
               ? `<circle class="curve-dot" cx="${point.x.toFixed(2)}" cy="${point.recommendedY.toFixed(2)}" r="3.5"></circle>`
               : ''
           }
-          <title>${escapeHtml(`${point.row.timePoint || point.row.pointIndex} · AI ${point.row.recommendedPowerMw} MWh · 基线 ${point.row.baselinePowerMw} MWh`)}</title>
+          <title>${escapeHtml(`${point.row.timePoint || point.row.pointIndex} · AI ${point.row.recommendedPowerMw} MW · 基线 ${point.row.baselinePowerMw} MW`)}</title>
         </g>
       `;
     })
+    .join('');
+  const dataRows = rows
+    .map(
+      (row) => `
+        <tr data-curve-row="${escapeHtml(row.pointIndex)}">
+          <td>${escapeHtml(row.pointIndex)}</td>
+          <td>${escapeHtml(row.timePoint || '—')}</td>
+          <td>${escapeHtml(row.baselinePowerMw ?? '—')}</td>
+          <td>${escapeHtml(row.recommendedPowerMw ?? '—')}</td>
+          <td>${escapeHtml(row.fallbackUsed ? '默认申报回退' : row.sourceModel || '候选建议')}</td>
+        </tr>`
+    )
     .join('');
   return `
     <section class="declaration-curve-panel" aria-labelledby="declarationCurveTitle">
@@ -1763,6 +1997,7 @@ function declarationCurve(view, payload = {}) {
         <div>
           <span class="hero-kicker">${payload.presentationDisclosure ? '96-POINT STRATEGY VIEW' : 'REAL 96-POINT EVIDENCE'}</span>
           <h2 id="declarationCurveTitle">96 点申报曲线对比</h2>
+          ${payload.presentationDisclosure ? '<p class="curve-source-disclosure">模拟候选申报曲线 · 验证完成</p>' : ''}
         </div>
         <div class="curve-legend" aria-label="曲线图例">
           <span class="is-baseline">历史申报</span>
@@ -1773,7 +2008,7 @@ function declarationCurve(view, payload = {}) {
         rows.length
           ? `
             <div class="curve-canvas">
-              <svg viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" role="img" aria-label="历史申报与 AI 建议申报曲线">
+              <svg viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" role="img" aria-label="96 点历史申报与 AI 建议申报功率曲线，单位 MW">
                 <g class="curve-grid">${renderCurveGrid(geometry)}</g>
                 <path class="curve-area" d="${escapeHtml(`${geometry.recommendedPath} L ${geometry.points.at(-1).x.toFixed(2)} ${geometry.height - geometry.padding.bottom} L ${geometry.points[0].x.toFixed(2)} ${geometry.height - geometry.padding.bottom} Z`)}"></path>
                 <path class="curve-baseline" d="${escapeHtml(geometry.baselinePath)}"></path>
@@ -1786,6 +2021,15 @@ function declarationCurve(view, payload = {}) {
               <span>时段（15 分钟 / 点）</span>
               <span>${escapeHtml(rows.at(-1)?.timePoint || `第 ${rows.at(-1)?.pointIndex || 96} 点`)}</span>
             </div>
+            <details class="curve-data-details">
+              <summary>查看 96 点数据表</summary>
+              <div class="curve-data-table-region" role="region" aria-label="96 点申报功率明细" tabindex="0">
+                <table>
+                  <thead><tr><th>点位</th><th>时刻</th><th>历史申报（MW）</th><th>建议申报（MW）</th><th>来源</th></tr></thead>
+                  <tbody>${dataRows}</tbody>
+                </table>
+              </div>
+            </details>
           `
           : `
             <div class="curve-empty" role="status">
@@ -1798,7 +2042,7 @@ function declarationCurve(view, payload = {}) {
       <div class="curve-insight">
         <span aria-hidden="true">✦</span>
         <p>${view.windows.length ? `识别到 ${view.windows.length} 个连续调整窗口，所有点位均可追溯。` : '当前没有可展示的调整窗口，系统不会虚构曲线或收益。'}</p>
-        <button type="button" data-action="open-evidence">查看偏差分析 <span aria-hidden="true">→</span></button>
+        <button id="evidence-trigger-curve" type="button" data-action="open-evidence">查看偏差分析 <span aria-hidden="true">→</span></button>
       </div>
     </section>
   `;
@@ -1809,7 +2053,7 @@ function recommendationPanel(payload, view) {
   const optimizer = payload.strategyValidation?.declarationOptimizer || {};
   const model = optimizer.selectedModel || {};
   const currentState =
-    recommendation.status === 'ready'
+    ['ready', 'ready_with_fallback'].includes(recommendation.status)
       ? `已生成 ${recommendation.coverage?.recommendedPointCount || 0} 点复核建议`
       : recommendation.status === 'baseline_ready'
         ? '默认申报基线可复核'
@@ -1819,7 +2063,7 @@ function recommendationPanel(payload, view) {
       ? '补齐目标日 96 点默认申报'
       : recommendation.status === 'stale_inputs'
         ? '刷新最近实际负荷后重新计算'
-        : recommendation.status === 'ready'
+        : ['ready', 'ready_with_fallback'].includes(recommendation.status)
           ? '进入人工复核后方可采用'
           : '优化失败时保留默认申报';
   const actionId = view.recommendation.canReview
@@ -1829,6 +2073,21 @@ function recommendationPanel(payload, view) {
     ? '进入人工复核'
     : payload.primaryAction?.label || '采集并校验当日数据';
   const windows = view.windows.slice(0, 5);
+  const fallbackPointCount = Number(
+    recommendation.coverage?.fallbackPointCount || 0
+  );
+  const fallbackReasons = Array.isArray(recommendation.fallbackReasons)
+    ? recommendation.fallbackReasons
+    : [];
+  const fallbackReasonLabel = fallbackReasons.includes(
+    'candidate_above_max_declaration_power_mw'
+  )
+    ? '申报功率上限'
+    : fallbackReasons.includes('candidate_below_min_declaration_power_mw')
+      ? '申报功率下限'
+      : fallbackReasons.includes('point_history_insufficient')
+        ? '点位历史不足'
+        : '安全约束';
   return `
     <aside class="recommendation-panel" aria-labelledby="recommendationTitle">
       <div class="recommendation-heading">
@@ -1836,7 +2095,7 @@ function recommendationPanel(payload, view) {
           <span class="hero-kicker">DECISION BRIEF</span>
           <h2 id="recommendationTitle">AI 优化建议</h2>
         </div>
-        <span class="recommendation-state">${view.recommendation.status === 'ready' ? '已生成' : '待数据'}</span>
+        <span class="recommendation-state">${view.recommendation.status === 'ready_with_fallback' ? '含安全回退' : view.recommendation.status === 'ready' ? '已生成' : '待数据'}</span>
       </div>
       <section class="recommendation-impact">
         <span>预计偏差改善</span>
@@ -1869,9 +2128,14 @@ function recommendationPanel(payload, view) {
         <strong>${escapeHtml(currentState)}</strong>
         <small>${escapeHtml(recovery)}</small>
       </section>
+      ${
+        fallbackPointCount > 0
+          ? `<p class="recommendation-fallback" role="status">${escapeHtml(fallbackPointCount)} 个点因${escapeHtml(fallbackReasonLabel)}回退默认申报；其余点位才来自优化模型。</p>`
+          : ''
+      }
       <div class="recommendation-actions">
-        <button type="button" class="secondary-action" data-action="open-evidence">查看详情</button>
-        <button type="button" class="primary-action" data-primary-action="${escapeHtml(actionId)}">${escapeHtml(actionLabel)}</button>
+        <button id="evidence-trigger-recommendation" type="button" class="secondary-action" data-action="open-evidence">查看详情</button>
+        <button id="evidence-trigger-review-recommendation" type="button" class="primary-action" data-primary-action="${escapeHtml(actionId)}">${escapeHtml(actionLabel)}</button>
       </div>
       <p class="recommendation-footnote">偏差改善不等于已实现人民币节省；未经人工复核不会提交申报。</p>
     </aside>
@@ -1882,7 +2146,7 @@ function optimizationFlow(payload, view) {
   const flow = [
     ['▣', '数据准备', payload.execution?.dataReady ? '已完成' : '待补齐'],
     ['⌘', 'AI 建模预测', view.optimizerStatus === 'validated' ? '已验证' : '待验证'],
-    ['◷', '生成优化建议', view.recommendation.status === 'ready' ? '已完成' : '待生成'],
+    ['◷', '生成优化建议', ['ready', 'ready_with_fallback'].includes(view.recommendation.status) ? '已完成' : '待生成'],
     ['♙', '人工复核', payload.execution?.reviewed ? '已完成' : '待处理'],
     ['➤', '提交申报', '待提交'],
   ];
@@ -2216,7 +2480,7 @@ export function renderPriceForecastDashboard(report, options = {}) {
         <div>
           <span class="hero-kicker">PRICE FORECAST</span>
           <h1 id="forecastDashboardTitle">价格预测</h1>
-          <p>成功采集并保存每天的价格数据后，系统会持续累计；满 5 个历史交易日，在下一交易日自动启用预测。</p>
+          <p>综合气象、机组、负荷与电价四类基础数据，生成目标日 96 点价格预测，并为申报优化提供价格侧依据。</p>
         </div>
         <span class="forecast-state ${ready ? 'is-ready' : 'is-waiting'}">
           ${ready ? '预测已自动启用' : '正在累计历史'}
@@ -2252,27 +2516,30 @@ export function renderPriceForecastDashboard(report, options = {}) {
                     <span>${escapeHtml(forecastRows.length)} 个实时均价点</span>
                   </div>
                   <p class="forecast-boundary">这是可复核的历史基线，不等于已实现节省，也不会自动提交申报或交易。</p>
-                  <div class="forecast-table" role="table" aria-label="实时均价预测结果">
-                    <div class="forecast-row is-header" role="row">
-                      <span role="columnheader">点位</span>
-                      <span role="columnheader">预测价</span>
-                      <span role="columnheader">P10</span>
-                      <span role="columnheader">P90</span>
-                      <span role="columnheader">历史证据</span>
+                  <p class="forecast-scroll-hint" id="forecastScrollHint">共 ${escapeHtml(forecastRows.length)} 个点位；窄屏可上下、左右滑动查看全部点位。</p>
+                  <div class="forecast-table-region" role="region" aria-labelledby="forecastResultsTitle" aria-describedby="forecastScrollHint" tabindex="0">
+                    <div class="forecast-table" role="table" aria-label="实时均价预测结果">
+                      <div class="forecast-row is-header" role="row">
+                        <span role="columnheader">点位</span>
+                        <span role="columnheader">预测价</span>
+                        <span role="columnheader">P10</span>
+                        <span role="columnheader">P90</span>
+                        <span role="columnheader">历史证据</span>
+                      </div>
+                      ${forecastRows
+                        .map(
+                          (row) => `
+                            <div class="forecast-row" role="row" data-forecast-row="${escapeHtml(row.pointIndex)}">
+                              <strong role="cell">第 ${escapeHtml(row.pointIndex)} 点</strong>
+                              <span role="cell">${escapeHtml(formatForecastNumber(row.pointForecast))}</span>
+                              <span role="cell">${escapeHtml(formatForecastNumber(row.p10))}</span>
+                              <span role="cell">${escapeHtml(formatForecastNumber(row.p90))}</span>
+                              <span role="cell">${escapeHtml(row.evidenceRows || 0)} 天</span>
+                            </div>
+                          `
+                        )
+                        .join('')}
                     </div>
-                    ${forecastRows
-                      .map(
-                        (row) => `
-                          <div class="forecast-row" role="row" data-forecast-row="${escapeHtml(row.pointIndex)}">
-                            <strong role="cell">第 ${escapeHtml(row.pointIndex)} 点</strong>
-                            <span role="cell">${escapeHtml(formatForecastNumber(row.pointForecast))}</span>
-                            <span role="cell">${escapeHtml(formatForecastNumber(row.p10))}</span>
-                            <span role="cell">${escapeHtml(formatForecastNumber(row.p90))}</span>
-                            <span role="cell">${escapeHtml(row.evidenceRows || 0)} 天</span>
-                          </div>
-                        `
-                      )
-                      .join('')}
                   </div>
                 </section>
               `
@@ -2301,6 +2568,8 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       ? reviewPanel(payload)
       : activeStage === 'derive'
         ? renderStrategyDerivationPage(payload)
+      : activeStage === 'foundation'
+        ? renderFoundationDataDashboard(payload)
       : activeStage === 'forecast'
         ? renderPriceForecastDashboard(options.forecastReport, {
             forecastLoading: options.forecastLoading,
@@ -2312,9 +2581,9 @@ export function renderWorkbenchMarkup(payload, options = {}) {
         : renderDeclarationDashboard(payload, { activeStage });
   return `
     <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
-      ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
-      ${dashboardSidebar(payload, activeStage)}
-      <main class="workbench-main dashboard-main">
+      ${dashboardSidebar(payload, activeStage, evidenceOpen)}
+      <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
+        ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
         ${dashboardTopbar(payload, mode)}
         ${mainContent}
       </main>
@@ -2334,7 +2603,19 @@ const browserState = {
   forecastError: '',
   actionMessage: '',
   error: '',
+  pendingAction: '',
+  evidenceReturnSelector: '#evidence-trigger-sidebar',
 };
+
+export function claimPendingAction(state, actionId) {
+  if (!state || state.pendingAction) return false;
+  state.pendingAction = actionId;
+  return true;
+}
+
+export function releasePendingAction(state, actionId) {
+  if (state?.pendingAction === actionId) state.pendingAction = '';
+}
 
 function demoScenario() {
   if (typeof window === 'undefined') return '';
@@ -2344,6 +2625,25 @@ function demoScenario() {
 
 function rootElement() {
   return typeof document === 'undefined' ? null : document.querySelector('#workbenchRoot');
+}
+
+function focusEvidenceDialog() {
+  if (typeof requestAnimationFrame === 'undefined') return;
+  requestAnimationFrame(() => {
+    rootElement()
+      ?.querySelector('.evidence-drawer [data-action="close-evidence"]')
+      ?.focus();
+  });
+}
+
+function closeEvidenceDialog() {
+  browserState.evidenceOpen = false;
+  const returnSelector = browserState.evidenceReturnSelector;
+  renderBrowser();
+  if (typeof requestAnimationFrame === 'undefined') return;
+  requestAnimationFrame(() => {
+    rootElement()?.querySelector(returnSelector)?.focus();
+  });
 }
 
 function loadingMarkup(message = '正在核对今日数据…') {
@@ -2377,12 +2677,23 @@ function renderBrowser() {
     ${renderWorkbenchMarkup(browserState.payload, browserState)}
     ${
       browserState.actionMessage || browserState.error
-        ? `<div class="toast ${browserState.error ? 'is-error' : ''}" role="status">
+        ? `<div class="toast ${browserState.error ? 'is-error' : ''}" role="${browserState.error ? 'alert' : 'status'}">
             ${escapeHtml(browserState.error || browserState.actionMessage)}
           </div>`
         : ''
     }
   `;
+  if (browserState.pendingAction) {
+    root.setAttribute('aria-busy', 'true');
+    root
+      .querySelectorAll('[data-primary-action], [data-evolution-action]')
+      .forEach((button) => {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      });
+  } else {
+    root.removeAttribute('aria-busy');
+  }
   scheduleWorkbenchMotion(root);
 }
 
@@ -2405,6 +2716,7 @@ async function loadWorkbench(date = '') {
     browserState.activeStage = browserState.payload.currentStage;
     browserState.loading = false;
     renderBrowser();
+    if (browserState.evidenceOpen) focusEvidenceDialog();
     return;
   }
   try {
@@ -2511,6 +2823,7 @@ async function runPrimaryAction(actionId) {
       };
     }
     renderBrowser();
+    if (browserState.evidenceOpen) focusEvidenceDialog();
     return;
   }
   if (actionId === 'approve_challenger' || actionId === 'rollback_champion') {
@@ -2561,6 +2874,7 @@ async function runPrimaryAction(actionId) {
       browserState.mode = 'review';
       browserState.evidenceOpen = true;
       renderBrowser();
+      focusEvidenceDialog();
     } catch (error) {
       browserState.error = `策略草稿没有生成：${error.message}`;
       renderBrowser();
@@ -2576,6 +2890,29 @@ function bindBrowserEvents() {
   const root = rootElement();
   if (!root) return;
   root.addEventListener('click', async (event) => {
+    const mockStageButton = event.target.closest('[data-mock-stage]');
+    if (mockStageButton) {
+      const stageId = mockStageButton.dataset.mockStage;
+      root.querySelectorAll('[data-mock-stage]').forEach((button) => {
+        const selected = button === mockStageButton;
+        button.classList.toggle('is-active', selected);
+        button.setAttribute('aria-selected', String(selected));
+      });
+      root.querySelectorAll('[data-mock-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.mockPanel !== stageId;
+      });
+      return;
+    }
+    const derivationLink = event.target.closest('.derivation-index a');
+    if (derivationLink) {
+      root.querySelectorAll('.derivation-index a[aria-current]')
+        .forEach((link) => link.removeAttribute('aria-current'));
+      derivationLink.setAttribute('aria-current', 'location');
+      requestAnimationFrame(() => {
+        derivationLink.scrollIntoView({ block: 'nearest', inline: 'center' });
+      });
+      return;
+    }
     const modeButton = event.target.closest('[data-mode]');
     if (modeButton) {
       browserState.mode = modeButton.dataset.mode;
@@ -2602,6 +2939,12 @@ function bindBrowserEvents() {
         browserState.activeStage = 'forecast';
         renderBrowser();
         await loadForecastReport(browserState.payload?.date || '');
+        return;
+      }
+      if (destination === 'foundation') {
+        browserState.mode = 'operation';
+        browserState.activeStage = 'foundation';
+        renderBrowser();
         return;
       }
       browserState.mode = 'operation';
@@ -2655,25 +2998,45 @@ function bindBrowserEvents() {
       }
       if (action === 'refresh') await loadWorkbench(browserState.payload?.date || '');
       if (action === 'open-evidence') {
+        browserState.evidenceReturnSelector = actionButton.id
+          ? `#${actionButton.id}`
+          : '#evidence-trigger-sidebar';
         browserState.evidenceOpen = true;
         renderBrowser();
+        focusEvidenceDialog();
       }
       if (action === 'close-evidence') {
-        browserState.evidenceOpen = false;
-        renderBrowser();
+        closeEvidenceDialog();
       }
       return;
     }
     const evolutionButton = event.target.closest('[data-evolution-action]');
     if (evolutionButton) {
-      evolutionButton.disabled = true;
-      await runPrimaryAction(evolutionButton.dataset.evolutionAction);
+      const actionId = evolutionButton.dataset.evolutionAction;
+      if (!claimPendingAction(browserState, actionId)) return;
+      renderBrowser();
+      try {
+        await runPrimaryAction(actionId);
+      } finally {
+        releasePendingAction(browserState, actionId);
+        renderBrowser();
+      }
       return;
     }
     const primaryButton = event.target.closest('[data-primary-action]');
     if (primaryButton) {
-      primaryButton.disabled = true;
-      await runPrimaryAction(primaryButton.dataset.primaryAction);
+      const actionId = primaryButton.dataset.primaryAction;
+      if (actionId === 'review_strategy' && primaryButton.id) {
+        browserState.evidenceReturnSelector = `#${primaryButton.id}`;
+      }
+      if (!claimPendingAction(browserState, actionId)) return;
+      renderBrowser();
+      try {
+        await runPrimaryAction(actionId);
+      } finally {
+        releasePendingAction(browserState, actionId);
+        renderBrowser();
+      }
     }
   });
   root.addEventListener('change', async (event) => {
@@ -2684,6 +3047,37 @@ function bindBrowserEvents() {
         browserState.activeStage = 'forecast';
         await loadForecastReport(event.target.value);
       }
+    }
+  });
+  root.addEventListener('keydown', (event) => {
+    if (!browserState.evidenceOpen) return;
+    const drawer = root.querySelector('.evidence-drawer');
+    if (!drawer) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeEvidenceDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(
+      drawer.querySelectorAll(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+    if (!focusable.length) {
+      event.preventDefault();
+      drawer.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !drawer.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
     }
   });
 }

@@ -62,6 +62,8 @@ node_modules/
 task_list_pretty.docx
 Thumbs.db
 trading-ai-system/.browser/
+trading-ai-system/.competition-tools/
+trading-ai-system/.competition-runtime/
 trading-ai-system/data/*.js
 trading-ai-system/data/audit-log.ndjson
 trading-ai-system/data/ukey-visible-snapshot.json

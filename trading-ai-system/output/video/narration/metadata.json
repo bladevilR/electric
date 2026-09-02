@@ -1,78 +1,69 @@
 [
   {
-    "id": "chapter-value",
-    "file": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-value.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "seed": 20260731,
-    "durationMs": 52240,
+    "id": "chapter-overview",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-overview.wav",
+    "engine": "macos-say",
+    "model": "macOS system voice",
+    "voice": "Tingting",
+    "durationMs": 60738,
     "speedFactor": 1,
     "sourceSegmentIds": [
       "intro",
       "opening",
-      "savings-impact"
-    ],
-    "startMs": 1,
-    "endMs": 56695
-  },
-  {
-    "id": "chapter-data",
-    "file": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-data.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "seed": 20260731,
-    "durationMs": 46193,
-    "speedFactor": 1,
-    "sourceSegmentIds": [
-      "data-quality",
-      "validation-evidence",
-      "prediction-proof"
-    ],
-    "startMs": 56696,
-    "endMs": 104347
-  },
-  {
-    "id": "chapter-decision",
-    "file": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-decision.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "seed": 20260731,
-    "durationMs": 80560,
-    "speedFactor": 1,
-    "sourceSegmentIds": [
-      "return-curve",
       "curve",
-      "recommendation",
-      "open-evidence",
-      "close-evidence",
-      "human-review"
+      "strategy-comparison"
     ],
-    "startMs": 104347,
-    "endMs": 186112
+    "startMs": 0,
+    "endMs": 62354
   },
   {
-    "id": "chapter-close",
-    "file": "/Users/r/Documents/electric/.worktrees/cinematic-contest-film/trading-ai-system/output/video/narration/chapter-close.wav",
-    "engine": "qwen3-tts",
-    "model": "/Users/r/Models/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-    "voice": "Serena",
-    "instruct": "同一女声主播连续讲解电力交易产品演示。语气专业、稳定、亲切，语速一致，情绪平稳，不要切换人设，不要夸张播音腔。",
-    "seed": 20260731,
-    "durationMs": 40294,
+    "id": "chapter-method",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-method.wav",
+    "engine": "macos-say",
+    "model": "macOS system voice",
+    "voice": "Tingting",
+    "durationMs": 64440,
     "speedFactor": 1,
     "sourceSegmentIds": [
-      "audit-mode",
-      "open-evolution",
-      "evolution-proof",
+      "adjustment-windows",
+      "derivation-summary",
+      "open-derivation",
+      "objective-function",
+      "holdout-validation"
+    ],
+    "startMs": 62354,
+    "endMs": 141966
+  },
+  {
+    "id": "chapter-forecast",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-forecast.wav",
+    "engine": "macos-say",
+    "model": "macOS system voice",
+    "voice": "Tingting",
+    "durationMs": 20497,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "return-from-derivation",
+      "price-forecast"
+    ],
+    "startMs": 141966,
+    "endMs": 169742
+  },
+  {
+    "id": "chapter-review",
+    "file": "/Users/r/Documents/electric/trading-ai-system/output/video/narration/chapter-review.wav",
+    "engine": "macos-say",
+    "model": "macOS system voice",
+    "voice": "Tingting",
+    "durationMs": 45261,
+    "speedFactor": 1,
+    "sourceSegmentIds": [
+      "return-submission",
+      "human-review",
+      "open-evidence",
       "outro"
     ],
-    "startMs": 186113,
-    "endMs": 227805
+    "startMs": 169742,
+    "endMs": 220196
   }
 ]

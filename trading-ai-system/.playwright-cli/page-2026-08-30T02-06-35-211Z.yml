@@ -1,0 +1,239 @@
+- generic [ref=f1e3]:
+  - complementary [ref=f1e4]:
+    - generic [ref=f1e5]:
+      - generic [ref=f1e6]: ϟ
+      - generic [ref=f1e7]:
+        - strong [ref=f1e8]: 电力交易 AI
+        - generic [ref=f1e9]: 智能申报决策
+    - navigation "AI 申报工作区" [ref=f1e10]:
+      - button "申报优化" [ref=f1e11] [cursor=pointer]:
+        - generic [ref=f1e12]: ⌁
+      - button "价格预测" [ref=f1e14] [cursor=pointer]:
+        - generic [ref=f1e15]: 预
+      - button "策略进化" [ref=f1e17] [cursor=pointer]:
+        - generic [ref=f1e18]: ↻
+      - button "复盘回顾" [ref=f1e20] [cursor=pointer]:
+        - generic [ref=f1e21]: ◇
+    - link "一分钟上手" [ref=f1e23] [cursor=pointer]:
+      - /url: ./一分钟上手.html
+      - generic [ref=f1e24]: "?"
+    - generic [ref=f1e28]:
+      - generic [ref=f1e29]: 历史模型状态
+      - strong [ref=f1e30]: 留出集通过
+    - button "证据与审计" [ref=f1e31] [cursor=pointer]:
+      - generic [ref=f1e32]: ◎
+  - main [ref=f1e34]:
+    - status [ref=f1e35]: 比赛演示 · 模拟数据 · 全流程采用模拟数据
+    - generic [ref=f1e36]:
+      - generic [ref=f1e37]:
+        - generic [ref=f1e38]: 交易日
+        - textbox "交易日" [ref=f1e39]: 2026-07-31
+      - generic [ref=f1e40]: 数据已就绪
+      - group "工作模式" [ref=f1e43]:
+        - button "决策" [pressed] [ref=f1e44] [cursor=pointer]
+        - button "审计" [ref=f1e45] [cursor=pointer]
+    - region [ref=f1e46]:
+      - generic [ref=f1e47]:
+        - generic [ref=f1e48]:
+          - heading "申报优化" [level=1] [ref=f1e49]
+          - generic [ref=f1e50]: 模拟闭环已完成
+        - paragraph [ref=f1e51]: 交易日 2026-07-31 · 5 / 5 环节完成 · 更新于 15:28
+      - region [ref=f1e52]:
+        - generic [ref=f1e53]:
+          - generic [ref=f1e54]:
+            - text: DESKTOP DEMO WORKFLOW
+            - heading "模拟交易闭环" [level=2] [ref=f1e55]
+          - strong [ref=f1e56]: 5 / 5 环节完成
+        - tablist "模拟交易闭环阶段" [ref=f1e57]:
+          - tab "01 数据接入 数据接入完成" [ref=f1e58] [cursor=pointer]:
+            - generic [ref=f1e59]: "01"
+            - generic [ref=f1e60]:
+              - strong [ref=f1e61]: 数据接入
+              - generic [ref=f1e62]: 数据接入完成
+            - generic [ref=f1e63]: ✓
+          - tab "02 质量校验 质量校验完成" [ref=f1e64] [cursor=pointer]:
+            - generic [ref=f1e65]: "02"
+            - generic [ref=f1e66]:
+              - strong [ref=f1e67]: 质量校验
+              - generic [ref=f1e68]: 质量校验完成
+            - generic [ref=f1e69]: ✓
+          - tab "03 申报优化 申报优化完成" [ref=f1e70] [cursor=pointer]:
+            - generic [ref=f1e71]: "03"
+            - generic [ref=f1e72]:
+              - strong [ref=f1e73]: 申报优化
+              - generic [ref=f1e74]: 申报优化完成
+            - generic [ref=f1e75]: ✓
+          - tab "04 人工复核 人工复核完成" [ref=f1e76] [cursor=pointer]:
+            - generic [ref=f1e77]: "04"
+            - generic [ref=f1e78]:
+              - strong [ref=f1e79]: 人工复核
+              - generic [ref=f1e80]: 人工复核完成
+            - generic [ref=f1e81]: ✓
+          - tab "05 结算评估 结算评估完成" [active] [selected] [ref=f1e82] [cursor=pointer]:
+            - generic [ref=f1e83]: "05"
+            - generic [ref=f1e84]:
+              - strong [ref=f1e85]: 结算评估
+              - generic [ref=f1e86]: 结算评估完成
+            - generic [ref=f1e87]: ✓
+        - tabpanel "模拟结算评估" [ref=f1e509]:
+          - generic [ref=f1e510]:
+            - generic [ref=f1e511]:
+              - text: 模拟结算评估
+              - heading "成本评估与结果回流完成" [level=3] [ref=f1e512]
+            - generic [ref=f1e513]: 模拟结算净优化 ¥24,000
+          - generic [ref=f1e514]:
+            - generic [ref=f1e515]:
+              - generic [ref=f1e516]: 基准成本
+              - strong [ref=f1e517]: ¥1,302,400
+            - generic [ref=f1e518]: −
+            - generic [ref=f1e519]:
+              - generic [ref=f1e520]: 模拟结算成本
+              - strong [ref=f1e521]: ¥1,258,520
+            - generic [ref=f1e522]: −
+            - generic [ref=f1e523]:
+              - generic [ref=f1e524]: 费用与偏差
+              - strong [ref=f1e525]: ¥19,880
+            - generic [ref=f1e526]: =
+            - generic [ref=f1e527]:
+              - generic [ref=f1e528]: 模拟净优化
+              - strong [ref=f1e529]: ¥24,000
+      - region "策略关键指标" [ref=f1e119]:
+        - article [ref=f1e120]:
+          - generic [ref=f1e121]: 模拟结算净优化
+          - strong [ref=f1e122]: ¥24,000
+          - generic [ref=f1e123]: 比赛演示结果
+        - article [ref=f1e124]:
+          - generic [ref=f1e125]: 模拟留出集偏差改善
+          - strong [ref=f1e126]: +9.64%
+          - generic [ref=f1e127]: 相对同点位基线
+        - article [ref=f1e128]:
+          - generic [ref=f1e129]: 场景 CVaR 95%
+          - strong [ref=f1e130]: ¥42,600
+          - generic [ref=f1e131]: 风险预算 ¥50,000
+        - article [ref=f1e132]:
+          - generic [ref=f1e133]: 场景输入覆盖
+          - strong [ref=f1e134]: 100%
+          - generic [ref=f1e135]: 1,000 个联合场景
+      - generic [ref=f1e136]:
+        - region [ref=f1e137]:
+          - generic [ref=f1e138]:
+            - generic [ref=f1e139]:
+              - heading "96 点申报曲线对比" [level=2] [ref=f1e140]
+              - paragraph [ref=f1e141]: 模拟候选申报曲线 · 验证完成
+            - generic "曲线图例" [ref=f1e142]:
+              - generic [ref=f1e143]: 历史申报
+              - generic [ref=f1e144]: AI 建议申报
+          - img "96 点历史申报与 AI 建议申报功率曲线，单位 MW" [ref=f1e146]
+          - generic [ref=f1e343]:
+            - generic [ref=f1e344]: 00:15
+            - generic [ref=f1e345]: 时段（15 分钟 / 点）
+            - generic [ref=f1e346]: 24:00
+          - group [ref=f1e347]:
+            - generic "查看 96 点数据表" [ref=f1e348] [cursor=pointer]
+          - generic [ref=f1e349]:
+            - generic [ref=f1e350]: ✦
+            - paragraph [ref=f1e351]: 识别到 7 个连续调整窗口，所有点位均可追溯。
+            - button "查看偏差分析" [ref=f1e352] [cursor=pointer]: 查看偏差分析 →
+        - complementary "策略对比与复核" [ref=f1e353]:
+          - generic [ref=f1e354]:
+            - heading "策略对比" [level=2] [ref=f1e355]
+            - generic [ref=f1e356]: 模拟复核完成
+          - generic [ref=f1e357]:
+            - generic [ref=f1e358]: 当前策略
+            - strong [ref=f1e359]: 42 天同点位均值
+            - paragraph [ref=f1e360]: 以历史同点位均值作为当日申报基线。
+          - generic [ref=f1e361]:
+            - generic [ref=f1e362]: 候选策略 · 模拟验证完成
+            - strong [ref=f1e363]: 多因素联合场景优化
+            - paragraph [ref=f1e364]: 多因素联合修正天气、负荷区间与价差方向。
+          - generic [ref=f1e365]:
+            - generic [ref=f1e366]:
+              - term [ref=f1e367]: 历史模型偏差改善
+              - definition [ref=f1e368]: +9.64%
+            - generic [ref=f1e369]:
+              - term [ref=f1e370]: 历史模型日胜率
+              - definition [ref=f1e371]: 86.05%
+            - generic [ref=f1e372]:
+              - term [ref=f1e373]: 历史验证覆盖
+              - definition [ref=f1e374]: 4,128 点 / 43 日
+            - generic [ref=f1e375]:
+              - term [ref=f1e376]: 候选风险测算
+              - definition [ref=f1e377]: 样例预算内
+          - button "查看复核与结算记录" [ref=f1e378] [cursor=pointer]
+          - paragraph [ref=f1e379]: 人工复核、模拟结算与审计留痕均已完成。
+      - region [ref=f1e380]:
+        - generic [ref=f1e381]:
+          - heading "调整窗口" [level=2] [ref=f1e382]
+          - generic [ref=f1e383]: 重点复核 3 个连续时段
+        - generic [ref=f1e384]:
+          - article [ref=f1e385]:
+            - generic [ref=f1e386]: "01"
+            - generic [ref=f1e387]:
+              - strong [ref=f1e388]: 00:15–02:15
+              - paragraph [ref=f1e389]: 低谷价差与负荷波动共同作用，减少不必要的偏差暴露。
+            - generic [ref=f1e390]: 建议上调
+          - article [ref=f1e391]:
+            - generic [ref=f1e392]: "02"
+            - generic [ref=f1e393]:
+              - strong [ref=f1e394]: 02:30–06:45
+              - paragraph [ref=f1e395]: 日间负荷区间抬升，结合价格方向调整申报量。
+            - generic [ref=f1e396]: 建议下调
+          - article [ref=f1e397]:
+            - generic [ref=f1e398]: "03"
+            - generic [ref=f1e399]:
+              - strong [ref=f1e400]: 07:00–11:30
+              - paragraph [ref=f1e401]: 晚峰负荷概率上移，在风险预算内保留供给余量。
+            - generic [ref=f1e402]: 建议上调
+      - region [ref=f1e403]:
+        - generic [ref=f1e404]:
+          - generic [ref=f1e405]:
+            - generic [ref=f1e406]: 策略依据 · 优化方法
+            - heading "申报策略形成依据" [level=2] [ref=f1e407]
+            - paragraph [ref=f1e408]: 42 日同点位模型提供模拟基线；天气、负荷概率、价差与联合场景共同形成完整的 96 点候选曲线。
+          - button "查看完整推导" [ref=f1e409] [cursor=pointer]: 查看完整推导 →
+        - list [ref=f1e410]:
+          - listitem [ref=f1e411]:
+            - generic [ref=f1e412]: "1"
+            - generic [ref=f1e413]:
+              - strong [ref=f1e414]: 历史基线
+              - paragraph [ref=f1e415]: 按 42 个历史交易日的同一 15 分钟点位取均值，形成 96 点基线曲线。
+              - code [ref=f1e416]: q⁰ₜ = mean(q₍d,t₎)
+          - listitem [ref=f1e417]:
+            - generic [ref=f1e418]: "2"
+            - generic [ref=f1e419]:
+              - strong [ref=f1e420]: 多因素修正
+              - paragraph [ref=f1e421]: 根据负荷分位区间、天气偏差和日前/实时价差方向，对每个点位进行联合修正。
+              - code [ref=f1e422]: qᵃᵈʲₜ = q⁰ₜ + Σ βₖ·Δxₖ,ₜ
+          - listitem [ref=f1e423]:
+            - generic [ref=f1e424]: "3"
+            - generic [ref=f1e425]:
+              - strong [ref=f1e426]: 场景风险求解
+              - paragraph [ref=f1e427]: 在 1,000 个联合场景下，同时压低预期偏差成本和 CVaR 95% 尾部风险。
+              - code [ref=f1e428]: min E[C(q,ω)] + λ·CVaR₉₅%
+        - generic "本次计算依据" [ref=f1e429]:
+          - article [ref=f1e430]:
+            - generic [ref=f1e431]: 天气驱动
+            - strong [ref=f1e432]: 31.8°C
+            - paragraph [ref=f1e433]: 体感 34.2°C · 湿度 72%
+            - generic [ref=f1e434]: 制冷负荷抬升
+          - article [ref=f1e435]:
+            - generic [ref=f1e436]: 负荷概率预测
+            - strong [ref=f1e437]: P50 612.4 MW
+            - paragraph [ref=f1e438]: P10–P90 571.8–656.2 MW
+            - generic [ref=f1e439]: 峰值 20:15
+          - article [ref=f1e440]:
+            - generic [ref=f1e441]: 日前/实时价差
+            - strong [ref=f1e442]: +36.4 元/MWh
+            - paragraph [ref=f1e443]: 19 个高风险点位
+            - generic [ref=f1e444]: 实时价格偏强
+          - article [ref=f1e445]:
+            - generic [ref=f1e446]: 风险度量
+            - strong [ref=f1e447]: ¥42,600
+            - paragraph [ref=f1e448]: 预算 ¥50,000
+            - generic [ref=f1e449]: CVaR 95%
+          - article [ref=f1e450]:
+            - generic [ref=f1e451]: 样例测算日成本改善
+            - strong [ref=f1e452]: ¥24,000
+            - paragraph [ref=f1e453]: 演示输入下的候选测算值
+            - generic [ref=f1e454]: 42 日历史模型留出集 +9.64%
+      - generic [ref=f1e455]: 全流程采用模拟数据

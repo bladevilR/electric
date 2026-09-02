@@ -35,6 +35,8 @@ function completeBusinessInputs() {
     },
     tradeLimits: {
       values: {
+        minDeclarationPowerMw: 0,
+        maxDeclarationPowerMw: 100,
         minQuantityMwh: 1,
         maxDraftQuantityMwh: 20,
         buyPriceCeilingYuanPerMwh: 380,
@@ -69,6 +71,45 @@ test('historical rows and a stale snapshot cannot be presented as today-ready da
   assert.equal(result.dataEvidence.find((item) => item.id === 'market_price').status, 'missing');
   assert.equal(result.dataEvidence.find((item) => item.id === 'visible_snapshot').status, 'stale');
   assert.equal(result.primaryAction.id, 'collect_today_data');
+});
+
+test('missing MW declaration limits keep the workbench out of strategy review', () => {
+  const businessInputs = completeBusinessInputs();
+  businessInputs.tradeLimits.values.minDeclarationPowerMw = null;
+  businessInputs.tradeLimits.values.maxDeclarationPowerMw = null;
+  const result = buildSavingsWorkbench({
+    date: today,
+    now,
+    dataset: {
+      generatedAt: '2026-07-27T01:50:00.000Z',
+      rows: points(today),
+    },
+    businessInputs,
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.execution.dataReady, false);
+  assert.equal(result.primaryAction.id, 'complete_business_inputs');
+  assert.ok(result.blockers.some((item) => item.id === 'trade_limits_missing'));
+});
+
+test('invalid MWh quantity limits keep the workbench out of strategy review', () => {
+  const businessInputs = completeBusinessInputs();
+  businessInputs.tradeLimits.values.minQuantityMwh = 1;
+  businessInputs.tradeLimits.values.maxDraftQuantityMwh = -1;
+  const result = buildSavingsWorkbench({
+    date: today,
+    now,
+    dataset: {
+      generatedAt: '2026-07-27T01:50:00.000Z',
+      rows: points(today),
+    },
+    businessInputs,
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.execution.dataReady, false);
+  assert.equal(result.primaryAction.id, 'complete_business_inputs');
 });
 
 test('complete current-day decision inputs unlock review but do not invent savings', () => {

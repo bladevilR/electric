@@ -1,0 +1,452 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "electric-trading-copilot"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "1.0.0"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "trading-ai-system.competition",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "name": "invoke_agent electric-trading-copilot-v1",
+              "traceId": "8a0e0ff39461e6f70dff28a1c3fd6ef9",
+              "spanId": "17a9af5041d210a1",
+              "startTimeUnixNano": "1788150283406000000",
+              "endTimeUnixNano": "1788150283414000001",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "invoke_agent"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.conversation.id",
+                  "value": {
+                    "stringValue": "submission-main"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"{\\n  \\\"status\\\": \\\"data_blocked\\\",\\n  \\\"summary\\\": \\\"本次是基于仓库样例数据的只读分析，不是生产交易结果。\\\",\\n  \\\"data_source\\\": \\\"repository_sample\\\",\\n  \\\"date\\\": \\\"2026-05-07\\\",\\n  \\\"price_windows\\\": {\\n    \\\"low\\\": [\\n      36,\\n      37,\\n      38,\\n      39,\\n      40,\\n      42,\\n      43,\\n      44,\\n      45,\\n      46,\\n      47,\\n      48,\\n      49,\\n      50,\\n      51\\n    ],\\n    \\\"high\\\": [\\n      9,\\n      10,\\n      11,\\n      12,\\n      13,\\n      14,\\n      15,\\n      20,\\n      21,\\n      22,\\n      23,\\n      24\\n    ]\\n  },\\n  \\\"data_gaps\\\": [\\n    \\\"预测负荷 96 点\\\",\\n    \\\"当前持仓曲线\\\",\\n    \\\"交易限额与安全边界\\\",\\n    \\\"人工确认记录\\\",\\n    \\\"实际负荷 96 点\\\",\\n    \\\"日结算\\\"\\n  ],\\n  \\\"human_review\\\": {\\n    \\\"mode\\\": \\\"human_decision_only\\\",\\n    \\\"auto_submit\\\": false,\\n    \\\"executable\\\": false\\n  }\\n}\"}],\"finish_reason\":\"stop\"}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.definitions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"function\",\"name\":\"load_trading_analysis_context\",\"description\":\"读取竞赛 Agent 已登记的本地能力\"}]"
+                  }
+                },
+                {
+                  "key": "competition.data_source",
+                  "value": {
+                    "stringValue": "repository_sample"
+                  }
+                },
+                {
+                  "key": "competition.classification",
+                  "value": {
+                    "stringValue": "domain_analysis"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "execute_tool load_trading_analysis_context",
+              "traceId": "8a0e0ff39461e6f70dff28a1c3fd6ef9",
+              "spanId": "157f4bf62e3e41a3",
+              "parentSpanId": "17a9af5041d210a1",
+              "startTimeUnixNano": "1788150283410000000",
+              "endTimeUnixNano": "1788150283414000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "load_trading_analysis_context"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "load-context"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"date\":\"2026-05-07\"}"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"advice\":{\"status\":\"observation_ready\",\"date\":\"2026-05-07\",\"generatedAt\":\"2026-08-31T04:24:43.414Z\",\"realtimePrice\":{\"required\":true,\"status\":\"available_snapshot\",\"pointCount\":57,\"requiredFor\":[\"low_price_window\",\"high_price_risk\",\"intraday_refresh\"],\"note\":\"A price snapshot is available for trial-only observation. Intraday advice still needs refreshed realtime prices.\"},\"priceSignal\":{\"pointCount\":57,\"averageRealTimePrice\":304.875,\"lowThreshold\":255.5,\"highThreshold\":354.2,\"minRealTimePrice\":202.2,\"maxRealTimePrice\":461.1,\"lowWindowPoints\":[36,37,38,39,40,42,43,44,45,46,47,48,49,50,51],\"highWindowPoints\":[9,10,11,12,13,14,15,20,21,22,23,24]},\"executionBoundary\":{\"mode\":\"trial_only\",\"executable\":false,\"canCreateDraft\":false,\"reason\":\"Forecast load, position, trade limits, and human review are required before creating an executable draft.\"},\"nextDataNeeds\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"},{\"id\":\"actual_load_96\",\"name\":\"实际负荷 96 点\",\"status\":\"源返回空\",\"note\":\"用于偏差考核、负荷预测评分和收益归因。\"},{\"id\":\"settle_day\",\"name\":\"日结算\",\"status\":\"源返回空\",\"note\":\"用于核算实际收益与偏差考核结果。\"}],\"suggestionCount\":3,\"costStrategy\":{\"generatedAt\":\"2026-08-31T04:24:43.414Z\",\"status\":\"ready\",\"date\":\"2026-05-07\",\"modelMode\":\"heuristic_fallback\",\"signals\":{\"pricePointCount\":57,\"lowThreshold\":255.5,\"highThreshold\":354.2,\"lowPriceWindows\":[{\"date\":\"2026-05-07\",\"pointIndex\":36,\"timePoint\":\"09:00\",\"realTimeAvgPrice\":208,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":37,\"timePoint\":\"09:15\",\"realTimeAvgPrice\":210.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":38,\"timePoint\":\"09:30\",\"realTimeAvgPrice\":215.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":39,\"timePoint\":\"09:45\",\"realTimeAvgPrice\":202.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":40,\"timePoint\":\"10:00\",\"realTimeAvgPrice\":202.5,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":42,\"timePoint\":\"10:30\",\"realTimeAvgPrice\":221.8,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":43,\"timePoint\":\"10:45\",\"realTimeAvgPrice\":254.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":44,\"timePoint\":\"11:00\",\"realTimeAvgPrice\":210.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"}],\"highPriceExposureWindows\":[{\"date\":\"2026-05-07\",\"pointIndex\":9,\"timePoint\":\"02:15\",\"realTimeAvgPrice\":354.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":10,\"timePoint\":\"02:30\",\"realTimeAvgPrice\":360.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":11,\"timePoint\":\"02:45\",\"realTimeAvgPrice\":359.4,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":12,\"timePoint\":\"03:00\",\"realTimeAvgPrice\":359.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":13,\"timePoint\":\"03:15\",\"realTimeAvgPrice\":357.6,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":14,\"timePoint\":\"03:30\",\"realTimeAvgPrice\":355.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":15,\"timePoint\":\"03:45\",\"realTimeAvgPrice\":355.4,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":20,\"timePoint\":\"05:00\",\"realTimeAvgPrice\":364.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"}],\"forecastSignals\":[]},\"dataConfidence\":{\"score\":5,\"penalties\":[{\"id\":\"actual_load_missing\",\"points\":25,\"reason\":\"用户实际负荷为空，不能验证移峰影响。\"},{\"id\":\"settlement_missing\",\"points\":20,\"reason\":\"结算金额为空，不能核算真实节省金额。\"},{\"id\":\"contract_missing\",\"points\":15,\"reason\":\"合同资产缺失，无法判断合约覆盖。\"},{\"id\":\"trade_sequence_missing\",\"points\":10,\"reason\":\"交易序列缺失，无法判断当前可交易背景。\"},{\"id\":\"system_load_forecast_missing\",\"points\":10,\"reason\":\"系统负荷预测缺失，市场压力解释不足。\"},{\"id\":\"backtest_unavailable\",\"points\":15,\"reason\":\"回测不可用，不能声明模型优于基线。\"}]},\"policyTiers\":[{\"id\":\"conservative\",\"title\":\"保守：观察并规避高价暴露\",\"enabled\":true,\"executable\":false,\"action\":\"只提示低价/高价窗口，不给出电量。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\"]},{\"id\":\"neutral\",\"title\":\"中性：有条件地考虑移峰\",\"enabled\":true,\"executable\":false,\"action\":\"低价和高价窗口同时存在，可人工评估柔性负荷移峰。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\"]},{\"id\":\"aggressive\",\"title\":\"激进：模型优先的大幅移峰\",\"enabled\":false,\"executable\":false,\"action\":\"当前数据不足，禁用激进档。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\",\"需要实际负荷、结算和有效回测后才能启用\"]}],\"nextBestData\":[{\"id\":\"realtime_average_price\",\"reason\":\"实时均价不足 96 点。\"},{\"id\":\"actual_load_96\",\"reason\":\"用户实际负荷为空。\"},{\"id\":\"settle_day\",\"reason\":\"日结算为空。\"},{\"id\":\"short_system_load_forecast\",\"reason\":\"系统负荷预测缺失。\"}]}},\"suggestions\":[{\"type\":\"low_price\",\"severity\":\"info\",\"title\":\"低价窗口补足\",\"description\":\"09:00、09:15、09:30、09:45、10:00、10:30 为低价观察窗口，适合做缺口补足和低风险增配。\",\"action\":\"增配买入\",\"confidence\":0.62,\"points\":[36,37,38,39,40,42],\"executable\":false,\"requiredData\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"}],\"blockingReasons\":[\"预测负荷未接入，无法计算建议电量\",\"当前持仓曲线未接入，无法判断可买可卖边界\",\"交易限额和人工确认记录未接入，不能生成执行单\"]},{\"type\":\"high_price_risk\",\"severity\":\"warning\",\"title\":\"高价风险控制\",\"description\":\"02:15、02:30、02:45、03:00、03:15、03:30 为高价风险窗口，建议先锁定申报偏差和负荷异常。\",\"action\":\"控制暴露\",\"confidence\":0.58,\"points\":[9,10,11,12,13,14],\"executable\":false,\"requiredData\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"}],\"blockingReasons\":[\"预测负荷未接入，无法计算建议电量\",\"当前持仓曲线未接入，无法判断可买可卖边界\",\"交易限额和人工确认记录未接入，不能生成执行单\"]},{\"type\":\"data_gap\",\"severity\":\"warning\",\"title\":\"数据补齐优先级\",\"description\":\"实际负荷、日结算 当前为空；系统可做策略试算，但收益归因与偏差考核需要补齐。\",\"action\":\"补齐数据\",\"confidence\":1,\"points\":[],\"executable\":false,\"requiredData\":[{\"id\":\"actual_load_96\",\"name\":\"实际负荷 96 点\",\"status\":\"源返回空\",\"note\":\"用于偏差考核、负荷预测评分和收益归因。\"},{\"id\":\"settle_day\",\"name\":\"日结算\",\"status\":\"源返回空\",\"note\":\"用于核算实际收益与偏差考核结果。\"}],\"blockingReasons\":[\"实际负荷未接入，不能校验策略对负荷偏差的影响\",\"日结算未接入，不能形成收益归因和结算复盘\"]}],\"readiness\":{\"generatedAt\":\"2026-08-31T04:24:43.413Z\",\"status\":\"data_blocked\",\"statusText\":\"数据闭环阻塞\",\"mode\":\"human_decision_only\",\"capabilities\":{\"decisionSupport\":false,\"reportExport\":false,\"proposalDraft\":false,\"verifiedSavings\":false,\"platformPrefill\":false,\"autoSubmit\":false},\"controls\":[{\"id\":\"standard_dataset\",\"title\":\"JSPEC 标准数据集\",\"status\":\"ready\",\"description\":\"辅助决策至少需要可读取的交易日 96 点数据。\",\"evidence\":{\"rowCount\":192,\"p0Coverage\":\"8/8\"}},{\"id\":\"integration_closure\",\"title\":\"数据闭环台账\",\"status\":\"ready\",\"description\":\"交易台账、核对单和源返回证据需要全部纳入闭环台账。\",\"evidence\":{\"completion\":\"8/8\"}},{\"id\":\"current_day_data\",\"title\":\"目标交易日数据\",\"status\":\"blocked\",\"description\":\"目标交易日必须有完整的 96 点市场价格，历史数据不能冒充今日数据。\",\"evidence\":{\"date\":\"2026-05-07\",\"rowCount\":96,\"marketPricePointCount\":57}},{\"id\":\"execution_business_inputs\",\"title\":\"负荷、持仓与交易限额\",\"status\":\"blocked\",\"description\":\"生成可复核电量草稿前，目标日负荷预测、持仓和完整交易限额必须到位。\",\"evidence\":{\"readyForDraftPrefill\":false}},{\"id\":\"settlement_verification\",\"title\":\"成本优化绩效验收数据\",\"status\":\"warning\",\"description\":\"只有目标日实际负荷和结算结果到位后，才能核验成本优化绩效。\",\"evidence\":{\"actualLoadPointCount\":0,\"settlementPointCount\":0}},{\"id\":\"p0_source_coverage\",\"title\":\"P0 源覆盖\",\"status\":\"ready\",\"description\":\"P0 源未全量覆盖时仍可生成提案草稿，但必须在人工决策时提示。\",\"evidence\":{\"p0Coverage\":\"8/8\"}},{\"id\":\"source_empty_data\",\"title\":\"源返回空数据提示\",\"status\":\"warning\",\"description\":\"实际负荷、日结算等关键源为空时，作为提案草稿的人工复核提示。\",\"evidence\":{\"items\":[\"实际负荷 96 点\",\"日结算明细\"]}},{\"id\":\"execution_master_data\",\"title\":\"执行主数据提示\",\"status\":\"warning\",\"description\":\"预测负荷、持仓、交易限额等未形成接口前，提案草稿保留人工填写字段。\",\"evidence\":{\"items\":[\"预测负荷 96 点\",\"当前持仓曲线\",\"人工确认与执行留痕\"]}},{\"id\":\"audit_store\",\"title\":\"审计日志存储\",\"status\":\"ready\",\"description\":\"提案生成和人工复核动作需要写入追加式审计日志。\",\"evidence\":{\"path\":\"/Users/r/Documents/electric/trading-ai-system/data/audit-log.ndjson\"}},{\"id\":\"jspec_auto_capture\",\"title\":\"JSPEC 自动采集账号\",\"status\":\"action_required\",\"description\":\"缺少 JSPEC 账号时仍可用本地数据生成草稿，但无法自动刷新生产源。\",\"requiredKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"],\"providedKeys\":[],\"missingKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"]},{\"id\":\"ca_ukey\",\"title\":\"CA/UKey 人工签名链路\",\"status\":\"action_required\",\"description\":\"CA/UKey 用于交易平台人工登录、签名或提交，不作为系统自动提交目标。\",\"requiredKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"],\"providedKeys\":[],\"missingKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"]},{\"id\":\"trade_platform_prefill\",\"title\":\"交易平台提案预填入口\",\"status\":\"action_required\",\"description\":\"有交易平台地址后可辅助定位/预填页面字段，最终提交仍由人工确认。\",\"requiredKeys\":[\"TRADING_PLATFORM_URL\"],\"providedKeys\":[],\"missingKeys\":[\"TRADING_PLATFORM_URL\"]},{\"id\":\"dual_review_identity\",\"title\":\"操作人/复核人身份\",\"status\":\"action_required\",\"description\":\"提案草稿需要记录操作人与复核人，确保人工决策可追溯。\",\"requiredKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"],\"providedKeys\":[],\"missingKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"]},{\"id\":\"human_decision_policy\",\"title\":\"人工最终决策策略\",\"status\":\"ready\",\"description\":\"系统只生成辅助决策提案草稿，不自动提交交易。\",\"evidence\":{\"autoSubmit\":false}}],\"blockers\":[{\"id\":\"current_day_data\",\"title\":\"目标交易日数据\",\"description\":\"目标交易日必须有完整的 96 点市场价格，历史数据不能冒充今日数据。\",\"missingKeys\":[],\"evidence\":{\"date\":\"2026-05-07\",\"rowCount\":96,\"marketPricePointCount\":57}},{\"id\":\"execution_business_inputs\",\"title\":\"负荷、持仓与交易限额\",\"description\":\"生成可复核电量草稿前，目标日负荷预测、持仓和完整交易限额必须到位。\",\"missingKeys\":[],\"evidence\":{\"readyForDraftPrefill\":false}}],\"warnings\":[{\"id\":\"settlement_verification\",\"title\":\"成本优化绩效验收数据\",\"description\":\"只有目标日实际负荷和结算结果到位后，才能核验成本优化绩效。\",\"missingKeys\":[],\"evidence\":{\"actualLoadPointCount\":0,\"settlementPointCount\":0}},{\"id\":\"source_empty_data\",\"title\":\"源返回空数据提示\",\"description\":\"实际负荷、日结算等关键源为空时，作为提案草稿的人工复核提示。\",\"missingKeys\":[],\"evidence\":{\"items\":[\"实际负荷 96 点\",\"日结算明细\"]}},{\"id\":\"execution_master_data\",\"title\":\"执行主数据提示\",\"description\":\"预测负荷、持仓、交易限额等未形成接口前，提案草稿保留人工填写字段。\",\"missingKeys\":[],\"evidence\":{\"items\":[\"预测负荷 96 点\",\"当前持仓曲线\",\"人工确认与执行留痕\"]}},{\"id\":\"jspec_auto_capture\",\"title\":\"JSPEC 自动采集账号\",\"description\":\"缺少 JSPEC 账号时仍可用本地数据生成草稿，但无法自动刷新生产源。\",\"missingKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"],\"evidence\":{}},{\"id\":\"ca_ukey\",\"title\":\"CA/UKey 人工签名链路\",\"description\":\"CA/UKey 用于交易平台人工登录、签名或提交，不作为系统自动提交目标。\",\"missingKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"],\"evidence\":{}},{\"id\":\"trade_platform_prefill\",\"title\":\"交易平台提案预填入口\",\"description\":\"有交易平台地址后可辅助定位/预填页面字段，最终提交仍由人工确认。\",\"missingKeys\":[\"TRADING_PLATFORM_URL\"],\"evidence\":{}},{\"id\":\"dual_review_identity\",\"title\":\"操作人/复核人身份\",\"description\":\"提案草稿需要记录操作人与复核人，确保人工决策可追溯。\",\"missingKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"],\"evidence\":{}}],\"paths\":{\"standardPath\":\"/Users/r/Documents/electric/trading-ai-system/data/standard-96.sample.json\",\"integrationSummaryPath\":\"/Users/r/Documents/electric/trading-ai-system/data/integration-summary.json\",\"auditLogPath\":\"/Users/r/Documents/electric/trading-ai-system/data/audit-log.ndjson\"}},\"dataSource\":\"repository_sample\"}"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "electric-trading-copilot"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "1.0.0"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "trading-ai-system.competition",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "name": "chat electric-trading-copilot-v1",
+              "traceId": "3a961f3bf248c59ea213e67211657898",
+              "spanId": "e7ab1f9aa556503e",
+              "startTimeUnixNano": "1788150283421000000",
+              "endTimeUnixNano": "1788150283421000001",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.conversation.id",
+                  "value": {
+                    "stringValue": "memory-case"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"请记住：后续分析先列数据缺口。\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"已记住本会话的非敏感分析偏好：后续分析先列数据缺口\"}],\"finish_reason\":\"stop\"}]"
+                  }
+                },
+                {
+                  "key": "competition.data_source",
+                  "value": {
+                    "stringValue": "repository_sample"
+                  }
+                },
+                {
+                  "key": "competition.classification",
+                  "value": {
+                    "stringValue": "memory_created"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "create_memory",
+              "traceId": "3a961f3bf248c59ea213e67211657898",
+              "spanId": "8642fa4730b228f3",
+              "parentSpanId": "e7ab1f9aa556503e",
+              "startTimeUnixNano": "1788150283421000000",
+              "endTimeUnixNano": "1788150283421000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "create_memory"
+                  }
+                },
+                {
+                  "key": "gen_ai.conversation.id",
+                  "value": {
+                    "stringValue": "memory-case"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.store.id",
+                  "value": {
+                    "stringValue": "competition-preferences"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.record.count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.records",
+                  "value": {
+                    "stringValue": "[{\"id\":\"memory-case-preference\",\"content\":\"后续分析先列数据缺口\"}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "electric-trading-copilot"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "1.0.0"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "trading-ai-system.competition",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "name": "chat electric-trading-copilot-v1",
+              "traceId": "061e73b05f88d7ec20196d37aa56c187",
+              "spanId": "c1818796b9743b82",
+              "startTimeUnixNano": "1788150283423000000",
+              "endTimeUnixNano": "1788150283426000001",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "chat"
+                  }
+                },
+                {
+                  "key": "gen_ai.request.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.response.model",
+                  "value": {
+                    "stringValue": "electric-trading-copilot-v1"
+                  }
+                },
+                {
+                  "key": "gen_ai.conversation.id",
+                  "value": {
+                    "stringValue": "memory-case"
+                  }
+                },
+                {
+                  "key": "gen_ai.input.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"user\",\"parts\":[{\"type\":\"text\",\"content\":\"请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。\"}]}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.output.messages",
+                  "value": {
+                    "stringValue": "[{\"role\":\"assistant\",\"parts\":[{\"type\":\"text\",\"content\":\"{\\n  \\\"status\\\": \\\"data_blocked\\\",\\n  \\\"summary\\\": \\\"本次是基于仓库样例数据的只读分析，不是生产交易结果。\\\",\\n  \\\"data_source\\\": \\\"repository_sample\\\",\\n  \\\"date\\\": \\\"2026-05-07\\\",\\n  \\\"data_gaps\\\": [\\n    \\\"预测负荷 96 点\\\",\\n    \\\"当前持仓曲线\\\",\\n    \\\"交易限额与安全边界\\\",\\n    \\\"人工确认记录\\\",\\n    \\\"实际负荷 96 点\\\",\\n    \\\"日结算\\\"\\n  ],\\n  \\\"price_windows\\\": {\\n    \\\"low\\\": [\\n      36,\\n      37,\\n      38,\\n      39,\\n      40,\\n      42,\\n      43,\\n      44,\\n      45,\\n      46,\\n      47,\\n      48,\\n      49,\\n      50,\\n      51\\n    ],\\n    \\\"high\\\": [\\n      9,\\n      10,\\n      11,\\n      12,\\n      13,\\n      14,\\n      15,\\n      20,\\n      21,\\n      22,\\n      23,\\n      24\\n    ]\\n  },\\n  \\\"human_review\\\": {\\n    \\\"mode\\\": \\\"human_decision_only\\\",\\n    \\\"auto_submit\\\": false,\\n    \\\"executable\\\": false\\n  },\\n  \\\"memory_note\\\": \\\"已应用记忆偏好：后续分析先列数据缺口\\\"\\n}\"}],\"finish_reason\":\"stop\"}]"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.definitions",
+                  "value": {
+                    "stringValue": "[{\"type\":\"function\",\"name\":\"load_trading_analysis_context\",\"description\":\"读取竞赛 Agent 已登记的本地能力\"}]"
+                  }
+                },
+                {
+                  "key": "competition.data_source",
+                  "value": {
+                    "stringValue": "repository_sample"
+                  }
+                },
+                {
+                  "key": "competition.classification",
+                  "value": {
+                    "stringValue": "domain_analysis"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "execute_tool load_trading_analysis_context",
+              "traceId": "061e73b05f88d7ec20196d37aa56c187",
+              "spanId": "6ba285fe0823ac66",
+              "parentSpanId": "c1818796b9743b82",
+              "startTimeUnixNano": "1788150283424000000",
+              "endTimeUnixNano": "1788150283424999999",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "execute_tool"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.name",
+                  "value": {
+                    "stringValue": "load_trading_analysis_context"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.id",
+                  "value": {
+                    "stringValue": "load-context"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.arguments",
+                  "value": {
+                    "stringValue": "{\"date\":\"2026-05-07\"}"
+                  }
+                },
+                {
+                  "key": "gen_ai.tool.call.result",
+                  "value": {
+                    "stringValue": "{\"advice\":{\"status\":\"observation_ready\",\"date\":\"2026-05-07\",\"generatedAt\":\"2026-08-31T04:24:43.426Z\",\"realtimePrice\":{\"required\":true,\"status\":\"available_snapshot\",\"pointCount\":57,\"requiredFor\":[\"low_price_window\",\"high_price_risk\",\"intraday_refresh\"],\"note\":\"A price snapshot is available for trial-only observation. Intraday advice still needs refreshed realtime prices.\"},\"priceSignal\":{\"pointCount\":57,\"averageRealTimePrice\":304.875,\"lowThreshold\":255.5,\"highThreshold\":354.2,\"minRealTimePrice\":202.2,\"maxRealTimePrice\":461.1,\"lowWindowPoints\":[36,37,38,39,40,42,43,44,45,46,47,48,49,50,51],\"highWindowPoints\":[9,10,11,12,13,14,15,20,21,22,23,24]},\"executionBoundary\":{\"mode\":\"trial_only\",\"executable\":false,\"canCreateDraft\":false,\"reason\":\"Forecast load, position, trade limits, and human review are required before creating an executable draft.\"},\"nextDataNeeds\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"},{\"id\":\"actual_load_96\",\"name\":\"实际负荷 96 点\",\"status\":\"源返回空\",\"note\":\"用于偏差考核、负荷预测评分和收益归因。\"},{\"id\":\"settle_day\",\"name\":\"日结算\",\"status\":\"源返回空\",\"note\":\"用于核算实际收益与偏差考核结果。\"}],\"suggestionCount\":3,\"costStrategy\":{\"generatedAt\":\"2026-08-31T04:24:43.426Z\",\"status\":\"ready\",\"date\":\"2026-05-07\",\"modelMode\":\"heuristic_fallback\",\"signals\":{\"pricePointCount\":57,\"lowThreshold\":255.5,\"highThreshold\":354.2,\"lowPriceWindows\":[{\"date\":\"2026-05-07\",\"pointIndex\":36,\"timePoint\":\"09:00\",\"realTimeAvgPrice\":208,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":37,\"timePoint\":\"09:15\",\"realTimeAvgPrice\":210.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":38,\"timePoint\":\"09:30\",\"realTimeAvgPrice\":215.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":39,\"timePoint\":\"09:45\",\"realTimeAvgPrice\":202.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":40,\"timePoint\":\"10:00\",\"realTimeAvgPrice\":202.5,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":42,\"timePoint\":\"10:30\",\"realTimeAvgPrice\":221.8,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":43,\"timePoint\":\"10:45\",\"realTimeAvgPrice\":254.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":44,\"timePoint\":\"11:00\",\"realTimeAvgPrice\":210.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"low_quantile\"}],\"highPriceExposureWindows\":[{\"date\":\"2026-05-07\",\"pointIndex\":9,\"timePoint\":\"02:15\",\"realTimeAvgPrice\":354.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":10,\"timePoint\":\"02:30\",\"realTimeAvgPrice\":360.2,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":11,\"timePoint\":\"02:45\",\"realTimeAvgPrice\":359.4,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":12,\"timePoint\":\"03:00\",\"realTimeAvgPrice\":359.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":13,\"timePoint\":\"03:15\",\"realTimeAvgPrice\":357.6,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":14,\"timePoint\":\"03:30\",\"realTimeAvgPrice\":355.3,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":15,\"timePoint\":\"03:45\",\"realTimeAvgPrice\":355.4,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"},{\"date\":\"2026-05-07\",\"pointIndex\":20,\"timePoint\":\"05:00\",\"realTimeAvgPrice\":364.9,\"dayAheadPublicPrice\":null,\"priceSpread\":null,\"reason\":\"high_quantile\"}],\"forecastSignals\":[]},\"dataConfidence\":{\"score\":5,\"penalties\":[{\"id\":\"actual_load_missing\",\"points\":25,\"reason\":\"用户实际负荷为空，不能验证移峰影响。\"},{\"id\":\"settlement_missing\",\"points\":20,\"reason\":\"结算金额为空，不能核算真实节省金额。\"},{\"id\":\"contract_missing\",\"points\":15,\"reason\":\"合同资产缺失，无法判断合约覆盖。\"},{\"id\":\"trade_sequence_missing\",\"points\":10,\"reason\":\"交易序列缺失，无法判断当前可交易背景。\"},{\"id\":\"system_load_forecast_missing\",\"points\":10,\"reason\":\"系统负荷预测缺失，市场压力解释不足。\"},{\"id\":\"backtest_unavailable\",\"points\":15,\"reason\":\"回测不可用，不能声明模型优于基线。\"}]},\"policyTiers\":[{\"id\":\"conservative\",\"title\":\"保守：观察并规避高价暴露\",\"enabled\":true,\"executable\":false,\"action\":\"只提示低价/高价窗口，不给出电量。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\"]},{\"id\":\"neutral\",\"title\":\"中性：有条件地考虑移峰\",\"enabled\":true,\"executable\":false,\"action\":\"低价和高价窗口同时存在，可人工评估柔性负荷移峰。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\"]},{\"id\":\"aggressive\",\"title\":\"激进：模型优先的大幅移峰\",\"enabled\":false,\"executable\":false,\"action\":\"当前数据不足，禁用激进档。\",\"blockers\":[\"用户实际负荷为空\",\"持仓/可交易电量为空\",\"交易限额为空\",\"人工复核未完成\",\"需要实际负荷、结算和有效回测后才能启用\"]}],\"nextBestData\":[{\"id\":\"realtime_average_price\",\"reason\":\"实时均价不足 96 点。\"},{\"id\":\"actual_load_96\",\"reason\":\"用户实际负荷为空。\"},{\"id\":\"settle_day\",\"reason\":\"日结算为空。\"},{\"id\":\"short_system_load_forecast\",\"reason\":\"系统负荷预测缺失。\"}]}},\"suggestions\":[{\"type\":\"low_price\",\"severity\":\"info\",\"title\":\"低价窗口补足\",\"description\":\"09:00、09:15、09:30、09:45、10:00、10:30 为低价观察窗口，适合做缺口补足和低风险增配。\",\"action\":\"增配买入\",\"confidence\":0.62,\"points\":[36,37,38,39,40,42],\"executable\":false,\"requiredData\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"}],\"blockingReasons\":[\"预测负荷未接入，无法计算建议电量\",\"当前持仓曲线未接入，无法判断可买可卖边界\",\"交易限额和人工确认记录未接入，不能生成执行单\"]},{\"type\":\"high_price_risk\",\"severity\":\"warning\",\"title\":\"高价风险控制\",\"description\":\"02:15、02:30、02:45、03:00、03:15、03:30 为高价风险窗口，建议先锁定申报偏差和负荷异常。\",\"action\":\"控制暴露\",\"confidence\":0.58,\"points\":[9,10,11,12,13,14],\"executable\":false,\"requiredData\":[{\"id\":\"forecast_load_96\",\"name\":\"预测负荷 96 点\",\"status\":\"已登记约束\",\"note\":\"用于把价格窗口换算成建议电量。\"},{\"id\":\"position_96\",\"name\":\"当前持仓曲线\",\"status\":\"已登记约束\",\"note\":\"用于判断可买、可卖和缺口规模。\"},{\"id\":\"trade_limits\",\"name\":\"交易限额与安全边界\",\"status\":\"已登记约束\",\"note\":\"用于校验最小申报量、可交易时段和运营安全约束。\"},{\"id\":\"manual_confirmation\",\"name\":\"人工确认记录\",\"status\":\"已登记流程\",\"note\":\"用于形成可追溯复核记录。\"}],\"blockingReasons\":[\"预测负荷未接入，无法计算建议电量\",\"当前持仓曲线未接入，无法判断可买可卖边界\",\"交易限额和人工确认记录未接入，不能生成执行单\"]},{\"type\":\"data_gap\",\"severity\":\"warning\",\"title\":\"数据补齐优先级\",\"description\":\"实际负荷、日结算 当前为空；系统可做策略试算，但收益归因与偏差考核需要补齐。\",\"action\":\"补齐数据\",\"confidence\":1,\"points\":[],\"executable\":false,\"requiredData\":[{\"id\":\"actual_load_96\",\"name\":\"实际负荷 96 点\",\"status\":\"源返回空\",\"note\":\"用于偏差考核、负荷预测评分和收益归因。\"},{\"id\":\"settle_day\",\"name\":\"日结算\",\"status\":\"源返回空\",\"note\":\"用于核算实际收益与偏差考核结果。\"}],\"blockingReasons\":[\"实际负荷未接入，不能校验策略对负荷偏差的影响\",\"日结算未接入，不能形成收益归因和结算复盘\"]}],\"readiness\":{\"generatedAt\":\"2026-08-31T04:24:43.426Z\",\"status\":\"data_blocked\",\"statusText\":\"数据闭环阻塞\",\"mode\":\"human_decision_only\",\"capabilities\":{\"decisionSupport\":false,\"reportExport\":false,\"proposalDraft\":false,\"verifiedSavings\":false,\"platformPrefill\":false,\"autoSubmit\":false},\"controls\":[{\"id\":\"standard_dataset\",\"title\":\"JSPEC 标准数据集\",\"status\":\"ready\",\"description\":\"辅助决策至少需要可读取的交易日 96 点数据。\",\"evidence\":{\"rowCount\":192,\"p0Coverage\":\"8/8\"}},{\"id\":\"integration_closure\",\"title\":\"数据闭环台账\",\"status\":\"ready\",\"description\":\"交易台账、核对单和源返回证据需要全部纳入闭环台账。\",\"evidence\":{\"completion\":\"8/8\"}},{\"id\":\"current_day_data\",\"title\":\"目标交易日数据\",\"status\":\"blocked\",\"description\":\"目标交易日必须有完整的 96 点市场价格，历史数据不能冒充今日数据。\",\"evidence\":{\"date\":\"2026-05-07\",\"rowCount\":96,\"marketPricePointCount\":57}},{\"id\":\"execution_business_inputs\",\"title\":\"负荷、持仓与交易限额\",\"status\":\"blocked\",\"description\":\"生成可复核电量草稿前，目标日负荷预测、持仓和完整交易限额必须到位。\",\"evidence\":{\"readyForDraftPrefill\":false}},{\"id\":\"settlement_verification\",\"title\":\"成本优化绩效验收数据\",\"status\":\"warning\",\"description\":\"只有目标日实际负荷和结算结果到位后，才能核验成本优化绩效。\",\"evidence\":{\"actualLoadPointCount\":0,\"settlementPointCount\":0}},{\"id\":\"p0_source_coverage\",\"title\":\"P0 源覆盖\",\"status\":\"ready\",\"description\":\"P0 源未全量覆盖时仍可生成提案草稿，但必须在人工决策时提示。\",\"evidence\":{\"p0Coverage\":\"8/8\"}},{\"id\":\"source_empty_data\",\"title\":\"源返回空数据提示\",\"status\":\"warning\",\"description\":\"实际负荷、日结算等关键源为空时，作为提案草稿的人工复核提示。\",\"evidence\":{\"items\":[\"实际负荷 96 点\",\"日结算明细\"]}},{\"id\":\"execution_master_data\",\"title\":\"执行主数据提示\",\"status\":\"warning\",\"description\":\"预测负荷、持仓、交易限额等未形成接口前，提案草稿保留人工填写字段。\",\"evidence\":{\"items\":[\"预测负荷 96 点\",\"当前持仓曲线\",\"人工确认与执行留痕\"]}},{\"id\":\"audit_store\",\"title\":\"审计日志存储\",\"status\":\"ready\",\"description\":\"提案生成和人工复核动作需要写入追加式审计日志。\",\"evidence\":{\"path\":\"/Users/r/Documents/electric/trading-ai-system/data/audit-log.ndjson\"}},{\"id\":\"jspec_auto_capture\",\"title\":\"JSPEC 自动采集账号\",\"status\":\"action_required\",\"description\":\"缺少 JSPEC 账号时仍可用本地数据生成草稿，但无法自动刷新生产源。\",\"requiredKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"],\"providedKeys\":[],\"missingKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"]},{\"id\":\"ca_ukey\",\"title\":\"CA/UKey 人工签名链路\",\"status\":\"action_required\",\"description\":\"CA/UKey 用于交易平台人工登录、签名或提交，不作为系统自动提交目标。\",\"requiredKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"],\"providedKeys\":[],\"missingKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"]},{\"id\":\"trade_platform_prefill\",\"title\":\"交易平台提案预填入口\",\"status\":\"action_required\",\"description\":\"有交易平台地址后可辅助定位/预填页面字段，最终提交仍由人工确认。\",\"requiredKeys\":[\"TRADING_PLATFORM_URL\"],\"providedKeys\":[],\"missingKeys\":[\"TRADING_PLATFORM_URL\"]},{\"id\":\"dual_review_identity\",\"title\":\"操作人/复核人身份\",\"status\":\"action_required\",\"description\":\"提案草稿需要记录操作人与复核人，确保人工决策可追溯。\",\"requiredKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"],\"providedKeys\":[],\"missingKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"]},{\"id\":\"human_decision_policy\",\"title\":\"人工最终决策策略\",\"status\":\"ready\",\"description\":\"系统只生成辅助决策提案草稿，不自动提交交易。\",\"evidence\":{\"autoSubmit\":false}}],\"blockers\":[{\"id\":\"current_day_data\",\"title\":\"目标交易日数据\",\"description\":\"目标交易日必须有完整的 96 点市场价格，历史数据不能冒充今日数据。\",\"missingKeys\":[],\"evidence\":{\"date\":\"2026-05-07\",\"rowCount\":96,\"marketPricePointCount\":57}},{\"id\":\"execution_business_inputs\",\"title\":\"负荷、持仓与交易限额\",\"description\":\"生成可复核电量草稿前，目标日负荷预测、持仓和完整交易限额必须到位。\",\"missingKeys\":[],\"evidence\":{\"readyForDraftPrefill\":false}}],\"warnings\":[{\"id\":\"settlement_verification\",\"title\":\"成本优化绩效验收数据\",\"description\":\"只有目标日实际负荷和结算结果到位后，才能核验成本优化绩效。\",\"missingKeys\":[],\"evidence\":{\"actualLoadPointCount\":0,\"settlementPointCount\":0}},{\"id\":\"source_empty_data\",\"title\":\"源返回空数据提示\",\"description\":\"实际负荷、日结算等关键源为空时，作为提案草稿的人工复核提示。\",\"missingKeys\":[],\"evidence\":{\"items\":[\"实际负荷 96 点\",\"日结算明细\"]}},{\"id\":\"execution_master_data\",\"title\":\"执行主数据提示\",\"description\":\"预测负荷、持仓、交易限额等未形成接口前，提案草稿保留人工填写字段。\",\"missingKeys\":[],\"evidence\":{\"items\":[\"预测负荷 96 点\",\"当前持仓曲线\",\"人工确认与执行留痕\"]}},{\"id\":\"jspec_auto_capture\",\"title\":\"JSPEC 自动采集账号\",\"description\":\"缺少 JSPEC 账号时仍可用本地数据生成草稿，但无法自动刷新生产源。\",\"missingKeys\":[\"JSPEC_BASE_URL\",\"JSPEC_USERNAME\"],\"evidence\":{}},{\"id\":\"ca_ukey\",\"title\":\"CA/UKey 人工签名链路\",\"description\":\"CA/UKey 用于交易平台人工登录、签名或提交，不作为系统自动提交目标。\",\"missingKeys\":[\"CA_UKEY_PROVIDER\",\"CA_UKEY_CERT_ID\"],\"evidence\":{}},{\"id\":\"trade_platform_prefill\",\"title\":\"交易平台提案预填入口\",\"description\":\"有交易平台地址后可辅助定位/预填页面字段，最终提交仍由人工确认。\",\"missingKeys\":[\"TRADING_PLATFORM_URL\"],\"evidence\":{}},{\"id\":\"dual_review_identity\",\"title\":\"操作人/复核人身份\",\"description\":\"提案草稿需要记录操作人与复核人，确保人工决策可追溯。\",\"missingKeys\":[\"TRADING_OPERATOR_ID\",\"TRADING_APPROVER_ID\"],\"evidence\":{}}],\"paths\":{\"standardPath\":\"/Users/r/Documents/electric/trading-ai-system/data/standard-96.sample.json\",\"integrationSummaryPath\":\"/Users/r/Documents/electric/trading-ai-system/data/integration-summary.json\",\"auditLogPath\":\"/Users/r/Documents/electric/trading-ai-system/data/audit-log.ndjson\"}},\"dataSource\":\"repository_sample\"}"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "search_memory",
+              "traceId": "061e73b05f88d7ec20196d37aa56c187",
+              "spanId": "5449dda7d7cb1db5",
+              "parentSpanId": "c1818796b9743b82",
+              "startTimeUnixNano": "1788150283425000000",
+              "endTimeUnixNano": "1788150283426000000",
+              "status": {
+                "code": 1
+              },
+              "attributes": [
+                {
+                  "key": "gen_ai.operation.name",
+                  "value": {
+                    "stringValue": "search_memory"
+                  }
+                },
+                {
+                  "key": "gen_ai.conversation.id",
+                  "value": {
+                    "stringValue": "memory-case"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.store.id",
+                  "value": {
+                    "stringValue": "competition-preferences"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.record.count",
+                  "value": {
+                    "intValue": "1"
+                  }
+                },
+                {
+                  "key": "gen_ai.memory.records",
+                  "value": {
+                    "stringValue": "[{\"id\":\"memory-case-preference\",\"content\":\"后续分析先列数据缺口\"}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

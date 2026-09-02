@@ -48,12 +48,27 @@ function freshnessStatus(timestamp, nowMs) {
 }
 
 function hasConfiguredLimits(values = {}) {
-  return [
-    'minQuantityMwh',
-    'maxDraftQuantityMwh',
-    'buyPriceCeilingYuanPerMwh',
-    'sellPriceFloorYuanPerMwh',
-  ].every((key) => numberOrNull(values[key]) !== null);
+  const minimumQuantity = numberOrNull(values.minQuantityMwh);
+  const maximumQuantity = numberOrNull(values.maxDraftQuantityMwh);
+  const tradeLimitsReady =
+    minimumQuantity !== null &&
+    maximumQuantity !== null &&
+    minimumQuantity >= 0 &&
+    maximumQuantity >= 0 &&
+    minimumQuantity <= maximumQuantity &&
+    numberOrNull(values.buyPriceCeilingYuanPerMwh) !== null &&
+    numberOrNull(values.sellPriceFloorYuanPerMwh) !== null;
+  const minimumPower = numberOrNull(values.minDeclarationPowerMw);
+  const maximumPower = numberOrNull(values.maxDeclarationPowerMw);
+  const hasPowerBoundary = minimumPower !== null || maximumPower !== null;
+  const powerLimitsValid =
+    hasPowerBoundary &&
+    (minimumPower === null || minimumPower >= 0) &&
+    (maximumPower === null || maximumPower >= 0) &&
+    (minimumPower === null ||
+      maximumPower === null ||
+      minimumPower <= maximumPower);
+  return tradeLimitsReady && powerLimitsValid;
 }
 
 function evidence(id, label, status, value, detail, actionId = null) {
@@ -149,7 +164,7 @@ export function buildSavingsWorkbench(options = {}) {
       '交易限额',
       limitsReady ? 'ready' : 'missing',
       limitsReady ? '已配置' : '未获取',
-      limitsReady ? '最小电量、最大电量和买卖限价均已配置。' : '缺少完整交易限额。',
+      limitsReady ? '交易电量、买卖限价和 MW 申报功率边界均已配置。' : '缺少或错误配置完整交易限额（含至少一侧 MW 申报功率边界）。',
       'complete_business_inputs'
     ),
     evidence(

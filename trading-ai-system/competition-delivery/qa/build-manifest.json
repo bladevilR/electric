@@ -1,0 +1,42 @@
+{
+  "builder": "competition-evaluation-submission",
+  "built_at": "2026-08-31T04:24:44.148Z",
+  "official_upload_files": [
+    "information.json",
+    "traces-dynamic.json",
+    "traces.json"
+  ],
+  "sha256": {
+    "information.json": "a81f1fa575e89665d5f8892d77d9c6b50e4f7119a4f444c2551d0efd801df31a",
+    "traces-dynamic.json": "7905a0a8717d7eb5ae5d31340236644d0f5b1646f4edccfcfc97f9251901866d",
+    "traces.json": "97c5e30a191c1924d9f79c09916a694b06d6466920f6794677b2e59ee1031e5b"
+  },
+  "static_calls": [
+    {
+      "trace_id": "8a0e0ff39461e6f70dff28a1c3fd6ef9"
+    },
+    {
+      "trace_id": "3a961f3bf248c59ea213e67211657898"
+    },
+    {
+      "trace_id": "061e73b05f88d7ec20196d37aa56c187"
+    }
+  ],
+  "dynamic_summary": {
+    "total": 3,
+    "succeeded": 3,
+    "failed": 0
+  },
+  "trace_reconciliation": true,
+  "secret_and_placeholder_scan": true,
+  "provenance": {
+    "data_source": "repository_sample",
+    "source_path": "data/standard-96.sample.json",
+    "is_repository_sample": true,
+    "production_ready": false,
+    "executable_trading_output": false,
+    "realized_savings_claimed": false,
+    "human_review_required": true,
+    "statement": "本次材料基于仓库样例数据，仅用于竞赛能力与日志格式评测；不代表真实生产数据、可执行交易指令或已实现收益。"
+  }
+}

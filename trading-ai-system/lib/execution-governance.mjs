@@ -44,6 +44,52 @@ function readinessWarnings(readiness = {}) {
   });
 }
 
+function declarationPowerLimitBlocker(businessInputs = {}) {
+  const values = businessInputs.tradeLimits?.values || {};
+  const parseConfigured = (value) => {
+    if (value === '' || value === null || value === undefined) return null;
+    const result = Number(value);
+    return Number.isFinite(result) ? result : Number.NaN;
+  };
+  const minimum = parseConfigured(values.minDeclarationPowerMw);
+  const maximum = parseConfigured(values.maxDeclarationPowerMw);
+  if (minimum === null && maximum === null) {
+    return 'MW 申报功率边界未配置';
+  }
+  if (
+    Number.isNaN(minimum) ||
+    Number.isNaN(maximum) ||
+    (minimum !== null && minimum < 0) ||
+    (maximum !== null && maximum < 0) ||
+    (minimum !== null && maximum !== null && minimum > maximum)
+  ) {
+    return 'MW 申报功率边界配置无效';
+  }
+  return '';
+}
+
+function quantityLimitBlocker(businessInputs = {}) {
+  const values = businessInputs.tradeLimits?.values || {};
+  const minimum = numeric(values.minQuantityMwh);
+  const maximum = numeric(values.maxDraftQuantityMwh);
+  if (
+    values.minQuantityMwh === '' ||
+    values.minQuantityMwh === null ||
+    values.minQuantityMwh === undefined ||
+    values.maxDraftQuantityMwh === '' ||
+    values.maxDraftQuantityMwh === null ||
+    values.maxDraftQuantityMwh === undefined ||
+    minimum === null ||
+    maximum === null ||
+    minimum < 0 ||
+    maximum < 0 ||
+    minimum > maximum
+  ) {
+    return 'MWh 交易数量边界缺失或配置无效';
+  }
+  return '';
+}
+
 function lineDirection(suggestion) {
   if (suggestion.type === 'low_price') {
     return '买入观察';
@@ -61,6 +107,15 @@ function capQuantity(quantity, limits = {}) {
   }
   const max = numeric(limits.maxDraftQuantityMwh);
   const min = numeric(limits.minQuantityMwh);
+  if (
+    min === null ||
+    max === null ||
+    min < 0 ||
+    max < 0 ||
+    min > max
+  ) {
+    return null;
+  }
   if (max !== null && value > max) {
     return max;
   }
@@ -140,7 +195,11 @@ export function buildExecutionProposal({
   const costStrategy = report?.costStrategy || null;
   const settlementReferenceSummary = report?.settlementReferenceSummary || null;
   const confidenceScore = Number(costStrategy?.dataConfidence?.score || 0);
-  const blockers = uniqueText(readinessBlockers(readiness));
+  const blockers = uniqueText([
+    ...readinessBlockers(readiness),
+    declarationPowerLimitBlocker(businessInputs),
+    quantityLimitBlocker(businessInputs),
+  ]);
   const reviewWarnings = uniqueText([
     ...readinessWarnings(readiness),
     ...(Array.isArray(report?.blockingReasons) ? report.blockingReasons : []),

@@ -1,0 +1,150 @@
+{
+  "business_intent_examples": [
+    {
+      "case_id": "C1-electricity-analysis",
+      "instruction": "请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。",
+      "expected_result": {
+        "required_fields": [
+          "status",
+          "summary",
+          "data_source",
+          "price_windows",
+          "data_gaps",
+          "human_review"
+        ],
+        "expected_values": {
+          "status": "必须反映真实数据门禁状态，数据不足时不得写成已就绪",
+          "summary": "必须明确说明是仓库样例数据的只读分析",
+          "data_source": "必须等于 repository_sample",
+          "price_windows": "必须包含 low 和 high 点位数组",
+          "data_gaps": "必须是实际缺失证据数组",
+          "human_review": "必须声明 human_decision_only、auto_submit=false、executable=false"
+        }
+      }
+    }
+  ],
+  "inference_task_examples": [
+    {
+      "case_id": "C2-sample-safety-gate",
+      "instruction": "请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。",
+      "scenario_facts": {
+        "data_source": "repository_sample",
+        "auto_submit": false
+      },
+      "business_rules": [
+        {
+          "rule_id": "R1",
+          "condition": "data_source == repository_sample",
+          "conclusion": "must_disclose_sample = true"
+        },
+        {
+          "rule_id": "R2",
+          "condition": "readiness != decision_support_ready",
+          "conclusion": "must_not_claim_executable = true"
+        }
+      ],
+      "expected_inference": {
+        "required_facts": [
+          "data_source",
+          "auto_submit"
+        ],
+        "applicable_rules": [
+          "R1",
+          "R2"
+        ],
+        "expected_conclusion": "仅输出样例数据的只读分析和人工复核清单，不生成可执行交易或真实收益结论"
+      }
+    }
+  ],
+  "task_log_evidence_examples": [
+    {
+      "submission_task_id": "E1-electricity-analysis",
+      "trace_id": "8a0e0ff39461e6f70dff28a1c3fd6ef9",
+      "task_description": "请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。",
+      "declared_stages": [
+        {
+          "stage_name": "接收并解析任务",
+          "stage_evidence_span_ids": [
+            "17a9af5041d210a1"
+          ]
+        },
+        {
+          "stage_name": "读取电力分析上下文",
+          "stage_evidence_span_ids": [
+            "157f4bf62e3e41a3"
+          ]
+        },
+        {
+          "stage_name": "应用数据和人工决策门禁并返回结果",
+          "stage_evidence_span_ids": [
+            "17a9af5041d210a1"
+          ]
+        }
+      ],
+      "deliverable_reference": "gen_ai.output.messages",
+      "deliverable_hash": "sha256:5db356c9ece003f18b88716f3969f9695752482d2f1949bd2bb5ac83f52dad39",
+      "process_handoff_evidence": [
+        {
+          "source_span_id": "157f4bf62e3e41a3",
+          "used_by_span_id": "17a9af5041d210a1",
+          "description": "工具读取的策略、数据缺口和就绪状态用于根 Span 最终答复"
+        }
+      ]
+    }
+  ],
+  "tool_skill_examples": [
+    {
+      "tool_or_skill_name": "load_trading_analysis_context",
+      "aliases": [],
+      "purpose": "读取指定交易日的价格信号、数据缺口、策略建议和人工决策就绪状态",
+      "parameter_mode": "structured",
+      "input_parameters": [
+        {
+          "name": "date",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "success_return_type": "object",
+      "failure_return_form": {
+        "type": "http_error",
+        "description": "领域上下文在工具执行前加载失败时返回 OpenAI-compatible HTTP 错误；不伪造工具返回或成功 Span"
+      }
+    }
+  ],
+  "memory_capability_examples": [
+    {
+      "memory_name": "会话分析偏好",
+      "memory_description": "在显式会话标识内记住非敏感的分析展示偏好，并在后续分析中使用",
+      "memory_source_field_paths": [
+        "gen_ai.memory.records",
+        "gen_ai.conversation.id"
+      ],
+      "memory_use_field_paths": [
+        "gen_ai.memory.records",
+        "gen_ai.output.messages"
+      ],
+      "memory_link_field_paths": [
+        "gen_ai.conversation.id",
+        "gen_ai.memory.store.id"
+      ],
+      "success_description": "create_memory Span 8642fa4730b228f3 形成偏好，search_memory Span 5449dda7d7cb1db5 在同会话中取回并应用"
+    }
+  ],
+  "api": {
+    "protocol": "openai_chat_completions",
+    "endpoint": "http://127.0.0.1:5177/v1/chat/completions",
+    "model": "electric-trading-copilot-v1",
+    "authentication": {
+      "method": "none"
+    },
+    "request_template": {},
+    "response_mapping": {
+      "output_text_path": "choices.0.message.content"
+    },
+    "trace_mapping": {
+      "trace_id_header": "traceparent",
+      "trace_id_response_path": "trace_id"
+    }
+  }
+}

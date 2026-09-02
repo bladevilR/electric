@@ -1,4 +1,6 @@
 {
+  "minDeclarationPowerMw": null,
+  "maxDeclarationPowerMw": null,
   "minQuantityMwh": null,
   "maxDraftQuantityMwh": null,
   "buyPriceCeilingYuanPerMwh": null,

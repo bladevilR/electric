@@ -218,7 +218,7 @@ function buildRunCode(
     const showText = async () => {
       await page.evaluate(({ captionCues, step }) => {
         const ui = window.__localDemoVideo;
-        const keywords = ['633.6万元', '2.4万元', '52.8万元', '96 点', '九十六点', '人工审批', '实时并行验证', '不参与真实申报'];
+        const keywords = ['2.4万元', '24,000元', '96 点', '九十六点', '人工复核', '独立留出集', '样例测算', '不自动提交'];
         const renderCue = (cue) => {
           ui.caption.classList.remove('visible');
           setTimeout(() => {
@@ -259,8 +259,8 @@ function buildRunCode(
         const ui = window.__localDemoVideo;
         const intro = kind === 'intro';
         ui.card.innerHTML = intro
-          ? '<div class="inner"><div class="eyebrow">AI ELECTRICITY TRADING COPILOT</div><h1>让每一次申报，更接近真实需求</h1><p>AI协助交易员完成数据校验、预测、九十六点申报优化、人工复核和结算回流。</p><div class="impact">¥6,336,000<small>年度节约潜力 · 按当前演示交易规模等比例测算</small></div><div class="flow"><span>减少申报偏差</span><span>降低交易成本</span><span>每笔节约可核算</span></div></div>'
-          : '<div class="inner"><div class="eyebrow">AI COMPUTES · HUMAN DECIDES</div><h1>让每一次申报，更省、更稳、更有依据</h1><p>AI负责计算与解释，交易员负责最终决策。所有建议都保留数据来源、成本口径、人工审批与版本回滚记录。</p><div class="flow"><span>可执行</span><span>可解释</span><span>可复核</span><span>可追溯</span></div></div>';
+          ? '<div class="inner"><div class="eyebrow">AI ELECTRICITY TRADING COPILOT</div><h1>九十六点申报优化，一屏完成复核</h1><p>从历史基线、价格预测到候选曲线和风险约束，AI把复杂计算整理为交易员可以直接复核的工作台。</p><div class="impact">96 点<small>完整曲线 · 形成依据 · 人工复核</small></div><div class="flow"><span>申报优化</span><span>价格预测</span><span>策略依据</span><span>人工决策</span></div></div>'
+          : '<div class="inner"><div class="eyebrow">AI COMPUTES · HUMAN DECIDES</div><h1>建议有依据，决策留给人</h1><p>演示展示完整的计算、解释和复核链路；样例测算不等于实际结算收益，系统不会自动提交交易。</p><div class="flow"><span>可解释</span><span>可复核</span><span>可追溯</span><span>不自动提交</span></div></div>';
         ui.card.classList.add('visible');
         ui.cursor.style.transform = 'translate(-80px,-80px)';
       }, { kind });
@@ -425,7 +425,7 @@ export async function recordBrowserVideo({
       session,
       [
         'run-code',
-        'async (page) => { await page.waitForSelector("#declarationDashboardTitle", { state: "visible", timeout: 30000 }); await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {}); }',
+        'async (page) => { await page.waitForSelector("#submissionWorkstationTitle", { state: "visible", timeout: 30000 }); await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {}); }',
       ],
       { cwd: projectRoot }
     );

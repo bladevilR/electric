@@ -138,25 +138,25 @@ test('builds narration and subtitles from actual step timing instead of planned 
   assert.match(assets.ssml, /<speak version="1\.0"/);
 });
 
-test('the shipped competition plan centers AI cost savings and leaves failure headroom', async () => {
+test('the shipped competition plan demonstrates the complete simulated loop without production-gap language', async () => {
   const raw = await readFile(
     new URL('../recording/demo-plan.json', import.meta.url),
     'utf8'
   );
   const plan = validateDemoPlan(JSON.parse(raw));
 
-  assert.equal(plan.url, '/?demo=settled');
+  assert.equal(plan.url, '/?demo=submission&v=20260830-workstation-v10');
   assert.match(plan.title, /智能交易副驾驶/);
-  assert.ok(plan.steps.length >= 12);
-  assert.ok(plan.totalHoldMs >= 180_000);
+  assert.ok(plan.steps.length >= 8);
+  assert.ok(plan.totalHoldMs >= 150_000);
   assert.ok(plan.totalHoldMs <= 210_000);
   assert.ok(plan.maxDurationMs <= 270_000);
   assert.ok(plan.steps.every((step) => step.ready.locators.length > 0));
   const cameraBeats = plan.steps.flatMap((step) => step.camera.beats);
   assert.ok(cameraBeats.every((beat) => beat.focus.length > 0));
   assert.ok(cameraBeats.every((beat) => beat.scale <= 1.9));
-  assert.ok(cameraBeats.length >= 16 && cameraBeats.length <= 20);
-  assert.ok(cameraBeats.filter((beat) => beat.scale >= 1.6).length >= 6);
+  assert.ok(cameraBeats.length >= 12 && cameraBeats.length <= 20);
+  assert.ok(cameraBeats.filter((beat) => beat.scale >= 1.6).length >= 4);
   let consecutiveCloseups = 0;
   for (const step of plan.steps) {
     for (const beat of step.camera.beats) {
@@ -167,20 +167,25 @@ test('the shipped competition plan centers AI cost savings and leaves failure he
   }
   assert.equal(new Set(plan.steps.map((step) => step.narrationChapter)).size, 4);
   assert.ok(plan.steps.some((step) => /24,000|2\.4\s*万/.test(step.narration)));
-  assert.ok(plan.steps.some((step) => /6,336,000|633\.6\s*万/.test(step.narration)));
   const allNarration = [
     plan.intro.narration,
     ...plan.steps.map((step) => step.narration),
     plan.outro.narration,
   ].join('');
-  assert.equal((allNarration.match(/633\.6/g) || []).length, 1);
-  assert.match(allNarration, /历史回测.*实时并行验证.*人工审批/s);
+  assert.doesNotMatch(allNarration, /633\.6|6,336,000|年度节约|年化/);
+  assert.match(allNarration, /演示|样例/);
+  assert.match(allNarration, /数据接入/);
+  assert.match(allNarration, /质量校验/);
+  assert.match(allNarration, /结算评估/);
+  assert.match(allNarration, /人工复核/);
+  assert.doesNotMatch(allNarration, /待接入真实数据|等待实际结算|尚未独立回测|补齐真实|缺少真实|数据不足|真实生产参数/);
   assert.doesNotMatch(allNarration, /影子运行|Champion|Challenger/);
-  assert.doesNotMatch(plan.outro.narration, /633\.6|6,336,000/);
-  const evolutionHoldMs = plan.steps
-    .filter((step) => step.id.includes('evolution'))
-    .reduce((sum, step) => sum + step.holdMs, 0);
-  assert.ok(evolutionHoldMs / plan.totalHoldMs <= 0.1);
+  for (const id of ['mock-data-connect', 'mock-quality-check', 'mock-optimization', 'mock-review', 'mock-settlement']) {
+    assert.ok(plan.steps.some((step) => step.id === id), `missing simulated loop step: ${id}`);
+  }
+  assert.ok(plan.steps.some((step) => step.id === 'open-derivation'));
+  assert.ok(plan.steps.some((step) => step.id === 'price-forecast'));
+  assert.ok(plan.steps.some((step) => step.id === 'mock-review'));
 });
 
 test('the tour command validates the shipped plan without launching a browser', () => {
@@ -198,8 +203,8 @@ test('the tour command validates the shipped plan without launching a browser', 
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
   assert.equal(output.ok, true);
-  assert.ok(output.stepCount >= 12);
-  assert.ok(output.totalHoldMs >= 180000);
+  assert.ok(output.stepCount >= 8);
+  assert.ok(output.totalHoldMs >= 150000);
 });
 
 test('the TTS command writes script, SSML, and SRT from a real timeline file', async () => {
@@ -214,13 +219,13 @@ test('the TTS command writes script, SSML, and SRT from a real timeline file', a
       JSON.stringify({
         steps: [
           {
-            id: 'opening',
+            id: 'mock-data-connect',
             status: 'completed',
             startMs: 800,
             endMs: 6400,
           },
           {
-            id: 'core-metrics',
+            id: 'mock-quality-check',
             status: 'completed',
             startMs: 7000,
             endMs: 13200,
@@ -247,7 +252,7 @@ test('the TTS command writes script, SSML, and SRT from a real timeline file', a
     assert.equal(result.status, 0, result.stderr);
     assert.match(
       await readFile(path.join(outputDirectory, '解说稿.txt'), 'utf8'),
-      /降低交易成本|单日净成本优化额|九十六个交易时点/
+      /数据接入|质量校验|九十六个交易点/
     );
     assert.match(
       await readFile(path.join(outputDirectory, '字幕.srt'), 'utf8'),
@@ -282,7 +287,7 @@ test('the PowerShell controller validates the plan without starting recording', 
   );
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Recording plan validated: 14 steps, 187248 ms/);
+  assert.match(result.stdout, /Recording plan validated: 15 steps, 176000 ms/);
 });
 
 test('the TTS mux controller accepts a separate video and WAV without overwriting either', async () => {

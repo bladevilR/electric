@@ -2,15 +2,24 @@
 
 更新时间：2026-08-30（Asia/Shanghai）
 
+## 0. 本轮最终交付（材料与演示优先）
+
+- 最终评审总包：`/Users/r/Documents/electric/dist/电力交易AI-v10-评审提交包-20260830.zip`。
+- 总包 SHA-256：`bcf9db7f58eb8e2a53e6c9a1a9a1989ecad6b2dd4f3afdff6121b64abbdb7eda`。
+- 最终视频：`output/video/电力交易AI-智能交易副驾驶-v10-最终提交版.mp4`，197.47 秒，1080P，有声并带烧录字幕。
+- Windows 演示包：`/Users/r/Documents/electric/dist/trading-ai-system-one-minute.zip`，manifest 显示 `includesNodeRuntime: true`；启动脚本直接打开 `?demo=submission&v=20260830-workstation-v10`。
+- 总包内含 4 张 v10 桌面/手机材料截图、现场讲解顺序和答辩口径；内置 `SHA256SUMS.txt` 已在全新解压目录逐项校验通过。
+- 从最终演示 ZIP 全新解压后，已用系统 Chrome 实测完整推导、价格预测、人工复核和证据链，控制台 0 错误。Windows 双击行为因当前验收机为 macOS，未在真实 Windows 硬件执行；启动脚本、内置 Windows Node 运行时与本地服务核心流程已分别验证。
+
 ## 1. 仓库与目标
 
 - 仓库目录：`/Users/r/Documents/electric/trading-ai-system`
 - GitHub：`https://github.com/bladevilR/electric`
 - 仓库可见性：`PUBLIC`
 - 当前分支：`main`
-- 功能基线提交：`c6d4835ccd42286de833b24a52bd31398684f98c`；本交接文件所属提交以 `git log -1` 为准。
+- 当前 `HEAD`：`db33b49`；本轮 v10 修复仍在工作区，尚未擅自提交。
 - 功能基线的 `HEAD` 与 `origin/main` 已在交接前只读复核，一致。
-- 目标页面：`http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v9`
+- 目标页面：`http://127.0.0.1:5177/?demo=submission&v=20260830-workstation-v10`
 - 系统安全边界：`human_decision_only`；不得自动申报、自动下单或绕过人工复核。
 
 ## 2. 用户已确认的页面要求
@@ -18,11 +27,21 @@
 - 页面是业务工作台，不使用“今天为什么这样申报”“这套建议是怎么得出的”“为什么这样做”等问句式标题。
 - 首页业务标题为“申报优化”；推导摘要标题为“申报策略形成依据”。
 - 详细推导必须有独立页面，且每个变量、上下标、单位、算子和回测指标必须就地解释。
-- 不在页面上额外使用“模拟数据”标签；同时不得把缺失的训练系数、场景样本或实际收益伪造成真实证据。
+- 演示入口必须持续显示“演示环境 · 样例输入”；同时不得把缺失的训练系数、场景样本或实际收益伪造成真实证据。
 - 当前页面区分三种口径：历史留出集指标、因素联合场景方案、测算日成本改善。
 - 前端视觉方向使用过内置生图目标稿，最终实现保持扁平白底、蓝色主操作、绿色验证状态和移动端单列布局。
 
 ## 3. 已完成修改
+
+### 工作区 v10：策略证据、限额与可用性收口
+
+- submission 页面不再把 42 日同点位历史模型的 `9.64% / 86.05%` 误归给多因素候选；候选单独标为“尚未独立回测”。
+- `¥24,000` 仅保留为“样例测算日成本改善”，默认真实入口不显示演示金额或演示标签。
+- 申报推荐新增可选的 `minDeclarationPowerMw / maxDeclarationPowerMw`：只接受 MW 功率边界，不误用 MWh 交易量上限；候选越界回退基线，非法边界或基线越界时阻断。
+- 修复 320–1440 px 响应式布局、价格预测宽表局部滚动、导航/日期/模式语义、96 点曲线冗余 Tab 焦点、证据对话框焦点陷阱与 Escape 返回焦点。
+- 异步主操作增加跨重渲染防重入门禁，错误 toast 使用警报语义。
+- README、`一分钟上手.html` 与 `docs/quick-start.html` 已统一到当前导航、启动脚本和模型口径。
+- `index.html` 资源缓存版本已更新为 `workstation-v10`。
 
 ### 提交 `3dd90ee`：完整推导页
 
@@ -61,33 +80,35 @@
 执行：
 
 ```bash
-node --test test/workbench-ui.test.mjs
+node --test test/declaration-optimizer.test.mjs test/execution-governance.test.mjs test/savings-workbench.test.mjs test/workbench-accessibility.test.mjs test/workbench-ui.test.mjs
 ```
 
-结果：22 项通过，0 项失败。
+结果：策略、页面与端到端门禁专项 54 项通过，0 项失败。
 
 ### 全量测试
 
 执行：
 
 ```bash
-XDG_CACHE_HOME=/tmp/electric-pwsh-cache-codex-20260829 node --test --test-concurrency=1 test/*.test.mjs
+XDG_CACHE_HOME=/tmp/electric-pwsh-cache-v10.biOwwT node --test --test-concurrency=1 test/*.test.mjs
 ```
 
-结果：192 项；191 项通过，0 项失败，1 项跳过。跳过项是本机未提供被 Git 忽略的业务 Excel，不使用虚构文件替代。
+结果：211 项；210 项通过，0 项失败，1 项跳过。跳过项是本机未提供被 Git 忽略的业务 Excel，不使用虚构文件替代。
 
 ### 浏览器验收
 
 - 使用系统 Chrome：`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`。
-- 桌面视口：1920 × 1080。
-- 手机视口：390 × 844。
-- 两个视口均验证：
-  - 38 项符号说明、6 项单位/算子说明存在；
+- 响应式视口：1440、1024、768、390、320 px。
+- 已验证：
   - 无横向溢出；
-  - 无 `undefined`、`null`、`NaN` 可见文本；
-  - 无“为什么 / 怎么得出 / 今天为什么”问句标题；
   - 无浏览器控制台错误；
-  - 首页可进入完整推导页，完整推导页可返回申报优化。
+  - 默认真实入口无演示标签、无 `¥24,000` 样例金额；
+  - 演示入口持续显示样例身份与“尚未独立回测”；
+  - 手机可进入完整推导页且无横向溢出；
+  - 证据对话框可聚焦、锁定 Tab、Escape 关闭并返回触发按钮；
+  - 价格预测宽表只在表格区域横向滚动。
+  - 真实截图复看后，将手机价格预测 96 行长页收敛为可上下/左右滚动的局部结果区；页面高度由约 5300 px 降至约 1280 px。
+  - 手机完整推导页使用吸顶横向步骤索引；点击章节后高亮当前项，并保留 74 px 锚点避让，章节标题不会被目录遮挡。
 - 四个主导航实测标题：
   - 申报优化 → “申报优化”
   - 价格预测 → “价格预测”
@@ -109,12 +130,12 @@ XDG_CACHE_HOME=/tmp/electric-pwsh-cache-codex-20260829 node --test --test-concur
 
 交接前于 2026-08-30 新鲜复核：
 
-- `127.0.0.1:5177`：无监听，HTTP 检查为 `000`。
+- `127.0.0.1:5177`：交付前已停止本轮验收服务，无监听；接手时仍须重新检查，不能继承本文运行状态。
 - `127.0.0.1:5178`：无监听，HTTP 检查为 `000`。
 - `localhost.run` SSH 穿透：无进程。
 - 之前发出的 `*.lhr.life` 公网链接均已失效，不得继续交付旧链接。
 - 当前没有本会话仍在运行的后台服务、穿透、automation、worktree 或额外分支。
-- 本会话测试临时缓存 `/tmp/electric-pwsh-cache-codex-20260829` 已在合并交付前清理。
+- 本会话测试临时缓存 `/tmp/electric-pwsh-cache-v10.biOwwT` 与视觉临时目录已移入系统废纸篓，可恢复。
 
 ## 6. 启动与重新穿透
 
@@ -135,7 +156,7 @@ node server.mjs --port 5177
 验收：
 
 ```bash
-curl -fsS -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:5177/?demo=submission&v=20260829-workstation-v9'
+curl -fsS -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:5177/?demo=submission&v=20260830-workstation-v10'
 ```
 
 期望输出：`200`。
@@ -169,11 +190,11 @@ curl -fsS -o /dev/null -w '%{http_code}\n' 'http://127.0.0.1:5177/?demo=submissi
 
 ## 9. 未完成项与验收标准
 
-没有遗留代码修改任务。若用户继续要求运行或外发：
+当前代码修改与本地验收已经完成，但工作区尚未提交。若用户继续要求运行、提交或外发：
 
 1. **恢复本地服务**：5177 监听、目标 URL 返回 200、浏览器能进入完整推导页。
 2. **恢复公网链接**：先建立只读 5178 安全网关，验证 `/api/*` 被拒绝，再建立穿透并从公网真实入口完成一次页面往返。
-3. **后续文案修改**：必须同时更新 `test/workbench-ui.test.mjs`，运行 22 项页面测试及与修改风险相称的浏览器验收。
+3. **后续文案修改**：必须同时更新 `test/workbench-ui.test.mjs`，运行页面专项测试及与修改风险相称的浏览器验收。
 
 接手者应先读取本文件和 `README.md`，再复核 Git 提交、当前端口状态和目标页面，不要直接继承本交接中的运行状态。
 

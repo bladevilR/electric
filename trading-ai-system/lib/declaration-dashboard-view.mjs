@@ -269,7 +269,7 @@ export function buildDeclarationDashboardView(payload = {}) {
     recommendation: {
       status: recommendation.status || 'unavailable',
       canReview:
-        recommendation.status === 'ready' &&
+        ['ready', 'ready_with_fallback'].includes(recommendation.status) &&
         Boolean(payload.execution?.dataReady),
       coverage:
         recommendation.coverage &&

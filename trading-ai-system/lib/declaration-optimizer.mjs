@@ -380,6 +380,33 @@ function baselineRecommendation(targetRows, reason, requiredPointCount) {
   };
 }
 
+function declarationPowerLimitReason(powerMw, subject, limits = {}) {
+  if (
+    limits.minDeclarationPowerMw !== null &&
+    powerMw < limits.minDeclarationPowerMw
+  ) {
+    return `${subject}_below_min_declaration_power_mw`;
+  }
+  if (
+    limits.maxDeclarationPowerMw !== null &&
+    powerMw > limits.maxDeclarationPowerMw
+  ) {
+    return `${subject}_above_max_declaration_power_mw`;
+  }
+  return null;
+}
+
+function blockedByDeclarationPowerLimits(coverage, reason) {
+  return {
+    status: 'declaration_limit_violation',
+    operatingMode: 'baseline_fallback',
+    coverage,
+    rows: [],
+    fallbackReasons: [reason],
+    costSavingsYuan: null,
+  };
+}
+
 export function buildDeclarationRecommendation(
   featureStore = {},
   targetDate = '',
@@ -396,6 +423,29 @@ export function buildDeclarationRecommendation(
     optimizerPointCount: 0,
     fallbackPointCount: 0,
   };
+  const minDeclarationPowerMw = numeric(options.minDeclarationPowerMw);
+  const maxDeclarationPowerMw = numeric(options.maxDeclarationPowerMw);
+  const declarationPowerLimits = {
+    minDeclarationPowerMw,
+    maxDeclarationPowerMw,
+  };
+  const hasConfiguredMinimum =
+    options.minDeclarationPowerMw !== null &&
+    options.minDeclarationPowerMw !== undefined;
+  const hasConfiguredMaximum =
+    options.maxDeclarationPowerMw !== null &&
+    options.maxDeclarationPowerMw !== undefined;
+  const declarationPowerLimitsMissing =
+    !hasConfiguredMinimum && !hasConfiguredMaximum;
+  const declarationPowerLimitsInvalid = [
+    [options.minDeclarationPowerMw, minDeclarationPowerMw],
+    [options.maxDeclarationPowerMw, maxDeclarationPowerMw],
+  ].some(
+    ([configuredValue, parsedValue]) =>
+      configuredValue !== null &&
+      configuredValue !== undefined &&
+      (parsedValue === null || parsedValue < 0)
+  );
 
   if (!targetDate || targetRows.length !== expectedPointsPerDay) {
     return {
@@ -406,6 +456,38 @@ export function buildDeclarationRecommendation(
       fallbackReasons: ['target_default_declaration_incomplete'],
       costSavingsYuan: null,
     };
+  }
+
+  if (
+    declarationPowerLimitsMissing ||
+    declarationPowerLimitsInvalid ||
+    (declarationPowerLimits.minDeclarationPowerMw !== null &&
+      declarationPowerLimits.maxDeclarationPowerMw !== null &&
+      declarationPowerLimits.minDeclarationPowerMw >
+        declarationPowerLimits.maxDeclarationPowerMw)
+  ) {
+    return blockedByDeclarationPowerLimits(
+      emptyCoverage,
+      declarationPowerLimitsMissing
+        ? 'declaration_power_limits_missing'
+        : 'declaration_power_limits_invalid'
+    );
+  }
+
+  const baselineLimitReason = targetRows
+    .map((row) =>
+      declarationPowerLimitReason(
+        row.baselinePowerMw,
+        'baseline',
+        declarationPowerLimits
+      )
+    )
+    .find(Boolean);
+  if (baselineLimitReason) {
+    return blockedByDeclarationPowerLimits(
+      emptyCoverage,
+      baselineLimitReason
+    );
   }
 
   if (validation?.status !== 'validated' || !validation?.selectedModel) {
@@ -456,6 +538,7 @@ export function buildDeclarationRecommendation(
   });
   let optimizerPointCount = 0;
   let fallbackPointCount = 0;
+  const fallbackReasons = [];
   const rows = targetRows.map((row) => {
     const history = (historyByPoint.get(row.pointIndex) || []).slice(-windowDays);
     const canOptimize = history.length >= minHistoryPerPoint;
@@ -465,9 +548,23 @@ export function buildDeclarationRecommendation(
         ? row.baselinePowerMw
         : row.baselinePowerMw * (1 - weight) + historyMean * weight;
     const validCandidate = Number.isFinite(candidate) && candidate >= 0;
+    const candidateLimitReason =
+      canOptimize && validCandidate
+        ? declarationPowerLimitReason(
+            candidate,
+            'candidate',
+            declarationPowerLimits
+          )
+        : null;
     const recommendedPowerMw =
-      canOptimize && validCandidate ? candidate : row.baselinePowerMw;
-    const fallbackUsed = !canOptimize || !validCandidate;
+      canOptimize && validCandidate && !candidateLimitReason
+        ? candidate
+        : row.baselinePowerMw;
+    const fallbackUsed = !canOptimize || !validCandidate || !!candidateLimitReason;
+    if (!canOptimize || !validCandidate) {
+      fallbackReasons.push('point_history_insufficient');
+    }
+    if (candidateLimitReason) fallbackReasons.push(candidateLimitReason);
     optimizerPointCount += Number(!fallbackUsed);
     fallbackPointCount += Number(fallbackUsed);
     return {
@@ -476,11 +573,12 @@ export function buildDeclarationRecommendation(
       deltaPowerMw: round(recommendedPowerMw - row.baselinePowerMw),
       sourceModel: fallbackUsed ? 'default_declaration' : model.id,
       fallbackUsed,
+      ...(candidateLimitReason ? { fallbackReason: candidateLimitReason } : {}),
     };
   });
 
   return {
-    status: 'ready',
+    status: fallbackPointCount ? 'ready_with_fallback' : 'ready',
     operatingMode: 'validated_optimizer',
     coverage: {
       baselinePointCount: targetRows.length,
@@ -490,9 +588,15 @@ export function buildDeclarationRecommendation(
       fallbackPointCount,
     },
     rows,
-    fallbackReasons: fallbackPointCount
-      ? ['point_history_insufficient']
-      : [],
+    fallbackReasons: [
+      ...new Set(
+        fallbackReasons.length
+          ? fallbackReasons
+          : fallbackPointCount
+            ? ['point_history_insufficient']
+            : []
+      ),
+    ],
     latestActualDate,
     costSavingsYuan: null,
   };

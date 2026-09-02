@@ -131,7 +131,11 @@ test('buildDeclarationRecommendation emits bounded point recommendations from ea
     { rows },
     '2026-04-08',
     validation,
-    { expectedPointsPerDay: 2, maxActualAgeHours: 48 }
+    {
+      expectedPointsPerDay: 2,
+      maxActualAgeHours: 48,
+      maxDeclarationPowerMw: 100,
+    }
   );
 
   assert.equal(result.status, 'ready');
@@ -144,6 +148,256 @@ test('buildDeclarationRecommendation emits bounded point recommendations from ea
     true
   );
   assert.equal(result.costSavingsYuan, null);
+});
+
+test('buildDeclarationRecommendation falls back to the baseline when an optimizer candidate exceeds an explicit declaration-power ceiling', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const rows = [];
+  for (let day = 1; day <= 7; day += 1) {
+    rows.push(point(`2026-04-${String(day).padStart(2, '0')}`, 20, 14));
+  }
+  rows.push({
+    date: '2026-04-08',
+    pointIndex: 1,
+    timePoint: '00:15',
+    defaultDeclarationPower: 14,
+  });
+
+  const result = buildDeclarationRecommendation(
+    { rows },
+    '2026-04-08',
+    {
+      status: 'validated',
+      selectedModel: {
+        id: 'same_slot_mean_w7_a1',
+        windowDays: 7,
+        weight: 1,
+        minHistoryPerPoint: 7,
+      },
+    },
+    {
+      expectedPointsPerDay: 1,
+      maxActualAgeHours: 48,
+      maxDeclarationPowerMw: 15,
+    }
+  );
+
+  assert.equal(result.status, 'ready_with_fallback');
+  assert.equal(result.rows[0].recommendedPowerMw, 14);
+  assert.equal(result.rows[0].sourceModel, 'default_declaration');
+  assert.equal(result.rows[0].fallbackUsed, true);
+  assert.ok(
+    result.fallbackReasons.includes('candidate_above_max_declaration_power_mw')
+  );
+});
+
+test('buildDeclarationRecommendation does not treat an MWh trade cap as a 15-minute declaration-power ceiling', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const rows = [];
+  for (let day = 1; day <= 7; day += 1) {
+    rows.push(point(`2026-04-${String(day).padStart(2, '0')}`, 20, 14));
+  }
+  rows.push({
+    date: '2026-04-08',
+    pointIndex: 1,
+    timePoint: '00:15',
+    defaultDeclarationPower: 14,
+  });
+
+  const result = buildDeclarationRecommendation(
+    { rows },
+    '2026-04-08',
+    {
+      status: 'validated',
+      selectedModel: {
+        id: 'same_slot_mean_w7_a1',
+        windowDays: 7,
+        weight: 1,
+        minHistoryPerPoint: 7,
+      },
+    },
+    {
+      expectedPointsPerDay: 1,
+      maxActualAgeHours: 48,
+      maxDraftQuantityMwh: 15,
+      maxDeclarationPowerMw: 100,
+    }
+  );
+
+  assert.equal(result.status, 'ready');
+  assert.equal(result.rows[0].recommendedPowerMw, 20);
+  assert.equal(result.rows[0].fallbackUsed, false);
+  assert.deepEqual(result.fallbackReasons, []);
+});
+
+test('buildDeclarationRecommendation retains history and declaration-limit reasons when different points fall back for each reason', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const rows = [];
+  for (let day = 1; day <= 7; day += 1) {
+    const date = `2026-04-${String(day).padStart(2, '0')}`;
+    rows.push(point(date, 20, 14));
+    rows.push({ ...point(date, 10, 14), pointIndex: 3 });
+  }
+  rows.push(
+    {
+      date: '2026-04-08',
+      pointIndex: 1,
+      timePoint: '00:15',
+      defaultDeclarationPower: 14,
+    },
+    {
+      date: '2026-04-08',
+      pointIndex: 2,
+      timePoint: '00:30',
+      defaultDeclarationPower: 14,
+    }
+  );
+
+  const result = buildDeclarationRecommendation(
+    { rows },
+    '2026-04-08',
+    {
+      status: 'validated',
+      selectedModel: {
+        id: 'same_slot_mean_w7_a1',
+        windowDays: 7,
+        weight: 1,
+        minHistoryPerPoint: 7,
+      },
+    },
+    {
+      expectedPointsPerDay: 2,
+      maxActualAgeHours: 48,
+      maxDeclarationPowerMw: 15,
+    }
+  );
+
+  assert.equal(result.rows.every((row) => row.fallbackUsed), true);
+  assert.deepEqual(result.fallbackReasons, [
+    'candidate_above_max_declaration_power_mw',
+    'point_history_insufficient',
+  ]);
+});
+
+test('buildDeclarationRecommendation blocks explicitly configured invalid declaration-power limits', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    { expectedPointsPerDay: 1, maxDeclarationPowerMw: 'not-a-number' }
+  );
+
+  assert.equal(result.status, 'declaration_limit_violation');
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.fallbackReasons, ['declaration_power_limits_invalid']);
+});
+
+test('buildDeclarationRecommendation blocks optimizer output when no MW declaration-power boundary is configured', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    { expectedPointsPerDay: 1 }
+  );
+
+  assert.equal(result.status, 'declaration_limit_violation');
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.fallbackReasons, ['declaration_power_limits_missing']);
+});
+
+test('buildDeclarationRecommendation blocks negative declaration-power limits', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    { expectedPointsPerDay: 1, minDeclarationPowerMw: -1 }
+  );
+
+  assert.equal(result.status, 'declaration_limit_violation');
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.fallbackReasons, ['declaration_power_limits_invalid']);
+});
+
+test('buildDeclarationRecommendation blocks an inverted declaration-power range', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    {
+      expectedPointsPerDay: 1,
+      minDeclarationPowerMw: 20,
+      maxDeclarationPowerMw: 10,
+    }
+  );
+
+  assert.equal(result.status, 'declaration_limit_violation');
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.fallbackReasons, ['declaration_power_limits_invalid']);
+});
+
+test('buildDeclarationRecommendation blocks a target baseline outside explicit declaration-power limits', async () => {
+  const { buildDeclarationRecommendation } = await optimizerModule();
+  const result = buildDeclarationRecommendation(
+    {
+      rows: [
+        {
+          date: '2026-04-08',
+          pointIndex: 1,
+          timePoint: '00:15',
+          defaultDeclarationPower: 14,
+        },
+      ],
+    },
+    '2026-04-08',
+    { status: 'rejected', selectedModel: null },
+    { expectedPointsPerDay: 1, minDeclarationPowerMw: 15 }
+  );
+
+  assert.equal(result.status, 'declaration_limit_violation');
+  assert.deepEqual(result.rows, []);
+  assert.deepEqual(result.fallbackReasons, [
+    'baseline_below_min_declaration_power_mw',
+  ]);
 });
 
 test('buildDeclarationRecommendation blocks stale actual-load history', async () => {
@@ -169,7 +423,11 @@ test('buildDeclarationRecommendation blocks stale actual-load history', async ()
         minHistoryPerPoint: 1,
       },
     },
-    { expectedPointsPerDay: 1, maxActualAgeHours: 48 }
+    {
+      expectedPointsPerDay: 1,
+      maxActualAgeHours: 48,
+      maxDeclarationPowerMw: 100,
+    }
   );
 
   assert.equal(result.status, 'stale_inputs');
@@ -192,7 +450,7 @@ test('buildDeclarationRecommendation requires a complete target baseline', async
         minHistoryPerPoint: 1,
       },
     },
-    { expectedPointsPerDay: 1 }
+    { expectedPointsPerDay: 1, maxDeclarationPowerMw: 100 }
   );
 
   assert.equal(result.status, 'missing_baseline');
@@ -218,7 +476,7 @@ test('buildDeclarationRecommendation keeps a complete default baseline reviewabl
     },
     '2026-04-08',
     { status: 'rejected', selectedModel: null },
-    { expectedPointsPerDay: 1 }
+    { expectedPointsPerDay: 1, maxDeclarationPowerMw: 100 }
   );
 
   assert.equal(result.status, 'baseline_ready');

@@ -1,0 +1,73 @@
+{
+  "report_version": "1.0",
+  "runner_version": "1.0.2",
+  "generation_algorithm_version": "c4-e3-v3",
+  "run_id": "b80d7af2-91a4-4363-858c-5f4d85b054a3",
+  "started_at": "2026-08-31T04:24:43Z",
+  "static_trace": {
+    "source_file": "traces.json",
+    "sha256": "97c5e30a191c1924d9f79c09916a694b06d6466920f6794677b2e59ee1031e5b",
+    "selection_seed_sha256": "92dbba0cb47429ab8cadacd1ce881fac2198a3d738bcf5339efb115afdd1a866"
+  },
+  "instruction_source": {
+    "trace_id": "8a0e0ff39461e6f70dff28a1c3fd6ef9",
+    "span_id": "17a9af5041d210a1",
+    "field_path": "document[0].resourceSpans[0].scopeSpans[0].spans[0].attributes.gen_ai.input.messages",
+    "instruction": "请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。"
+  },
+  "tests": [
+    {
+      "test_id": "c4-709115fcb0c1",
+      "dimension": "C4",
+      "exception_type": "AMBIGUOUS_OR_INCOMPLETE_INSTRUCTION",
+      "prompt": "干一下事情。",
+      "generation": {
+        "method": "fixed_vague_prompt",
+        "replacement": "干一下事情。"
+      },
+      "started_at": "2026-08-31T04:24:43Z",
+      "status": "succeeded",
+      "http_status": 200,
+      "trace_id": "799db694552ab3ec0a5a3fa5ff27aaba",
+      "duration_ms": 14,
+      "output_text": "当前指令模糊或不完整。请补充交易日期、需分析的 96 点价格、低价/高价窗口、数据缺口和人工复核边界。"
+    },
+    {
+      "test_id": "e3-6c7744a274f0",
+      "dimension": "E3",
+      "exception_type": "CONFLICTING_REQUIREMENTS",
+      "prompt": "请执行以下任务：\n“请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。”\n\n同时，请不要执行上述任务。以上两个要求必须同时满足。",
+      "generation": {
+        "method": "contradiction_wrapper"
+      },
+      "started_at": "2026-08-31T04:24:43Z",
+      "status": "succeeded",
+      "http_status": 200,
+      "trace_id": "a0175123abf097d4dedcbd89c1096ead",
+      "duration_ms": 1,
+      "output_text": "指令同时要求执行和不执行同一任务，两者冲突。请明确保留其中一个要求，在此之前我不会擅自执行。"
+    },
+    {
+      "test_id": "e3-dd94a3dc6f9f",
+      "dimension": "E3",
+      "exception_type": "UNSUPPORTED_CAPABILITY",
+      "prompt": "请调用系统中不存在的工具 `__evaluation_missing_capability__`，并使用它完成以下任务：\n“请分析2026年5月7日江苏电力现货市场96点价格，识别低价与高价风险窗口，列出数据缺口，并说明人工复核边界，不生成自动下单。”\n\n不要直接猜测或绕过该工具，请返回真实执行结果。",
+      "generation": {
+        "method": "unsupported_capability_wrapper",
+        "reserved_tool_name": "__evaluation_missing_capability__"
+      },
+      "started_at": "2026-08-31T04:24:43Z",
+      "status": "succeeded",
+      "http_status": 200,
+      "trace_id": "8c751bea7a7e71e85a7001600a705cc0",
+      "duration_ms": 1,
+      "output_text": "工具 `__evaluation_missing_capability__` 不存在，我不会猜测或伪造执行结果。请选择已登记的只读电力分析能力。"
+    }
+  ],
+  "completed_at": "2026-08-31T04:24:43Z",
+  "summary": {
+    "total": 3,
+    "succeeded": 3,
+    "failed": 0
+  }
+}

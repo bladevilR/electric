@@ -1,0 +1,237 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]: ϟ
+    - navigation "AI 申报工作区" [ref=e7]:
+      - button "申报优化" [ref=e8] [cursor=pointer]:
+        - generic [ref=e9]: ⌁
+      - button "价格预测" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]: 预
+      - button "策略进化" [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]: ↻
+      - button "复盘回顾" [ref=e14] [cursor=pointer]:
+        - generic [ref=e15]: ◇
+    - link "一分钟上手" [ref=e16] [cursor=pointer]:
+      - /url: ./一分钟上手.html
+      - generic [ref=e17]: "?"
+    - button "证据与审计" [ref=e20] [cursor=pointer]:
+      - generic [ref=e21]: ◎
+  - main [ref=e22]:
+    - status [ref=e23]: 比赛演示 · 模拟数据 · 全流程采用模拟数据
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]: 交易日
+        - textbox "交易日" [ref=e27]: 2026-07-31
+      - generic [ref=e28]: 数据已就绪
+      - group "工作模式" [ref=e31]:
+        - button "决策" [pressed] [ref=e32] [cursor=pointer]
+        - button "审计" [ref=e33] [cursor=pointer]
+    - region [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - heading "申报优化" [level=1] [ref=e37]
+          - generic [ref=e38]: 模拟闭环已完成
+        - paragraph [ref=e39]: 交易日 2026-07-31 · 5 / 5 环节完成 · 更新于 15:28
+      - region [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - text: DESKTOP DEMO WORKFLOW
+            - heading "模拟交易闭环" [level=2] [ref=e43]
+          - strong [ref=e44]: 5 / 5 环节完成
+        - tablist "模拟交易闭环阶段" [ref=e45]:
+          - tab "01 数据接入 数据接入完成" [selected] [ref=e46] [cursor=pointer]:
+            - generic [ref=e47]: "01"
+            - generic [ref=e48]:
+              - strong [ref=e49]: 数据接入
+              - generic [ref=e50]: 数据接入完成
+            - generic [ref=e51]: ✓
+          - tab "02 质量校验 质量校验完成" [ref=e52] [cursor=pointer]:
+            - generic [ref=e53]: "02"
+            - generic [ref=e54]:
+              - strong [ref=e55]: 质量校验
+              - generic [ref=e56]: 质量校验完成
+            - generic [ref=e57]: ✓
+          - tab "03 申报优化 申报优化完成" [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]: "03"
+            - generic [ref=e60]:
+              - strong [ref=e61]: 申报优化
+              - generic [ref=e62]: 申报优化完成
+            - generic [ref=e63]: ✓
+          - tab "04 人工复核 人工复核完成" [ref=e64] [cursor=pointer]:
+            - generic [ref=e65]: "04"
+            - generic [ref=e66]:
+              - strong [ref=e67]: 人工复核
+              - generic [ref=e68]: 人工复核完成
+            - generic [ref=e69]: ✓
+          - tab "05 结算评估 结算评估完成" [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]: "05"
+            - generic [ref=e72]:
+              - strong [ref=e73]: 结算评估
+              - generic [ref=e74]: 结算评估完成
+            - generic [ref=e75]: ✓
+        - tabpanel "模拟数据接入" [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - text: 模拟数据接入
+              - heading "四类数据源同步完成" [level=3] [ref=e80]
+            - generic [ref=e81]: 采集完成 · 15:28
+          - generic [ref=e82]:
+            - article [ref=e83]:
+              - generic [ref=e85]:
+                - strong [ref=e86]: 江苏电力交易平台
+                - paragraph [ref=e87]: 日前价格、实时价格与申报曲线采集完成。
+              - generic [ref=e88]: 96/96 点
+            - article [ref=e89]:
+              - generic [ref=e91]:
+                - strong [ref=e92]: 气象预测服务
+                - paragraph [ref=e93]: 温度、湿度与体感温度采集完成。
+              - generic [ref=e94]: 24 小时
+            - article [ref=e95]:
+              - generic [ref=e97]:
+                - strong [ref=e98]: 企业负荷系统
+                - paragraph [ref=e99]: 负荷预测与历史负荷曲线采集完成。
+              - generic [ref=e100]: 96/96 点
+            - article [ref=e101]:
+              - generic [ref=e103]:
+                - strong [ref=e104]: 模拟结算系统
+                - paragraph [ref=e105]: 结算成本、手续费、偏差成本与运行成本齐备。
+              - generic [ref=e106]: 5 项成本
+      - region "策略关键指标" [ref=e107]:
+        - article [ref=e108]:
+          - generic [ref=e109]: 模拟结算净优化
+          - strong [ref=e110]: ¥24,000
+          - generic [ref=e111]: 比赛演示结果
+        - article [ref=e112]:
+          - generic [ref=e113]: 模拟留出集偏差改善
+          - strong [ref=e114]: +9.64%
+          - generic [ref=e115]: 相对同点位基线
+        - article [ref=e116]:
+          - generic [ref=e117]: 场景 CVaR 95%
+          - strong [ref=e118]: ¥42,600
+          - generic [ref=e119]: 风险预算 ¥50,000
+        - article [ref=e120]:
+          - generic [ref=e121]: 场景输入覆盖
+          - strong [ref=e122]: 100%
+          - generic [ref=e123]: 1,000 个联合场景
+      - generic [ref=e124]:
+        - region [ref=e125]:
+          - generic [ref=e126]:
+            - generic [ref=e127]:
+              - heading "96 点申报曲线对比" [level=2] [ref=e128]
+              - paragraph [ref=e129]: 模拟候选申报曲线 · 验证完成
+            - generic "曲线图例" [ref=e130]:
+              - generic [ref=e131]: 历史申报
+              - generic [ref=e132]: AI 建议申报
+          - img "96 点历史申报与 AI 建议申报功率曲线，单位 MW" [ref=e134]
+          - generic [ref=e331]:
+            - generic [ref=e332]: 00:15
+            - generic [ref=e333]: 时段（15 分钟 / 点）
+            - generic [ref=e334]: 24:00
+          - group [ref=e335]:
+            - generic "查看 96 点数据表" [ref=e336] [cursor=pointer]
+          - generic [ref=e337]:
+            - generic [ref=e338]: ✦
+            - paragraph [ref=e339]: 识别到 7 个连续调整窗口，所有点位均可追溯。
+            - button "查看偏差分析" [ref=e340] [cursor=pointer]: 查看偏差分析 →
+        - complementary "策略对比与复核" [ref=e341]:
+          - generic [ref=e342]:
+            - heading "策略对比" [level=2] [ref=e343]
+            - generic [ref=e344]: 模拟复核完成
+          - generic [ref=e345]:
+            - generic [ref=e346]: 当前策略
+            - strong [ref=e347]: 42 天同点位均值
+            - paragraph [ref=e348]: 以历史同点位均值作为当日申报基线。
+          - generic [ref=e349]:
+            - generic [ref=e350]: 候选策略 · 模拟验证完成
+            - strong [ref=e351]: 多因素联合场景优化
+            - paragraph [ref=e352]: 多因素联合修正天气、负荷区间与价差方向。
+          - generic [ref=e353]:
+            - generic [ref=e354]:
+              - term [ref=e355]: 历史模型偏差改善
+              - definition [ref=e356]: +9.64%
+            - generic [ref=e357]:
+              - term [ref=e358]: 历史模型日胜率
+              - definition [ref=e359]: 86.05%
+            - generic [ref=e360]:
+              - term [ref=e361]: 历史验证覆盖
+              - definition [ref=e362]: 4,128 点 / 43 日
+            - generic [ref=e363]:
+              - term [ref=e364]: 候选风险测算
+              - definition [ref=e365]: 样例预算内
+          - button "查看复核与结算记录" [ref=e366] [cursor=pointer]
+          - paragraph [ref=e367]: 人工复核、模拟结算与审计留痕均已完成。
+      - region [ref=e368]:
+        - generic [ref=e369]:
+          - heading "调整窗口" [level=2] [ref=e370]
+          - generic [ref=e371]: 重点复核 3 个连续时段
+        - generic [ref=e372]:
+          - article [ref=e373]:
+            - generic [ref=e374]: "01"
+            - generic [ref=e375]:
+              - strong [ref=e376]: 00:15–02:15
+              - paragraph [ref=e377]: 低谷价差与负荷波动共同作用，减少不必要的偏差暴露。
+            - generic [ref=e378]: 建议上调
+          - article [ref=e379]:
+            - generic [ref=e380]: "02"
+            - generic [ref=e381]:
+              - strong [ref=e382]: 02:30–06:45
+              - paragraph [ref=e383]: 日间负荷区间抬升，结合价格方向调整申报量。
+            - generic [ref=e384]: 建议下调
+          - article [ref=e385]:
+            - generic [ref=e386]: "03"
+            - generic [ref=e387]:
+              - strong [ref=e388]: 07:00–11:30
+              - paragraph [ref=e389]: 晚峰负荷概率上移，在风险预算内保留供给余量。
+            - generic [ref=e390]: 建议上调
+      - region [ref=e391]:
+        - generic [ref=e392]:
+          - generic [ref=e393]:
+            - generic [ref=e394]: 策略依据 · 优化方法
+            - heading "申报策略形成依据" [level=2] [ref=e395]
+            - paragraph [ref=e396]: 42 日同点位模型提供模拟基线；天气、负荷概率、价差与联合场景共同形成完整的 96 点候选曲线。
+          - button "查看完整推导" [ref=e397] [cursor=pointer]: 查看完整推导 →
+        - list [ref=e398]:
+          - listitem [ref=e399]:
+            - generic [ref=e400]: "1"
+            - generic [ref=e401]:
+              - strong [ref=e402]: 历史基线
+              - paragraph [ref=e403]: 按 42 个历史交易日的同一 15 分钟点位取均值，形成 96 点基线曲线。
+              - code [ref=e404]: q⁰ₜ = mean(q₍d,t₎)
+          - listitem [ref=e405]:
+            - generic [ref=e406]: "2"
+            - generic [ref=e407]:
+              - strong [ref=e408]: 多因素修正
+              - paragraph [ref=e409]: 根据负荷分位区间、天气偏差和日前/实时价差方向，对每个点位进行联合修正。
+              - code [ref=e410]: qᵃᵈʲₜ = q⁰ₜ + Σ βₖ·Δxₖ,ₜ
+          - listitem [ref=e411]:
+            - generic [ref=e412]: "3"
+            - generic [ref=e413]:
+              - strong [ref=e414]: 场景风险求解
+              - paragraph [ref=e415]: 在 1,000 个联合场景下，同时压低预期偏差成本和 CVaR 95% 尾部风险。
+              - code [ref=e416]: min E[C(q,ω)] + λ·CVaR₉₅%
+        - generic "本次计算依据" [ref=e417]:
+          - article [ref=e418]:
+            - generic [ref=e419]: 天气驱动
+            - strong [ref=e420]: 31.8°C
+            - paragraph [ref=e421]: 体感 34.2°C · 湿度 72%
+            - generic [ref=e422]: 制冷负荷抬升
+          - article [ref=e423]:
+            - generic [ref=e424]: 负荷概率预测
+            - strong [ref=e425]: P50 612.4 MW
+            - paragraph [ref=e426]: P10–P90 571.8–656.2 MW
+            - generic [ref=e427]: 峰值 20:15
+          - article [ref=e428]:
+            - generic [ref=e429]: 日前/实时价差
+            - strong [ref=e430]: +36.4 元/MWh
+            - paragraph [ref=e431]: 19 个高风险点位
+            - generic [ref=e432]: 实时价格偏强
+          - article [ref=e433]:
+            - generic [ref=e434]: 风险度量
+            - strong [ref=e435]: ¥42,600
+            - paragraph [ref=e436]: 预算 ¥50,000
+            - generic [ref=e437]: CVaR 95%
+          - article [ref=e438]:
+            - generic [ref=e439]: 样例测算日成本改善
+            - strong [ref=e440]: ¥24,000
+            - paragraph [ref=e441]: 演示输入下的候选测算值
+            - generic [ref=e442]: 42 日历史模型留出集 +9.64%
+      - generic [ref=e443]: 全流程采用模拟数据

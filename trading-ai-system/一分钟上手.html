@@ -325,12 +325,12 @@
         <article class="card">
           <span class="num">2</span>
           <strong>查看预测进度</strong>
-          <p>在工作台左侧“价格预测”查看累计进度。每天成功采集并保存有效价格数据才会计入，累计 5/5 后自动解锁。</p>
+          <p>在工作台左侧“价格预测”查看累计进度。每天成功采集并保存有效价格数据才会计入；累计 5 个有效历史交易日后，第 6 个交易日有目标日数据时启用历史同点位中位数基线预测。</p>
         </article>
         <article class="card">
           <span class="num">3</span>
           <strong>再看申报建议</strong>
-          <p>回到“AI申报优化”查看曲线和建议；进入“申报总览”核对数据缺口。所有建议都需要人工复核。</p>
+          <p>回到“申报优化”查看曲线和建议；其历史基线采用 42 日同点位模型，与价格预测的 5 日累计门槛不同。需要时可进入“策略进化”和“复盘回顾”继续核对。</p>
         </article>
       </div>
     </section>
@@ -368,16 +368,12 @@
       <h2 class="section-title">全量功能一眼看懂</h2>
       <div class="features">
         <article class="card">
-          <strong>AI申报优化</strong>
-          <p>查看 96 点申报曲线、偏差改善证据和需要人工复核的建议，不会自动提交交易。</p>
-        </article>
-        <article class="card">
-          <strong>申报总览与曲线对比</strong>
-          <p>核对当前交易日的数据缺口，并比较默认申报与建议申报曲线。</p>
+          <strong>申报优化</strong>
+          <p>查看 96 点申报曲线、基于 42 日同点位模型的历史基线、偏差改善证据和需要人工复核的建议。</p>
         </article>
         <article class="card">
           <strong>价格预测</strong>
-          <p>左侧有真实入口，显示“累计 N/5”。成功采集 5 个有效历史交易日后，第 6 个交易日有目标日数据时会自动启用历史同点位中位数基线预测。</p>
+          <p>显示“累计 N/5 个历史交易日”；达到累计 5/5 后，第 6 个交易日有目标日数据时会启用历史同点位中位数基线预测。</p>
         </article>
         <article class="card">
           <strong>策略进化</strong>
@@ -399,6 +395,7 @@
       <div class="boundaries">
         <div class="boundary">UKey 和登录态只留在你的电脑上。</div>
         <div class="boundary">系统只读取页面上已经显示的业务表格。</div>
+        <div class="boundary">样例和演示测算不等于实际结算收益，所有建议均须人工复核。</div>
         <div class="boundary">系统不会自动提交申报或交易。</div>
         <div class="boundary">遇到频率风险、跳登录或连续空数据，应先停止采集。</div>
       </div>

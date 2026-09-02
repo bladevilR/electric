@@ -1,54 +1,52 @@
-# STATUS — electric / JSPEC 相关
+# STATUS — electric / trading-ai-system
 
-更新时间：2026-08-01（5 分钟内参赛成片定版）
+更新时间：2026-08-30（v10 评审材料与现场演示包收口）
 
 ## 一句话目标
 
-电力/JSPEC 相关工具与文档可维护；UKey 登录问题单独跟踪，不在聊天写私钥。
-
-## 目标环境
-
-- `/Users/r/Documents/electric`
-- 子目录：`jspec-capture`、`trading-ai-system` 等
-
-## WIP 上限
-
-- 默认不占全局双主线名额，除非用户指定
+提供可复核、不会误导为自动交易或真实收益承诺的电力申报辅助工作台；真实策略、候选方法、样例测算和缺失数据必须明确分层。
 
 ## 当前主线
 
-1. **AI 电力交易副驾驶参赛成片（已完成本机真实验收）**
-   - 主线改为：AI 数据门禁 → 预测 → 96 点申报优化 → 成本证据 → 人工复核 → 结算回流
-   - 金额口径：单日 2.4 万元、月度 52.8 万元、年度 633.6 万元（按演示规模测算，非生产收益承诺）
-   - 正式术语：现行策略 / 候选优化策略 / 实时并行验证；策略版本镜头占比约 7.95%
-   - 4K 页面级素材，22 个后期摄影机节拍，9 个不低于 1.5 倍，最大 1.85 倍；38 段高对比字幕
-   - Qwen3-TTS Serena 固定 seed，四章连续旁白按真实时长排期；成片 3:48.68
-   - 自动媒体门禁全绿、完整解码、每 2 秒密集抽帧和本机真实时长播放已执行
-2. UKey/登录：仅测试环境策略，生产合规优先
+1. `trading-ai-system` v10 已完成代码修改、本机真实入口验收和评审交付包封装，改动仍在工作区，未擅自 commit/push。
+2. 真实默认入口当前数据不足：策略验证为 `not_validated / insufficient_history`，目标日推荐为 `missing_baseline`；系统按设计不生成虚假推荐或收益。
+3. UKey/JSPEC 真实采集与 Windows 接收机双击启动仍属于目标环境验收项；禁止在仓库或聊天中保存凭证、PIN、Cookie、Token 或私钥。
 
-## 最后真实验收证据
+## 本轮结果
 
-| 时间 | 内容 | 路径 |
-|---|---|---|
-| 2026-08-01 14:09 | 5 分钟内定版：页面级 4K 素材，22 个镜头节拍、9 个特写、38 段字幕；H.264/AAC 1920×1080、228.68 秒、29,686,456 字节；黑/白屏 0、最长静止 6.43 秒、最长静音 4.56 秒、完整解码通过 | `trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`；SHA-256 `c5daf840e2877a5a0cf904d048839f650194a66d5bf4724f15f92d35a8ff24a8`；报告 `trading-ai-system/output/video/验收报告.md` |
-| 2026-08-01 01:51 | 强运镜参赛成片：19 个镜头节拍、9 个 1.6 倍以上特写、最大 1.9 倍；无“AI 解说”标签；四章统一 Serena TTS 切分对齐 16 个真实镜头；H.264/AAC 1920×1080、259.200 秒、56,755,886 字节；QuickTime 完整播放 | `trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`；SHA-256 `b7192377199a93e73c01536ce95d78e974d1e296399c982860120d360d440f5a`；报告 `trading-ai-system/output/video/验收报告.md` |
-| 2026-08-01 01:05 | 电影感重制参赛版：10 次运镜、四章统一 Serena TTS、大字号动态字幕、正式策略验证术语；H.264/AAC 1920×1080、229.633 秒、44,720,800 字节；定向 49 项测试通过 | `trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`；SHA-256 `8cf0bccfb633d809e3c631db3fef7f532ce7cbdd742b7f20e3b0fc69d74aa0ce`；报告 `trading-ai-system/output/video/验收报告.md` |
-| 2026-07-31 23:20 | AI 电力交易副驾驶参赛版：14 个业务镜头 + 开场/结尾、五章统一 Qwen TTS、H.264/AAC 1920×1080、236.00 秒、32,009,570 字节；定向 44 项测试通过 | `trading-ai-system/output/video/电力交易AI-智能交易副驾驶-参赛版.mp4`；SHA-256 `d369ed2eb2ad192a90815fa7866bd125993c355f6275cc866f430a7ee9106d86`；报告 `trading-ai-system/output/video/验收报告.md` |
-| 2026-07-31 21:47 | 策略自进化叙事成片：13 镜头（含进化中枢与人工审批）、Qwen3-TTS Serena 固定 seed、H.264/AAC 1920×1080、124.47 秒、15,638,006 字节；定向 38 项测试通过 | `trading-ai-system/output/video/电力交易AI-两分钟演示-最终版.mp4`；SHA-256 `0325fdd5e7b199fd13cb0c4078f5660dd88779dc965abdf2ee26c00f4b832944`；报告 `trading-ai-system/output/video/验收报告.md` |
-| 2026-07-31 17:09 | 前端动效版本地模拟成片（前序） | 见历史 output/video 与当时验收报告 |
-| 2026-07-31 16:18 | Windows 一键启动 + 无人值守录制合并包；钉钉送达王莹 | `dist/trading-ai-system-windows-auto-recording-20260731.zip` |
+- 拆分 42 日同点位历史模型证据与未独立回测的多因素候选，消除 `9.64% / 86.05%` 误归属。
+- 演示入口持续显示“演示环境 · 样例输入”；`¥24,000` 只作为样例测算，默认真实入口不出现。
+- 新增明确的 MW 申报功率上下限；缺失/非法边界或基线越界时阻断，候选越界时标记安全回退，不误用 MWh 交易量限额。
+- 修复移动端横向溢出、宽表局部滚动、导航/日期/模式语义、曲线键盘冗余焦点和证据对话框焦点管理；新增可展开的 96 点明细表。
+- 异步主操作增加防重复提交门禁；README、两份上手页和交接文档已同步。
 
-## 当前验收缺口
+## 新鲜验收证据
 
-- 5 分钟内定版已完成本机技术与完整播放验收；仍待用户/评委主观审片打分。
-- Windows 10/11 真实接收机解压双击 `启动系统.bat` / `录制比赛视频.bat` 仍未收到实机结果。
-- 全仓 155 项测试中 153 项通过；`server-contract` 的历史夹具和 `settlement-reference` 的本地 Excel/导出引用在当前 worktree 缺失，与本轮成片无关，未伪造补绿。
+- 全量：`XDG_CACHE_HOME=<本轮独立临时目录> node --test --test-concurrency=1 test/*.test.mjs`
+  - 216 项：215 通过、0 失败、1 跳过。
+  - 跳过项为本机未提供被 Git 忽略的真实业务 Excel，不伪造数据补绿。
+- 语法/差异：`node --check workbench.js server.mjs lib/declaration-optimizer.mjs` 与 `git diff --check`。
+- 系统 Chrome 真实入口：1440、768、390、320 px 无横向溢出、无控制台错误；默认入口无演示标签/样例金额；390 px 完整推导页无溢出并显示“尚未独立回测”。
+- 自动化浏览器专项另覆盖 1024 px、证据对话框焦点闭环和价格预测局部滚动。
+- 从最终 ZIP 干净解压后，以系统 Chrome 实测 v10 submission 入口、完整推导、价格预测、人工复核和证据链；控制台 0 错误。
+- 最终视频：197.47 秒，1920×1080、30fps、H.264 High + AAC LC 48kHz 双声道；全片解码通过，无黑屏段，无 ≥3 秒静音段。
 
-## 完成门禁
+## 评审交付物
 
-- 涉及证书/私钥：只写操作步骤与路径，不落盘私钥内容到 git
-- 宣称完成：真实环境证据（本轮 macOS 成片 + 定向测试已附）
+- 总包：`dist/电力交易AI-v10-评审提交包-20260830.zip`（67,957,047 bytes；SHA-256 `bcf9db7f58eb8e2a53e6c9a1a9a1989ecad6b2dd4f3afdff6121b64abbdb7eda`）。
+- 成片：`trading-ai-system/output/video/电力交易AI-智能交易副驾驶-v10-最终提交版.mp4`。
+- Windows 演示包：`dist/trading-ai-system-one-minute.zip`，内置 Node.js；双击入口直接打开 v10 submission 页面。
+- 说明：`trading-ai-system/现场演示与提交说明.md`。
 
-## 密钥
+## 完成边界
 
-- UKey 相关：**禁止**复制私钥进仓库或 agentmemory
+- 本轮完成的是本地代码、文案和浏览器行为验收，不等于生产交易有效性或真实收益验证。
+- 多因素联合场景策略仍是候选方法，缺少独立回测、真实 β 系数和场景样本，不得描述为已验证模型。
+- 42 日模型证据衡量的是负荷偏差 MAE，不等同于结算成本或人民币收益。
+- 生产使用仍须补齐真实日数据、MW 申报边界、结算证据，并由人工复核；系统不会自动申报或下单。
+
+## 接手入口
+
+- 先读 `trading-ai-system/CURRENT_HANDOFF.md` 与 `trading-ai-system/README.md`。
+- 本地启动：在 `trading-ai-system` 运行 `node server.mjs --port 5177`。
+- 页面：`http://127.0.0.1:5177/?demo=submission&v=20260830-workstation-v10`。

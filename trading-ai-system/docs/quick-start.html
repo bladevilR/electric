@@ -129,7 +129,7 @@
         </div>
         <div class="step">
           <strong>2. 双击启动</strong>
-          <span>双击 <code>start-ukey-assistant.bat</code>。模型已经配好，不需要再填 Key。</span>
+          <span>Windows 双击 <code>启动系统.bat</code>。模型已经配好，不需要再填 Key。</span>
         </div>
         <div class="step">
           <strong>3. 进入系统</strong>
@@ -139,13 +139,13 @@
     </section>
 
     <section>
-      <h2>实时数据怎么采</h2>
+      <h2>申报优化怎么开始</h2>
       <ol>
         <li>插上 UKey。</li>
-        <li>进入左侧 <strong>实时数据助手</strong>。</li>
-        <li>点击 <strong>打开数据窗口</strong>。</li>
+        <li>进入左侧 <strong>申报优化</strong>。</li>
+        <li>数据未就绪时，点击页面给出的采集或补齐按钮。</li>
         <li>在弹出的浏览器窗口里登录 JSPEC，停在任意 JSPEC 页面即可。</li>
-        <li>回到助手页面，点击 <strong>自动扫核心页</strong>；系统会先低频巡扫首页、实时均价、实际负荷、日结算。</li>
+        <li>回到工作台重新检查数据；系统只读取页面已显示的信息，不会自动提交交易。</li>
       </ol>
     </section>
 
@@ -169,17 +169,17 @@
 
     <section>
       <h2>交易草稿怎么用</h2>
-      <p>进入 <strong>交易草稿复核</strong>，点击 <strong>生成交易草稿</strong>。系统会把建议整理出来，但电量、限价和是否采纳都需要人工确认。</p>
+      <p>在 <strong>申报优化</strong> 中点击 <strong>进入人工复核</strong>，再通过 <strong>证据与审计</strong> 核对输入、约束和回退原因。电量、限价和是否采纳都需要人工确认。</p>
     </section>
 
     <section>
       <h2>省钱策略闭环怎么看？</h2>
       <ol>
-        <li>先看 <strong>数据资产</strong>：确认 raw captures 里已有多少实时均价、出清价、申报、合同和交易序列。</li>
-        <li>再看 <strong>预测实验室</strong>：如果显示 <code>insufficient_history</code> 或 <code>heuristic_fallback</code>，说明当前只能用基线和规则。</li>
-        <li>查看 <strong>回测结果</strong>：历史不足时不会声称模型有效；缺实际负荷和结算时不会声称节省金额。</li>
-        <li>最后看 <strong>省钱策略</strong>：保守、中性、激进三档都只是人工决策支持，不会自动提交 JSPEC。</li>
-        <li>需要补数据时，只按 <strong>补采队列</strong> 慢速补采，最多 4 个目标，每个目标至少间隔 20 秒。</li>
+        <li>先看 <strong>申报优化</strong>：确认 96 点基线、推荐曲线、限制条件和回退原因。</li>
+        <li>再看 <strong>价格预测</strong>：至少累计 5 个有效历史交易日才会形成五日预测结果。</li>
+        <li>查看 <strong>策略进化</strong>：42 日同点位历史模型的留出集证据与未独立回测的候选方法会分开呈现。</li>
+        <li>最后看 <strong>复盘回顾</strong>：缺实际负荷和结算数据时，不会声称已实现人民币节省。</li>
+        <li>演示页中的金额是样例输入测算，不是实际收益；所有建议都必须人工复核。</li>
       </ol>
     </section>
 

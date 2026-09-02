@@ -1,0 +1,27 @@
+{
+  "schema_version": "2.0",
+  "file": "/Users/r/Documents/electric/trading-ai-system/competition-delivery/upload/traces-dynamic.json",
+  "valid": true,
+  "input_format": "otlp_json",
+  "input_format_valid": true,
+  "genai_fields_valid": true,
+  "evaluation_compatible": true,
+  "trace_integrity_valid": true,
+  "validator_spec": {
+    "validator_version": "2.1.0",
+    "report_schema_version": "2.0",
+    "genai_registry_version": "v8",
+    "genai_registry_sha256": "337a1b0ab14a9d9f1fe382871e7ab14598e50815fe8fbe4f4b7c8defe9cce195",
+    "trace_rules_version": "evaluation-v7-2026-08-21"
+  },
+  "input_record_count": 4,
+  "total_spans": 4,
+  "parsed_spans": 4,
+  "valid_spans": 4,
+  "trace_count": 3,
+  "valid_trace_count": 3,
+  "error_count": 0,
+  "warning_count": 0,
+  "errors": [],
+  "warnings": []
+}

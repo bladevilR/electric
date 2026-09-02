@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import * as browserRecording from '../recording/local/record-browser-video.mjs';
 import * as videoProduction from '../recording/local/lib/video-production.mjs';
+import { selectNarrationBackend } from '../recording/local/render-narration.mjs';
 import {
   cameraTransformCss,
   computeCameraTransform,
@@ -85,6 +86,38 @@ test('允许 settled 演示入口用于录制已核验成本证据', () => {
     fps: 30,
   });
   assert.match(config.baseUrl, /demo=settled/);
+});
+
+test('允许 submission 演示入口录制当前评审工作台', () => {
+  const config = validateProductionConfig({
+    baseUrl: 'http://127.0.0.1:5177/?demo=submission&v=20260830-workstation-v10',
+    width: 1920,
+    height: 1080,
+    fps: 30,
+  });
+  assert.match(config.baseUrl, /demo=submission/);
+});
+
+test('Qwen 运行时离线时在 macOS 选择本地中文系统声线', () => {
+  assert.equal(
+    selectNarrationBackend({
+      qwenPythonAvailable: false,
+      macSayAvailable: true,
+      platform: 'darwin',
+    }),
+    'macos-say'
+  );
+});
+
+test('Qwen 运行时可用时仍优先使用 Serena', () => {
+  assert.equal(
+    selectNarrationBackend({
+      qwenPythonAvailable: true,
+      macSayAvailable: true,
+      platform: 'darwin',
+    }),
+    'qwen3-tts'
+  );
 });
 
 test('生成 1920x1080、30 帧且带开场结尾的连续时间线', () => {
@@ -442,6 +475,17 @@ test('开场卡退场后的首个工作台镜头会重新播放完整动效', ()
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('intro'), false);
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('opening'), true);
   assert.equal(browserRecording.shouldReplayWorkbenchMotion('core-metrics'), false);
+});
+
+test('真实录制等待当前 v10 申报工作台，而不是已废弃的旧首页标题', async () => {
+  const source = await readFile(
+    new URL('../recording/local/record-browser-video.mjs', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(source, /#submissionWorkstationTitle/);
+  assert.doesNotMatch(source, /waitForSelector\("#declarationDashboardTitle"/);
+  assert.doesNotMatch(source, /6,336,000|633\.6万元/);
 });
 
 test('smoke 快速遍历全部镜头且不把完整章节旁白塞进短时间线', () => {

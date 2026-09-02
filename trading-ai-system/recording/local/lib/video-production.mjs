@@ -400,8 +400,8 @@ export function buildProductionStages(stage = 'all', { smoke = false } = {}) {
 
 export function validateProductionConfig(config) {
   const parsedUrl = new URL(config.baseUrl);
-  if (!['reviewable', 'settled'].includes(parsedUrl.searchParams.get('demo'))) {
-    throw new Error('录制入口必须包含 demo=reviewable 或 demo=settled 演示标识');
+  if (!['reviewable', 'settled', 'submission'].includes(parsedUrl.searchParams.get('demo'))) {
+    throw new Error('录制入口必须包含 demo=reviewable、demo=settled 或 demo=submission 演示标识');
   }
   if (
     config.width !== DEFAULT_WIDTH ||

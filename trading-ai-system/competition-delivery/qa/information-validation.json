@@ -1,0 +1,47 @@
+{
+  "source": "/Users/r/Documents/electric/trading-ai-system/competition-delivery/upload/information.json",
+  "verdict": "可提交",
+  "status": "pass",
+  "scope": "information_format_only",
+  "service_information_gate": "pass",
+  "dimensions": [
+    "P1",
+    "P2",
+    "C1",
+    "C2",
+    "C4",
+    "E1",
+    "E2",
+    "E3",
+    "MEMORY",
+    "L1"
+  ],
+  "errors": [],
+  "notices": [],
+  "phase_checks": [
+    {
+      "dimension": "C1",
+      "message": "声明的预期结果是否被实际输出支持，要在正式评分阶段判断。"
+    },
+    {
+      "dimension": "C2",
+      "message": "事实、规则和结论是否被实际推理使用，要在正式评分阶段判断。"
+    },
+    {
+      "dimension": "E1",
+      "message": "trace_id、span_id、成果引用和哈希要在正式评分阶段与上传日志/成果核对。"
+    },
+    {
+      "dimension": "E2",
+      "message": "工具调用、参数、返回结果和调用链要在正式评分阶段与日志核对。"
+    },
+    {
+      "dimension": "MEMORY",
+      "message": "字段路径是否真实存在、是否形成记忆链路要在正式评分阶段与日志核对。"
+    }
+  ],
+  "summary": {
+    "error_count": 0,
+    "notice_count": 0
+  }
+}

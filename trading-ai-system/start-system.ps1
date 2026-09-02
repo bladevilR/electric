@@ -195,7 +195,7 @@ if (-not $node) {
 }
 
 Write-StartupMessage "Using Node runtime: $node"
-$workbenchUrl = "http://127.0.0.1:$Port/"
+$workbenchUrl = "http://127.0.0.1:$Port/?demo=submission&v=20260830-workstation-v12"
 $healthUrl = "http://127.0.0.1:$Port/api/health"
 
 try {

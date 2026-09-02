@@ -1,0 +1,10 @@
+{
+  "data_source": "repository_sample",
+  "source_path": "data/standard-96.sample.json",
+  "is_repository_sample": true,
+  "production_ready": false,
+  "executable_trading_output": false,
+  "realized_savings_claimed": false,
+  "human_review_required": true,
+  "statement": "本次材料基于仓库样例数据，仅用于竞赛能力与日志格式评测；不代表真实生产数据、可执行交易指令或已实现收益。"
+}

@@ -1,4 +1,11 @@
 {
+  "scripts": {
+    "competition:setup": "node tools/competition-tools.mjs setup",
+    "competition:doctor": "node tools/competition-tools.mjs doctor",
+    "competition:smoke": "node tools/competition-tools.mjs smoke",
+    "competition:build-delivery": "node tools/build-competition-delivery.mjs build",
+    "competition:verify-delivery": "node tools/build-competition-delivery.mjs verify"
+  },
   "dependencies": {
     "playwright": "^1.52.0"
   }

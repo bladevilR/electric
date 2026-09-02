@@ -48,6 +48,17 @@ import {
   buildDeclarationRecommendation,
 } from './lib/declaration-optimizer.mjs';
 import { buildStrategyEvolution } from './lib/strategy-evolution.mjs';
+import {
+  createCompetitionMemoryStore,
+  competitionRequestRoute,
+  executeCompetitionAgent,
+  parseCompetitionChatRequest,
+} from './lib/competition-agent.mjs';
+import {
+  appendCompetitionTrace,
+  buildCompetitionTrace,
+  indexCompetitionEvidence,
+} from './lib/competition-trace.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -96,6 +107,13 @@ const host = process.env.HOST || '127.0.0.1';
 const standardPath = path.resolve(getArgValue('--standard', defaultStandardPath));
 const pythonPath = getArgValue('--python', process.env.TRADING_AI_PYTHON || '');
 const auditLogPath = path.resolve(getArgValue('--audit', process.env.TRADING_AUDIT_LOG || defaultAuditLogPath));
+const competitionTraceLogPath = path.resolve(
+  getArgValue(
+    '--competition-trace-log',
+    process.env.COMPETITION_TRACE_LOG || path.resolve(rootDir, '.competition-runtime/traces.ndjson')
+  )
+);
+const competitionMemoryStore = createCompetitionMemoryStore();
 
 function sendJson(response, payload, statusCode = 200) {
   const body = JSON.stringify(payload, null, 2);
@@ -139,6 +157,23 @@ async function readJsonBody(request) {
     return {};
   }
   return JSON.parse(body);
+}
+
+async function readCompetitionJsonBody(request, maxBytes = 1024 * 1024) {
+  let total = 0;
+  const chunks = [];
+  for await (const chunk of request) {
+    total += chunk.length;
+    if (total > maxBytes) {
+      const error = new Error(`request body exceeds ${maxBytes} bytes`);
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  const text = Buffer.concat(chunks).toString('utf8');
+  if (!text.trim()) throw new Error('request body must not be empty');
+  return JSON.parse(text);
 }
 
 function contentType(filePath) {
@@ -418,6 +453,88 @@ async function loadProductionReadiness(date = '') {
   });
 }
 
+function competitionDate(instruction) {
+  const matched = instruction.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日/);
+  if (!matched) return '';
+  return `${matched[1]}-${matched[2].padStart(2, '0')}-${matched[3].padStart(2, '0')}`;
+}
+
+function sendCompetitionError(response, error) {
+  sendJson(response, {
+    error: {
+      message: error?.message || String(error),
+      type: 'invalid_request_error',
+      code: error?.statusCode === 413 ? 'request_too_large' : 'invalid_request',
+    },
+  }, error?.statusCode || 400);
+}
+
+async function handleCompetitionChat(request, response) {
+  try {
+    if (!String(request.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+      const error = new Error('content-type must be application/json');
+      error.statusCode = 415;
+      throw error;
+    }
+    const startedAtUnixNano = String(BigInt(Date.now()) * 1_000_000n);
+    const parsed = parseCompetitionChatRequest(await readCompetitionJsonBody(request));
+    const date = competitionDate(parsed.instruction);
+    const dataSource = standardPath.endsWith(`${path.sep}data${path.sep}standard-96.sample.json`)
+      ? 'repository_sample'
+      : 'configured_standard';
+    let context = { dataSource, date };
+    if (competitionRequestRoute(parsed) === 'domain_analysis') {
+      const dataset = await loadDataset();
+      const readiness = await loadProductionReadiness(date);
+      context = {
+        ...context,
+        advice: buildStrategyAdvice(dataset, { date }),
+        suggestions: buildStrategySuggestions(dataset, { date }),
+        readiness,
+      };
+    }
+    const result = executeCompetitionAgent({
+      request: parsed,
+      context,
+      memoryStore: competitionMemoryStore,
+    });
+    const endedAtUnixNano = String(BigInt(Date.now()) * 1_000_000n + 1n);
+    const trace = buildCompetitionTrace({
+      request: parsed,
+      result,
+      dataSource,
+      model: parsed.model,
+      startedAtUnixNano,
+      endedAtUnixNano,
+    });
+    await appendCompetitionTrace(competitionTraceLogPath, trace);
+    const evidence = indexCompetitionEvidence(trace);
+    const traceId = evidence.root.traceId;
+    const spanId = evidence.root.spanId;
+    const body = JSON.stringify({
+      id: `chatcmpl-${traceId}`,
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: parsed.model,
+      choices: [{ index: 0, message: { role: 'assistant', content: result.content }, finish_reason: result.finishReason }],
+      usage: {
+        prompt_tokens: Math.max(1, Math.ceil(parsed.instruction.length / 2)),
+        completion_tokens: Math.max(1, Math.ceil(result.content.length / 2)),
+        total_tokens: Math.max(2, Math.ceil((parsed.instruction.length + result.content.length) / 2)),
+      },
+      trace_id: traceId,
+    }, null, 2);
+    response.writeHead(200, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      traceparent: `00-${traceId}-${spanId}-01`,
+    });
+    response.end(body);
+  } catch (error) {
+    sendCompetitionError(response, error);
+  }
+}
+
 async function loadUkeyStatus(dataset = null) {
   const [resolvedDataset, visibleSnapshot, visibleHistory] = await Promise.all([
     dataset ? Promise.resolve(dataset) : loadDataset(),
@@ -599,13 +716,19 @@ async function handleApi(request, response, url) {
     url.pathname === '/api/declaration-optimizer/recommendation'
   ) {
     const date = url.searchParams.get('date') || '';
-    const [context, validation] = await Promise.all([
+    const [context, validation, businessInputs] = await Promise.all([
       loadForecastContext(date),
       loadDeclarationOptimizerValidation(),
+      loadBusinessInputs(),
     ]);
     sendJson(
       response,
-      buildDeclarationRecommendation(context.allFeatureStore, date, validation)
+      buildDeclarationRecommendation(context.allFeatureStore, date, validation, {
+        minDeclarationPowerMw:
+          businessInputs.tradeLimits?.values?.minDeclarationPowerMw,
+        maxDeclarationPowerMw:
+          businessInputs.tradeLimits?.values?.maxDeclarationPowerMw,
+      })
     );
     return;
   }
@@ -879,6 +1002,10 @@ async function handleStatic(response, urlPath) {
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`);
+    if (request.method === 'POST' && url.pathname === '/v1/chat/completions') {
+      await handleCompetitionChat(request, response);
+      return;
+    }
     if (url.pathname.startsWith('/api/')) {
       await handleApi(request, response, url);
       return;
