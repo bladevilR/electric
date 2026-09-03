@@ -7,6 +7,7 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { appendFact, emptyStore, writePointInTimeStoreAtomic } from '../lib/point-in-time-store.mjs';
 
 const systemRoot = fileURLToPath(new URL('..', import.meta.url));
 const localCaptureStandardPath = path.resolve(
@@ -30,6 +31,7 @@ async function startServer(options = {}) {
   const auditPath = path.join(temp, 'audit-log.ndjson');
   const visibleSnapshotPath = path.join(temp, 'ukey-visible-snapshot.json');
   const visibleHistoryPath = path.join(temp, 'ukey-visible-history.json');
+  const pointInTimeStorePath = path.join(temp, 'point-in-time-facts.json');
   const args = [
     'server.mjs',
     '--port',
@@ -40,6 +42,8 @@ async function startServer(options = {}) {
     visibleSnapshotPath,
     '--visible-history',
     visibleHistoryPath,
+    '--point-in-time-store',
+    pointInTimeStorePath,
   ];
   if (options.standard) args.push('--standard', options.standard);
   if (options.python) args.push('--python', options.python);
@@ -77,6 +81,7 @@ async function startServer(options = {}) {
   return {
     baseUrl: `http://${options.clientHost || '127.0.0.1'}:${port}`,
     visibleHistoryPath,
+    pointInTimeStorePath,
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
@@ -97,6 +102,42 @@ test('forecast API stays available when the optional settlement reference runtim
 
     assert.equal(response.status, 200);
     assert.ok(['insufficient_history', 'baseline_ready'].includes(report.status));
+  } finally {
+    await server.close();
+  }
+});
+
+test('catalog and point-in-time APIs expose cutoff-safe read-only context', async () => {
+  const server = await startServer();
+  try {
+    let store = appendFact(emptyStore(), {
+      sourceId: 'JSPEC-P0-3', fieldId: 'dayAheadUserPriceTemporaryYuanPerMwh', businessDate: '2026-08-24',
+      pointIndex: 1, value: 318.5, availableAt: '2026-08-23T10:00:00+08:00', capturedAt: '2026-08-23T10:01:00+08:00', sourceRevision: 'r1'
+    });
+    store = appendFact(store, {
+      sourceId: 'JSPEC-P0-3', fieldId: 'dayAheadUserPriceTemporaryYuanPerMwh', businessDate: '2026-08-24',
+      pointIndex: 1, value: 999, availableAt: '2026-08-23T13:00:00+08:00', capturedAt: '2026-08-23T13:01:00+08:00', sourceRevision: 'r2'
+    });
+    await writePointInTimeStoreAtomic(server.pointInTimeStorePath, store);
+
+    const [sourcesResponse, fieldsResponse, contextResponse] = await Promise.all([
+      fetch(`${server.baseUrl}/api/data-sources`),
+      fetch(`${server.baseUrl}/api/field-catalog`),
+      fetch(`${server.baseUrl}/api/point-in-time/context?date=2026-08-24&asOf=${encodeURIComponent('2026-08-23T12:00:00+08:00')}&fields=dayAheadUserPriceTemporaryYuanPerMwh`),
+    ]);
+    const sources = await sourcesResponse.json();
+    const fields = await fieldsResponse.json();
+    const context = await contextResponse.json();
+    assert.equal(sourcesResponse.headers.get('cache-control'), 'no-store');
+    assert.ok(sources.sources.some((source) => source.sourceId === 'JSPEC-P0-3'));
+    assert.ok(fields.fields.some((field) => field.fieldId === 'dayAheadUserClearedPowerMw'));
+    assert.doesNotMatch(JSON.stringify(fields), /"(?:cookie|token|authorization|pin|private[_ -]?key|password)"\s*:/i);
+    assert.equal(context.rows[0].fields.dayAheadUserPriceTemporaryYuanPerMwh, 318.5);
+    assert.deepEqual(context.rows[0].selectedFactIds, [store.facts[0].factId]);
+
+    const future = await fetch(`${server.baseUrl}/api/point-in-time/context?date=2026-08-24&asOf=2999-01-01T00:00:00Z`);
+    assert.equal(future.status, 400);
+    assert.equal((await future.json()).error.code, 'as_of_in_future');
   } finally {
     await server.close();
   }
@@ -376,6 +417,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(health.name, 'trading-ai-system');
     assert.equal(health.modelRuntime.provider, 'openai_compatible');
     assert.equal(health.modelRuntime.configured, false);
+    assert.equal(health.pointInTimeStorePath, server.pointInTimeStorePath);
 
     assert.equal(summary.rowCount, expectedStandardSummary.rowCount);
     assert.equal(summary.p0SourceCoverage.present, 8);
@@ -658,4 +700,17 @@ test('one-minute onboarding page is friendly and launchable', async () => {
   assert.match(packageScript, /trading-ai-system-one-minute/);
   assert.doesNotMatch(packageScript, /ukey-visible-history\.json/);
   assert.ok(iconInfo.size > 1000);
+});
+
+test('documentation connects onsite evidence to canonical point-in-time fields', async () => {
+  const [readme, taskSheet, dictionary] = await Promise.all([
+    readFile(path.join(systemRoot, 'README.md'), 'utf8'),
+    readFile(path.join(systemRoot, 'docs/ukey现场字段探索任务单.md'), 'utf8'),
+    readFile(path.join(systemRoot, 'docs/data-source-field-dictionary-v1.md'), 'utf8'),
+  ]);
+  const documentation = `${readme}\n${taskSheet}\n${dictionary}`;
+  assert.match(documentation, /dayAheadUserClearedPowerMw/);
+  assert.match(documentation, /临时价、最终价、有效价/);
+  assert.match(documentation, /availableAt <= decisionCutoffAt/);
+  assert.match(documentation, /只读页面可见数据/);
 });

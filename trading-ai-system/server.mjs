@@ -48,6 +48,10 @@ import {
   buildDeclarationRecommendation,
 } from './lib/declaration-optimizer.mjs';
 import { buildStrategyEvolution } from './lib/strategy-evolution.mjs';
+import { loadDataSourceRegistry } from './lib/data-source-registry.mjs';
+import { loadFieldCatalog } from './lib/field-catalog.mjs';
+import { readPointInTimeStore } from './lib/point-in-time-store.mjs';
+import { buildFeatureSnapshot } from './lib/feature-snapshot.mjs';
 import {
   createCompetitionMemoryStore,
   competitionRequestRoute,
@@ -72,6 +76,8 @@ const defaultStandardPath = existsSync(localCaptureStandardPath)
 const browserDataPath = path.resolve(rootDir, 'data/standard-96.js');
 const integrationSummaryPath = path.resolve(rootDir, 'data/integration-summary.json');
 const integrationBuildScriptPath = path.resolve(rootDir, 'tools/build-integration-summary.py');
+const dataSourceRegistryPath = path.resolve(rootDir, 'config/data-sources.json');
+const fieldCatalogPath = path.resolve(rootDir, 'config/field-catalog.json');
 const defaultAuditLogPath = path.resolve(rootDir, 'data/audit-log.ndjson');
 const businessInputsDir = path.resolve(rootDir, 'data/business-inputs');
 const defaultCaptureOutputPath = path.resolve(rootDir, '../jspec-capture/output');
@@ -85,6 +91,15 @@ const visibleHistoryPath = path.resolve(
   getArgValue(
     '--visible-history',
     process.env.TRADING_VISIBLE_HISTORY_PATH || path.resolve(rootDir, 'data/ukey-visible-history.json')
+  )
+);
+const defaultPointInTimeStorePath = process.platform === 'win32' && process.env.LOCALAPPDATA
+  ? path.resolve(process.env.LOCALAPPDATA, 'ElectricTradingAI/data/point-in-time-facts.json')
+  : path.resolve(rootDir, 'data/point-in-time-facts.json');
+const pointInTimeStorePath = path.resolve(
+  getArgValue(
+    '--point-in-time-store',
+    process.env.TRADING_POINT_IN_TIME_STORE_PATH || defaultPointInTimeStorePath
   )
 );
 const startTime = Date.now();
@@ -450,6 +465,13 @@ async function loadProductionReadiness(date = '') {
       integrationSummaryPath,
       auditLogPath,
     },
+    governance: {
+      fieldCatalogLoaded: existsSync(fieldCatalogPath),
+      sourceRegistryLoaded: existsSync(dataSourceRegistryPath),
+      p0SemanticsConfirmed: false,
+      pointInTimeStoreWritable: Boolean(pointInTimeStorePath),
+      featureSnapshotLeakageGuardEnabled: true,
+    },
   });
 }
 
@@ -564,6 +586,57 @@ async function loadUkeyStatus(dataset = null) {
 }
 
 async function handleApi(request, response, url) {
+  if (request.method === 'GET' && url.pathname === '/api/data-sources') {
+    sendJson(response, await loadDataSourceRegistry(dataSourceRegistryPath));
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/field-catalog') {
+    sendJson(response, await loadFieldCatalog(fieldCatalogPath));
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/point-in-time/context') {
+    const targetDate = url.searchParams.get('date') || '';
+    const asOf = url.searchParams.get('asOf') || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+      sendJson(response, { error: { code: 'target_date_invalid', message: 'date must use YYYY-MM-DD' } }, 400);
+      return;
+    }
+    const asOfMs = Date.parse(asOf);
+    if (!Number.isFinite(asOfMs)) {
+      sendJson(response, { error: { code: 'as_of_invalid', message: 'asOf must be an ISO timestamp' } }, 400);
+      return;
+    }
+    if (asOfMs > Date.now()) {
+      sendJson(response, { error: { code: 'as_of_in_future', message: 'asOf cannot be in the future for live queries' } }, 400);
+      return;
+    }
+    const [store, catalog] = await Promise.all([
+      readPointInTimeStore(pointInTimeStorePath),
+      loadFieldCatalog(fieldCatalogPath),
+    ]);
+    const requestedFields = (url.searchParams.get('fields') || '')
+      .split(',')
+      .map((field) => field.trim())
+      .filter(Boolean);
+    const requiredFields = requestedFields.length
+      ? requestedFields
+      : ['systemLoadForecastMw', 'dayAheadPublicPriceYuanPerMwh', 'realTimeWeightedAveragePriceYuanPerMwh'];
+    try {
+      sendJson(response, buildFeatureSnapshot({
+        facts: store.facts,
+        catalog,
+        targetDate,
+        decisionCutoffAt: asOf,
+        requiredFields,
+      }));
+    } catch (error) {
+      sendJson(response, { error: { code: 'point_in_time_context_invalid', message: error.message } }, 400);
+    }
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/health') {
     sendJson(response, {
       ok: true,
@@ -576,6 +649,7 @@ async function handleApi(request, response, url) {
       integrationSummaryPath,
       auditLogPath,
       visibleHistoryPath,
+      pointInTimeStorePath,
       businessInputsDir,
       pythonPath: await resolvePythonPath(pythonPath),
       modelRuntime: buildModelConfig(process.env),

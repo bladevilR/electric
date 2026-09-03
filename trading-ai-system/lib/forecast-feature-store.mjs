@@ -4,6 +4,11 @@ const FEATURE_FIELDS = [
   'realTimeAvgPrice',
   'dayAheadPublicPrice',
   'dayAheadUserPrice',
+  'dayAheadUserClearedPowerMw',
+  'dayAheadUserPriceTemporaryYuanPerMwh',
+  'dayAheadUserPriceFinalYuanPerMwh',
+  'dayAheadUserPriceEffectiveYuanPerMwh',
+  'dayAheadUserPriceEffectiveSource',
   'realTimePointPriceCurrent',
   'declarationPower',
   'defaultDeclarationPower',
@@ -163,7 +168,7 @@ function normalizeActualSystemLoad(record) {
 }
 
 export function normalizeAssetRows(inventory = {}) {
-  const assets = inventory.assets || {};
+  const assets = inventory.assets || inventory;
   const rows = [];
 
   (assets.realtimeAveragePrices || []).forEach((record) => {
@@ -183,7 +188,22 @@ export function normalizeAssetRows(inventory = {}) {
 
   (assets.dayAheadUserClearing || []).forEach((record) => {
     const raw = record.raw || {};
-    rows.push(normalizedRecord('dayAheadUserClearing', record, { dayAheadUserPrice: raw.unitPrice ?? raw.dayAheadUserPrice }));
+    const temporary = numberOrNull(raw.unitPrice ?? raw.dayAheadUserPriceTemporaryYuanPerMwh ?? raw.dayAheadUserPrice);
+    const final = numberOrNull(raw.userClearingPriceFinal ?? raw.dayAheadUserPriceFinalYuanPerMwh);
+    const effective = final ?? temporary;
+    const normalized = normalizedRecord('dayAheadUserClearing', record, {
+      dayAheadUserClearedPowerMw: raw.clearingPower ?? raw.dayAheadUserClearedPowerMw,
+      dayAheadUserPriceTemporaryYuanPerMwh: temporary,
+      dayAheadUserPriceFinalYuanPerMwh: final,
+      dayAheadUserPriceEffectiveYuanPerMwh: effective,
+      dayAheadUserPrice: effective,
+    });
+    normalized.fields.dayAheadUserPriceEffectiveSource = final !== null
+      ? 'final'
+      : temporary !== null
+        ? 'temporary'
+        : 'unavailable';
+    rows.push(normalized);
   });
 
   (assets.realtimePublicClearing || []).forEach((record) => {
@@ -254,6 +274,11 @@ function emptyFeature(date, pointIndex, timePoint = '') {
     realTimeAvgPrice: null,
     dayAheadPublicPrice: null,
     dayAheadUserPrice: null,
+    dayAheadUserClearedPowerMw: null,
+    dayAheadUserPriceTemporaryYuanPerMwh: null,
+    dayAheadUserPriceFinalYuanPerMwh: null,
+    dayAheadUserPriceEffectiveYuanPerMwh: null,
+    dayAheadUserPriceEffectiveSource: null,
     realTimePointPriceCurrent: null,
     declarationPower: null,
     defaultDeclarationPower: null,
@@ -322,7 +347,7 @@ function finalizeRows(rows) {
   return rows.sort((left, right) => left.date.localeCompare(right.date) || left.pointIndex - right.pointIndex);
 }
 
-function buildSummary(allRows, outputRows) {
+function buildSummary(allRows, outputRows, warnings = []) {
   const fieldCompleteness = Object.fromEntries(
     FEATURE_FIELDS.map((field) => [
       field,
@@ -336,14 +361,40 @@ function buildSummary(allRows, outputRows) {
     sourceDates: [...new Set(allRows.map((row) => row.date).filter(Boolean))].sort(),
     dates: [...new Set(outputRows.map((row) => row.date).filter(Boolean))].sort(),
     fieldCompleteness,
+    warnings,
   };
 }
 
+function normalizeSnapshotRows(snapshot = {}) {
+  return (Array.isArray(snapshot.rows) ? snapshot.rows : []).map((row) => {
+    const fields = row.fields || {};
+    const pointIndex = numberOrNull(row.pointIndex);
+    return {
+      kind: 'pointInTimeSnapshot',
+      date: normalizeDate(row.businessDate || snapshot.targetDate),
+      pointIndex,
+      timePoint: timeFromPoint(pointIndex),
+      fields: {
+        ...fields,
+        systemLoadForecast: numberOrNull(fields.systemLoadForecastMw),
+        actualSystemLoad: numberOrNull(fields.actualSystemLoadMw),
+        actualKwh: numberOrNull(fields.actualIntervalEnergyKwh),
+        declarationPower: numberOrNull(fields.userDeclaredPowerMw),
+        defaultDeclarationPower: numberOrNull(fields.defaultDeclaredPowerMw),
+        dayAheadUserPrice: numberOrNull(fields.dayAheadUserPriceEffectiveYuanPerMwh),
+      },
+      source: { sourceFile: snapshot.featureSnapshotId || 'feature-snapshot', endpoint: 'point-in-time-snapshot' },
+    };
+  });
+}
+
 export function buildForecastFeatureStore(dataset = {}, options = {}) {
+  const snapshotRows = normalizeSnapshotRows(options.featureSnapshot || {});
   const normalized = [
-    ...normalizedDatasetRows(dataset),
-    ...normalizeAssetRows(options.assets || {}),
-    ...normalizeSettlementReferenceRows(options.settlementReference || {}),
+    ...(snapshotRows.length ? [] : normalizedDatasetRows(dataset)),
+    ...(snapshotRows.length ? [] : normalizeAssetRows(options.assets || {})),
+    ...(snapshotRows.length ? [] : normalizeSettlementReferenceRows(options.settlementReference || {})),
+    ...snapshotRows,
   ].filter((row) => row.pointIndex !== null && row.pointIndex !== undefined);
 
   const datedRows = normalized.filter((row) => row.date);
@@ -359,15 +410,7 @@ export function buildForecastFeatureStore(dataset = {}, options = {}) {
     mergeFeature(byKey.get(key), item);
   });
 
-  undatedRows.forEach((item) => {
-    dates.forEach((date) => {
-      const key = buildPointKey(date, item.pointIndex);
-      if (!byKey.has(key)) {
-        byKey.set(key, emptyFeature(date, item.pointIndex, item.timePoint));
-      }
-      mergeFeature(byKey.get(key), item);
-    });
-  });
+  const warnings = undatedRows.length ? ['undated_time_varying_fact_rejected'] : [];
 
   const allRows = finalizeRows([...byKey.values()]);
   const outputRows = options.date ? allRows.filter((row) => row.date === options.date) : allRows;
@@ -375,7 +418,8 @@ export function buildForecastFeatureStore(dataset = {}, options = {}) {
   return {
     generatedAt: new Date().toISOString(),
     date: options.date || '',
-    summary: buildSummary(allRows, outputRows),
+    sourceMode: snapshotRows.length ? 'point_in_time_snapshot' : 'legacy_dataset',
+    summary: buildSummary(allRows, outputRows, warnings),
     rows: outputRows,
   };
 }

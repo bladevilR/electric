@@ -174,6 +174,23 @@ if (-not $env:TRADING_VISIBLE_HISTORY_PATH) {
   $env:TRADING_VISIBLE_HISTORY_PATH = Join-Path $tradingUserDataRoot "ukey-visible-history.json"
 }
 
+if (-not $env:TRADING_POINT_IN_TIME_STORE_PATH) {
+  if ($isWindowsHost) {
+    if (-not $env:LOCALAPPDATA) {
+      Stop-Startup -Message "The Windows user data directory is unavailable." -Details "LOCALAPPDATA is empty, so point-in-time facts cannot be stored safely."
+    }
+    $pointInTimeDataRoot = Join-Path $env:LOCALAPPDATA "ElectricTradingAI\data"
+  } else {
+    $pointInTimeDataRoot = Join-Path $root "data"
+  }
+  try {
+    New-Item -ItemType Directory -Path $pointInTimeDataRoot -Force | Out-Null
+  } catch {
+    Stop-Startup -Message "The point-in-time fact directory could not be created." -Details $_.Exception.Message
+  }
+  $env:TRADING_POINT_IN_TIME_STORE_PATH = Join-Path $pointInTimeDataRoot "point-in-time-facts.json"
+}
+
 $portableNode = Join-Path $root "runtime\node\node.exe"
 $node = ""
 if ($NodePath) {

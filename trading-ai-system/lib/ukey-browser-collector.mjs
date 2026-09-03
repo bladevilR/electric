@@ -18,6 +18,11 @@ const RATE_LIMIT_WARNING_PATTERN =
   /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
 const RATE_LIMIT_SWEEP_STOP_MESSAGE = 'JSPEC reported high API access frequency; sweep stopped before remaining targets.';
 const CORE_SWEEP_TARGET_IDS = ['dashboard', 'realtime_average_price', 'actual_load_96', 'settle_day'];
+const CONFIRMED_VISIBLE_HEADERS = new Map([
+  ['出清电力', 'dayAheadUserClearedPowerMw'],
+  ['统一结算点电价临时结果', 'dayAheadUserPriceTemporaryYuanPerMwh'],
+  ['统一结算点电价最终结果', 'dayAheadUserPriceFinalYuanPerMwh'],
+]);
 
 const DEFAULT_SWEEP_TARGETS = [
   {
@@ -162,6 +167,9 @@ const NUMERIC_FIELDS = new Set([
   'declarationPower',
   'dayAheadPublicPrice',
   'dayAheadUserPrice',
+  'dayAheadUserClearedPowerMw',
+  'dayAheadUserPriceTemporaryYuanPerMwh',
+  'dayAheadUserPriceFinalYuanPerMwh',
   'actualKwh',
   'settleAmount',
 ]);
@@ -365,6 +373,9 @@ function mapHeaderToField(header, contextualPriceField = '') {
   if (!normalized) {
     return '';
   }
+  if (contextualPriceField === 'dayAheadUserPrice' && CONFIRMED_VISIBLE_HEADERS.has(normalized)) {
+    return CONFIRMED_VISIBLE_HEADERS.get(normalized);
+  }
   for (const rule of FIELD_RULES) {
     if (rule.patterns.some((pattern) => pattern.test(normalized))) {
       return rule.field;
@@ -428,9 +439,38 @@ function hasBusinessValue(row) {
     'declarationPower',
     'dayAheadPublicPrice',
     'dayAheadUserPrice',
+    'dayAheadUserClearedPowerMw',
+    'dayAheadUserPriceTemporaryYuanPerMwh',
+    'dayAheadUserPriceFinalYuanPerMwh',
     'actualKwh',
     'settleAmount',
   ].some((field) => row[field] !== null && row[field] !== undefined && row[field] !== '');
+}
+
+export function selectEffectivePrice({ temporary, final, finalPublished = null } = {}) {
+  const finalValue = numberOrNull(final);
+  const temporaryValue = numberOrNull(temporary);
+  if (finalValue !== null && finalPublished !== false) return { value: finalValue, source: 'final' };
+  if (temporaryValue !== null) return { value: temporaryValue, source: 'temporary' };
+  return { value: null, source: 'unavailable' };
+}
+
+export function normalizeVisibleDayAheadUserRow(cells = [], headers = []) {
+  const raw = Object.fromEntries(headers.map((header, index) => [cleanString(header), cells[index]]));
+  const temporary = numberOrNull(raw['统一结算点电价临时结果']);
+  const final = numberOrNull(raw['统一结算点电价最终结果']);
+  const effective = selectEffectivePrice({ temporary, final });
+  return {
+    timePoint: cleanString(raw['时间']),
+    dayAheadUserClearedPowerMw: numberOrNull(raw['出清电力']),
+    dayAheadUserPriceTemporaryYuanPerMwh: temporary,
+    dayAheadUserPriceFinalYuanPerMwh: final,
+    dayAheadUserPriceEffectiveYuanPerMwh: effective.value,
+    dayAheadUserPriceEffectiveSource: effective.source,
+    evidence: {
+      visibleFields: headers.map((header, index) => ({ header: cleanString(header), value: cleanString(cells[index]) })),
+    },
+  };
 }
 
 function browserNameFromPath(executablePath = '') {
@@ -884,6 +924,15 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
         }
       }
 
+      const isConfirmedDayAheadUserTable = contextualPriceField === 'dayAheadUserPrice' &&
+        headers.some((header) => CONFIRMED_VISIBLE_HEADERS.has(normalizeHeader(header)));
+      if (isConfirmedDayAheadUserTable) {
+        const canonical = normalizeVisibleDayAheadUserRow(cells, headers);
+        Object.assign(row, canonical);
+        row.dayAheadUserPrice = canonical.dayAheadUserPriceEffectiveYuanPerMwh;
+        row.dayAheadUserClearingPower = canonical.dayAheadUserClearedPowerMw;
+      }
+
       if (!row.date || !row.pointIndex || !hasBusinessValue(row)) {
         return;
       }
@@ -891,7 +940,10 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
       row.sourceTargets = ['visible_page_snapshot'];
       rows.push(
         Object.fromEntries(
-          Object.entries(row).filter(([, value]) => value !== null && value !== undefined && value !== '')
+          Object.entries(row).filter(([key, value]) =>
+            key === 'dayAheadUserPriceFinalYuanPerMwh' ||
+            (value !== null && value !== undefined && value !== '')
+          )
         )
       );
       tableMatched = true;

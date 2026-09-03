@@ -1,0 +1,4006 @@
+{
+  "version": 1,
+  "fields": [
+    {
+      "fieldId": "sourceId",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sourceId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "fieldId",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 fieldId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "businessDate",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 businessDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "pointIndex",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 pointIndex",
+      "unit": "index",
+      "dataType": "integer",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "intervalStart",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 intervalStart",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "intervalEnd",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 intervalEnd",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "eventTime",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 eventTime",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "forecastIssuedAt",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 forecastIssuedAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "publishedAt",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 publishedAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "availableAt",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 availableAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "capturedAt",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 capturedAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "sourceRevision",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sourceRevision",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "evidenceRef",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 evidenceRef",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "featureSnapshotId",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 featureSnapshotId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "forecastRunId",
+      "domain": "metadata",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 forecastRunId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "timePoint",
+      "domain": "common",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 timePoint",
+      "unit": "HH:mm",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "userDeclaredPowerMw",
+      "domain": "user_declaration",
+      "sourceIds": [
+        "JSPEC-P0-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 userDeclaredPowerMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "userDeclaredPowerUpperMw",
+      "domain": "user_declaration",
+      "sourceIds": [
+        "JSPEC-P0-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 userDeclaredPowerUpperMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "userDeclaredPowerLowerMw",
+      "domain": "user_declaration",
+      "sourceIds": [
+        "JSPEC-P0-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 userDeclaredPowerLowerMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "userDeclarationState",
+      "domain": "user_declaration",
+      "sourceIds": [
+        "JSPEC-P0-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 userDeclarationState",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "userDeclarationPercent",
+      "domain": "user_declaration",
+      "sourceIds": [
+        "JSPEC-P0-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 userDeclarationPercent",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "defaultDeclaredPowerMw",
+      "domain": "default_declaration",
+      "sourceIds": [
+        "JSPEC-P0-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 defaultDeclaredPowerMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "captured_nonempty",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "defaultDeclaredPowerUpperMw",
+      "domain": "default_declaration",
+      "sourceIds": [
+        "JSPEC-P0-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 defaultDeclaredPowerUpperMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "defaultDeclaredPowerLowerMw",
+      "domain": "default_declaration",
+      "sourceIds": [
+        "JSPEC-P0-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 defaultDeclaredPowerLowerMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadUserClearedPowerMw",
+      "domain": "dayahead_user_clearing",
+      "sourceIds": [
+        "JSPEC-P0-3"
+      ],
+      "sourceHeaders": [
+        "出清电力"
+      ],
+      "sourceKeys": [
+        "clearingPower"
+      ],
+      "businessMeaning": "用户日前实际出清电力，独立于主动申报和缺省申报",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "15m_candidate",
+      "requiredness": "required_when_source_present",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "page_visible_code_missing",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadUserPriceTemporaryYuanPerMwh",
+      "domain": "dayahead_user_clearing",
+      "sourceIds": [
+        "JSPEC-P0-3"
+      ],
+      "sourceHeaders": [
+        "统一结算点电价临时结果"
+      ],
+      "sourceKeys": [],
+      "businessMeaning": "用户日前临时价格，必须与最终价分开保存",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "15m_candidate",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "confirmed_visible",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadUserPriceFinalYuanPerMwh",
+      "domain": "dayahead_user_clearing",
+      "sourceIds": [
+        "JSPEC-P0-3"
+      ],
+      "sourceHeaders": [
+        "统一结算点电价最终结果"
+      ],
+      "sourceKeys": [],
+      "businessMeaning": "用户日前最终价格，不得由临时价回填",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "15m_candidate",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "confirmed_visible",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadUserPriceEffectiveYuanPerMwh",
+      "domain": "dayahead_user_clearing",
+      "sourceIds": [
+        "JSPEC-P0-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "查询时按最终价优先、临时价后备派生的有效价格",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "15m",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "derived_only",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "dayAheadUserPriceEffectiveSource",
+      "domain": "dayahead_user_clearing",
+      "sourceIds": [
+        "JSPEC-P0-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadUserPriceEffectiveSource",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "dayAheadPublicClearedPowerMw",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadPublicClearedPowerMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadPublicPriceYuanPerMwh",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadPublicPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadSouthPriceYuanPerMwh",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadSouthPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadNorthPriceYuanPerMwh",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadNorthPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadSouthNodePriceYuanPerMwh",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadSouthNodePriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "dayAheadNorthNodePriceYuanPerMwh",
+      "domain": "dayahead_public_clearing",
+      "sourceIds": [
+        "JSPEC-P0-4"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dayAheadNorthNodePriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeSouthPriceYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-5"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeSouthPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeNorthPriceYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-5"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeNorthPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeSouthNodePriceYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-5"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeSouthNodePriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeNorthNodePriceYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-5"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeNorthNodePriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeReleaseType",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-5"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeReleaseType",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeWeightedAveragePriceYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-6"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeWeightedAveragePriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "captured_nonempty",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeAvgPriceCurrentYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-6"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeAvgPriceCurrentYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimePointPriceCurrentYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-6"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimePointPriceCurrentYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimeAvgPriceFinalYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-6"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimeAvgPriceFinalYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "realTimePointPriceFinalYuanPerMwh",
+      "domain": "realtime_market",
+      "sourceIds": [
+        "JSPEC-P0-6"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 realTimePointPriceFinalYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "actualIntervalEnergyKwh",
+      "domain": "actuals",
+      "sourceIds": [
+        "JSPEC-P0-7"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualIntervalEnergyKwh",
+      "unit": "kWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "captured_empty",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "actualAverageLoadMw",
+      "domain": "actuals",
+      "sourceIds": [
+        "JSPEC-P0-7"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualAverageLoadMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "systemLoadForecastMw",
+      "domain": "common",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 systemLoadForecastMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "actualSystemLoadMw",
+      "domain": "actuals",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualSystemLoadMw",
+      "unit": "MW_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "dailySettlementAmountYuan",
+      "domain": "settlement",
+      "sourceIds": [
+        "JSPEC-P0-8",
+        "SETTLEMENT-XLSX"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dailySettlementAmountYuan",
+      "unit": "Yuan_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "captured_empty",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "settlementStatus",
+      "domain": "settlement",
+      "sourceIds": [
+        "JSPEC-P0-8",
+        "SETTLEMENT-XLSX"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 settlementStatus",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "settlementRevision",
+      "domain": "settlement",
+      "sourceIds": [
+        "JSPEC-P0-8",
+        "SETTLEMENT-XLSX"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 settlementRevision",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "settlementPriceYuanPerMwh",
+      "domain": "settlement",
+      "sourceIds": [
+        "JSPEC-P0-8",
+        "SETTLEMENT-XLSX"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 settlementPriceYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "totalTradeFeeYuan",
+      "domain": "settlement",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 totalTradeFeeYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "totalTradeSavingYuan",
+      "domain": "settlement",
+      "sourceIds": [],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 totalTradeSavingYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "tradeDate",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 tradeDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "executionDate",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 executionDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "tradeHour",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 tradeHour",
+      "unit": "hour",
+      "dataType": "integer",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "energyBlockDirection",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 energyBlockDirection",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "energyBlockQuantityMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 energyBlockQuantityMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "energyBlockPriceYuanPerMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-1"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 energyBlockPriceYuanPerMwh",
+      "unit": "Yuan/MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "availableBuyMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 availableBuyMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "availableSellMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 availableSellMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "tradeLimitMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-2"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 tradeLimitMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "positionMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 positionMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "tradedMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 tradedMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "adjustableBuyMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 adjustableBuyMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "adjustableSellMwh",
+      "domain": "trading_position",
+      "sourceIds": [
+        "JSPEC-P1-3"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 adjustableSellMwh",
+      "unit": "MWh_pending_confirmation",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "code_supported",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "weatherLocationId",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 weatherLocationId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "latitude",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 latitude",
+      "unit": "degree",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "longitude",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 longitude",
+      "unit": "degree",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "weatherTargetTime",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 weatherTargetTime",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "temperatureC",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 temperatureC",
+      "unit": "C",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "dewPointC",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 dewPointC",
+      "unit": "C",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "feelsLikeC",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 feelsLikeC",
+      "unit": "C",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "relativeHumidityPct",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 relativeHumidityPct",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windU10Mps",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windU10Mps",
+      "unit": "m/s",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windV10Mps",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windV10Mps",
+      "unit": "m/s",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windSpeed10Mps",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windSpeed10Mps",
+      "unit": "m/s",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windDirection10Deg",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windDirection10Deg",
+      "unit": "degree",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windGustMps",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windGustMps",
+      "unit": "m/s",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "precipitationAmountMm",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 precipitationAmountMm",
+      "unit": "mm",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "precipitationProbabilityPct",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 precipitationProbabilityPct",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "totalCloudCoverPct",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 totalCloudCoverPct",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "surfaceSolarRadiationJm2",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 surfaceSolarRadiationJm2",
+      "unit": "J/m2",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "solarIrradianceWm2",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 solarIrradianceWm2",
+      "unit": "W/m2",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "weatherConditionCode",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 weatherConditionCode",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_authorization",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "weatherAlignmentMethod",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 weatherAlignmentMethod",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "weatherSpatialWeightVersion",
+      "domain": "weather",
+      "sourceIds": [
+        "CMA-AUTH-WEATHER",
+        "ECMWF-OPEN"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 weatherSpatialWeightVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "unitId",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 unitId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "plantId",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 plantId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "generationType",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 generationType",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "ratedCapacityMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 ratedCapacityMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "availableCapacityMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 availableCapacityMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "plannedOutageCapacityMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 plannedOutageCapacityMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "unplannedOutageCapacityMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 unplannedOutageCapacityMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "maintenanceStartAt",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 maintenanceStartAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "maintenanceEndAt",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 maintenanceEndAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "unitOperatingState",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 unitOperatingState",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "mustRunFlag",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 mustRunFlag",
+      "unit": "boolean",
+      "dataType": "boolean",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "mustStopFlag",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 mustStopFlag",
+      "unit": "boolean",
+      "dataType": "boolean",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "minUpMinutes",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 minUpMinutes",
+      "unit": "minute",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "minDownMinutes",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 minDownMinutes",
+      "unit": "minute",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "scheduledOutputMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 scheduledOutputMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "actualOutputMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualOutputMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "rampUpMwPer15m",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 rampUpMwPer15m",
+      "unit": "MW/15m",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "rampDownMwPer15m",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 rampDownMwPer15m",
+      "unit": "MW/15m",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "availableReserveMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 availableReserveMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "windForecastMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windForecastMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "solarForecastMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 solarForecastMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "forecast_vintage"
+    },
+    {
+      "fieldId": "windActualMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 windActualMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "solarActualMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 solarActualMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "interchangeScheduledMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 interchangeScheduledMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "interchangeActualMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 interchangeActualMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "actual_revision"
+    },
+    {
+      "fieldId": "sectionId",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sectionId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "sectionName",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sectionName",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "static_with_effective_period"
+    },
+    {
+      "fieldId": "sectionFlowMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sectionFlowMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "sectionLimitMw",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sectionLimitMw",
+      "unit": "MW",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "sectionUtilizationPct",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 sectionUtilizationPct",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "congestionStatus",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 congestionStatus",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "energyPriceComponentYuanPerMwh",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 energyPriceComponentYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "congestionPriceComponentYuanPerMwh",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 congestionPriceComponentYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "marketAdjustmentType",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 marketAdjustmentType",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "marketAdjustmentAt",
+      "domain": "supply_network",
+      "sourceIds": [
+        "JSPEC-DISCLOSURE-2026"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 marketAdjustmentAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "pending_field_confirmation",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "event_revision"
+    },
+    {
+      "fieldId": "forecastRunType",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 forecastRunType",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "forecastGeneratedAt",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 forecastGeneratedAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "decisionCutoffAt",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 decisionCutoffAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "targetTradingDate",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 targetTradingDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "modelId",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 modelId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "modelVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 modelVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "featureVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 featureVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "codeCommitSha",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 codeCommitSha",
+      "unit": "sha",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "trainingStartDate",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 trainingStartDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "trainingEndDate",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 trainingEndDate",
+      "unit": "date",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "backtestSplitLabel",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 backtestSplitLabel",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "pointForecastYuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 pointForecastYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "p10YuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 p10YuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "p50YuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 p50YuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "p90YuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 p90YuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "spikeProbability",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 spikeProbability",
+      "unit": "ratio",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "inputCompletenessPct",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 inputCompletenessPct",
+      "unit": "percent",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "fallbackReasons",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 fallbackReasons",
+      "unit": "array",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualPriceTemporaryYuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualPriceTemporaryYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualPriceFinalYuanPerMwh",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualPriceFinalYuanPerMwh",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualLabelVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualLabelVersion",
+      "unit": "enum",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualSourceRevision",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualSourceRevision",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualBackfilledAt",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualBackfilledAt",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "forecastError",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 forecastError",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "absoluteError",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 absoluteError",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "squaredError",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 squaredError",
+      "unit": "squared_Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "pinballLossP10",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 pinballLossP10",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "pinballLossP50",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 pinballLossP50",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "pinballLossP90",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 pinballLossP90",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "interval80Covered",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 interval80Covered",
+      "unit": "boolean",
+      "dataType": "boolean",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "interval80Width",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 interval80Width",
+      "unit": "Yuan/MWh",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "spikeThresholdVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 spikeThresholdVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualSpikeLabel",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualSpikeLabel",
+      "unit": "boolean",
+      "dataType": "boolean",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "brierScore",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 brierScore",
+      "unit": "score",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "baselineCostYuan",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 baselineCostYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "strategyCostYuan",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 strategyCostYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "actualOperatorCostYuan",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 actualOperatorCostYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "economicRegretYuan",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 economicRegretYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "savingVsDefaultYuan",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 savingVsDefaultYuan",
+      "unit": "Yuan",
+      "dataType": "number",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "evaluationRunId",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 evaluationRunId",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "evaluationAsOf",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 evaluationAsOf",
+      "unit": "datetime",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "evaluationConfigVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 evaluationConfigVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    },
+    {
+      "fieldId": "conversionFormulaVersion",
+      "domain": "forecast_evaluation",
+      "sourceIds": [
+        "INTERNAL-FORECAST-LEDGER"
+      ],
+      "sourceHeaders": [],
+      "sourceKeys": [],
+      "businessMeaning": "规范字段 conversionFormulaVersion",
+      "unit": "string",
+      "dataType": "string",
+      "granularity": "source_native",
+      "requiredness": "conditional",
+      "nullTokens": [
+        "",
+        "-",
+        "--",
+        null
+      ],
+      "zeroIsNull": false,
+      "confirmationStatus": "derived",
+      "substitutionPolicy": "forbidden",
+      "temporalBehavior": "derived"
+    }
+  ]
+}
