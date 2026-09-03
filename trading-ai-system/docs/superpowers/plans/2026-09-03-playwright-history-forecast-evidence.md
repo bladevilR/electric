@@ -174,18 +174,23 @@ git commit -m "feat(data): migrate legacy evidence into SQLite"
 
 **Interfaces:**
 - Produces: `createPlaywrightCollectorRuntime({ rootDir, playwright, executablePath?, profileDir?, launchUrl?, headless?, clock? })`.
-- Runtime methods: `start()`, `stop()`, `getPage()`, `healthCheck()`, `status()`, `subscribe(listener)`.
+- Runtime methods: `start()`, `stop()`, `getPage()`, `healthCheck()`, `status()`, `transition(state, details?)`, `subscribe(listener)`.
 - Runtime states: `uninitialized`, `login_required`, `ready`, `collecting`, `paused`, `rate_limited`, `login_expired`, `page_changed`, `error`, `stopped`.
 
-- [ ] **Step 1: Write failing runtime tests with an injected fake Playwright**
+- [x] **Step 1: Write failing runtime tests with a real local page and installed Chrome**
 
 ```js
-test('runtime starts one persistent visible context and reports login_required', async () => {
-  const runtime = createPlaywrightCollectorRuntime({ rootDir, playwright: fakePlaywright });
+test('runtime starts one persistent context and reports login_required', async () => {
+  const runtime = createPlaywrightCollectorRuntime({
+    rootDir,
+    playwright: { chromium },
+    executablePath,
+    launchUrl: `${mockServerUrl}/out#/outNet`,
+    headless: true,
+  });
   const result = await runtime.start();
-  assert.equal(fakePlaywright.launches[0].headless, false);
-  assert.match(fakePlaywright.launches[0].userDataDir, /jspec-playwright-profile/);
   assert.equal(result.state, 'login_required');
+  assert.match(result.profileDir, /jspec-playwright-profile/);
 });
 
 test('runtime never exposes storage state or cookies', async () => {
@@ -193,13 +198,13 @@ test('runtime never exposes storage state or cookies', async () => {
 });
 ```
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run: `node --test test/playwright-collector-runtime.test.mjs`
 
 Expected: FAIL because the runtime module does not exist.
 
-- [ ] **Step 3: Implement the runtime**
+- [x] **Step 3: Implement the runtime**
 
 Launch with:
 
@@ -214,13 +219,13 @@ await playwright.chromium.launchPersistentContext(profileDir, {
 
 Select or create one JSPEC page, detect `#/outNet` and login UI as `login_required`, detect known business landmarks as `ready`, serialize state transitions, and close only the dedicated context. Do not call `context.cookies()`, `storageState()`, request routing, or response-body interception.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `node --test test/playwright-collector-runtime.test.mjs test/ukey-browser-collector.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit runtime**
+- [x] **Step 5: Commit runtime**
 
 ```bash
 git add lib/playwright-collector-runtime.mjs test/playwright-collector-runtime.test.mjs
