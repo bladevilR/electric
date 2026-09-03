@@ -1,0 +1,1 @@
+export function buildModelGovernanceModel({versions=[],thresholds={},approvals=[],ablations=[]}={}){return{versions:versions.map(v=>({...v,statusText:v.status==='champion_review_eligible'?'可申请人工评审':v.status==='candidate_rejected'?'候选未通过':'仅候选，不自动上线'})),thresholds,approvals,ablations,automaticPromotion:false};}

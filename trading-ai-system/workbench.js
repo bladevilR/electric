@@ -4,6 +4,13 @@ import {
   buildStrategyEvolution,
 } from './lib/strategy-evolution.mjs';
 import { scheduleWorkbenchMotion } from './workbench-motion.js';
+import { renderNavigation } from './ui/navigation.js';
+import { renderDataSourcesView } from './ui/views/data-sources-view.js';
+import { renderMarketCockpitView } from './ui/views/market-cockpit-view.js';
+import { renderPriceForecastView } from './ui/views/price-forecast-view.js';
+import { renderDeclarationStrategyView } from './ui/views/declaration-strategy-view.js';
+import { renderHistoryReviewView } from './ui/views/history-review-view.js';
+import { renderModelGovernanceView } from './ui/views/model-governance-view.js';
 
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -2579,11 +2586,18 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       : activeStage === 'evolve'
         ? renderStrategyEvolutionDashboard(payload)
         : renderDeclarationDashboard(payload, { activeStage });
+  const cockpitState = { ...options, mode: payload.demoMode ? 'demo' : 'real', targetDate: payload.date, dataSources: options.dataSources || {}, fieldCatalog: options.fieldCatalog || {}, marketCockpit: options.marketCockpit || {}, forecastReport: options.forecastReport || {}, strategyReport: { recommendation: payload.declarationRecommendation, trace: options.strategyTrace }, accuracyReport: options.accuracyReport || {}, governanceReport: options.governanceReport || {} };
+  const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
+  const activeCockpitView = options.activeView || 'market-cockpit';
   return `
     <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
       ${dashboardSidebar(payload, activeStage, evidenceOpen)}
       <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
         ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
+        <section class="cockpit-experience" aria-label="六步市场决策工作流">
+          ${renderNavigation({ activeView: activeCockpitView })}
+          ${cockpitViews[activeCockpitView](cockpitState)}
+        </section>
         ${dashboardTopbar(payload, mode)}
         ${mainContent}
       </main>
@@ -2596,6 +2610,7 @@ const browserState = {
   payload: null,
   mode: 'operation',
   activeStage: null,
+  activeView: 'market-cockpit',
   evidenceOpen: false,
   loading: true,
   forecastReport: null,
@@ -2725,6 +2740,14 @@ async function loadWorkbench(date = '') {
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
+    const asOf = new Date().toISOString();
+    const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace] = await Promise.all([
+      fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
+      fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
+      fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
+      fetch(`/api/strategy/trace?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({stages:[]})),
+    ]);
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
         fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
@@ -2890,6 +2913,10 @@ function bindBrowserEvents() {
   const root = rootElement();
   if (!root) return;
   root.addEventListener('click', async (event) => {
+    const cockpitButton = event.target.closest('[data-cockpit-view]');
+    if (cockpitButton) { browserState.activeView = cockpitButton.dataset.cockpitView; const url = new URL(window.location.href); url.searchParams.set('view', browserState.activeView); history.replaceState(null,'',url); renderBrowser(); return; }
+    const cockpitEvidence = event.target.closest('[data-evidence-ref]');
+    if (cockpitEvidence) { browserState.selectedEvidence = cockpitEvidence.dataset.evidenceRef || 'missing-evidence'; browserState.evidenceReturnSelector = '.cockpit-experience [data-evidence-ref]'; browserState.evidenceOpen = true; renderBrowser(); focusEvidenceDialog(); return; }
     const mockStageButton = event.target.closest('[data-mock-stage]');
     if (mockStageButton) {
       const stageId = mockStageButton.dataset.mockStage;

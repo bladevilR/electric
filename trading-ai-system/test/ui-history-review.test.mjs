@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {buildHistoryReviewModel} from '../ui/view-models/history-review-model.js';import {renderHistoryReviewView} from '../ui/views/history-review-view.js';
+test('history review isolates run types and labels missing metrics',()=>{const m=buildHistoryReviewModel({});assert.deepEqual(m.tabs.map(t=>t.id),['live-issued','point-in-time-replay','settlement-replay']);assert.equal(m.tabs.some(t=>t.metricsFromAnotherRunType),false);assert.match(renderHistoryReviewView({mode:'real'}),/证据不足/);});

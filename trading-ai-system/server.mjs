@@ -625,6 +625,7 @@ async function handleApi(request, response, url) {
   if (request.method === 'GET' && url.pathname === '/api/market/cockpit') {
     const date=url.searchParams.get('date')||'';const asOf=url.searchParams.get('asOf')||'';
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(asOf))){sendJson(response,{error:{code:'market_context_invalid'}},400);return;}
+    if ((url.searchParams.get('mode')||'real') !== 'demo' && Date.parse(asOf) > Date.now()) { sendJson(response,{error:{code:'as_of_in_future'}},400);return; }
     const [store,catalog]=await Promise.all([readPointInTimeStore(pointInTimeStorePath),loadFieldCatalog(fieldCatalogPath)]);
     const requiredFields=['userDeclaredPowerMw','defaultDeclaredPowerMw','dayAheadUserClearedPowerMw','actualAverageLoadMw','systemLoadForecastMw','availableCapacityMw'];
     const snapshot=buildFeatureSnapshot({facts:store.facts,catalog,targetDate:date,decisionCutoffAt:asOf,requiredFields});
