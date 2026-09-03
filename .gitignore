@@ -28,6 +28,7 @@ __jspec_app.js
 *.pem
 *.pfx
 *.png
+!trading-ai-system/design/strategy-foundation-evidence-target.png
 *.ppt
 *.pptx
 *.wav
