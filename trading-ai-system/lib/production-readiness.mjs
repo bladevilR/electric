@@ -75,13 +75,13 @@ export function buildProductionReadiness(options = {}) {
     control(
       'field_catalog_loaded',
       '规范字段目录',
-      governance.fieldCatalogLoaded ? 'ready' : 'blocked',
+      governance.fieldCatalogLoaded === true ? 'ready' : governance.fieldCatalogLoaded === false ? 'blocked' : 'warning',
       '预测和回放必须使用版本化规范字段目录。'
     ),
     control(
       'source_registry_loaded',
       '数据源目录',
-      governance.sourceRegistryLoaded ? 'ready' : 'blocked',
+      governance.sourceRegistryLoaded === true ? 'ready' : governance.sourceRegistryLoaded === false ? 'blocked' : 'warning',
       '每项真实输入必须绑定已登记的数据源和可得性状态。'
     ),
     control(
@@ -99,7 +99,11 @@ export function buildProductionReadiness(options = {}) {
     control(
       'feature_snapshot_leakage_guard_enabled',
       '特征快照防泄漏门禁',
-      governance.featureSnapshotLeakageGuardEnabled ? 'ready' : 'blocked',
+      governance.featureSnapshotLeakageGuardEnabled === true
+        ? 'ready'
+        : governance.featureSnapshotLeakageGuardEnabled === false
+          ? 'blocked'
+          : 'warning',
       '只有 availableAt 不晚于决策截止时点的数据可以进入特征快照。'
     ),
     control(
