@@ -11,6 +11,10 @@ import { renderPriceForecastView } from './ui/views/price-forecast-view.js';
 import { renderDeclarationStrategyView } from './ui/views/declaration-strategy-view.js';
 import { renderHistoryReviewView } from './ui/views/history-review-view.js';
 import { renderModelGovernanceView } from './ui/views/model-governance-view.js';
+import {
+  createFoundationUiState,
+  reduceFoundationUiState,
+} from './ui/app-state.js';
 
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -885,6 +889,10 @@ export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
   return {
     status: 'baseline_ready',
     targetDate,
+    modelVersion: 'price-baseline-v3',
+    dataCutoff: `${targetDate}T07:30:00+08:00`,
+    sampleDays: 214,
+    lastBacktestAt: `${targetDate}T07:18:00+08:00`,
     readiness: {
       status: 'baseline_ready',
       historicalDateCount: 5,
@@ -892,6 +900,53 @@ export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
       missingReasons: [],
     },
     forecasts,
+    actuals: forecasts.map((row, index) => ({
+      pointIndex: row.pointIndex,
+      value: Number(
+        (row.pointForecast * (1 + Math.sin((index + 3) / 7) * 0.045)).toFixed(2)
+      ),
+    })),
+    previousForecasts: forecasts.map((row, index) => ({
+      pointIndex: row.pointIndex,
+      value: Number(
+        (row.pointForecast * (1 + Math.cos((index + 5) / 9) * 0.075)).toFixed(2)
+      ),
+    })),
+  };
+}
+
+function buildDemoFoundationMarketSeries() {
+  const rows = Array.from({ length: 96 }, (_, index) => {
+    const pointIndex = index + 1;
+    const hour = index / 4;
+    const temperatureForecast =
+      25.5 + 6.8 * Math.sin(((hour - 8) / 24) * Math.PI * 2);
+    const loadForecast =
+      505 +
+      105 * Math.exp(-((hour - 10) ** 2) / 10) +
+      165 * Math.exp(-((hour - 19) ** 2) / 11);
+    return {
+      pointIndex,
+      temperatureForecast,
+      temperatureActual: temperatureForecast + Math.sin((index + 2) / 8) * 0.8,
+      temperaturePrevious: temperatureForecast + Math.cos((index + 4) / 10) * 1.25,
+      loadForecast,
+      loadActual: loadForecast * (1 + Math.sin((index + 1) / 9) * 0.028),
+      loadPrevious: loadForecast * (1 + Math.cos((index + 5) / 11) * 0.045),
+    };
+  });
+  const series = (key) =>
+    rows.map((row) => ({ pointIndex: row.pointIndex, value: Number(row[key].toFixed(2)) }));
+  return {
+    identity: { asOf: '2026-07-31T07:30:00+08:00' },
+    series: {
+      temperatureActual: series('temperatureActual'),
+      temperatureForecast: series('temperatureForecast'),
+      temperaturePrevious: series('temperaturePrevious'),
+      loadActual: series('loadActual'),
+      loadForecast: series('loadForecast'),
+      loadPrevious: series('loadPrevious'),
+    },
   };
 }
 
@@ -2586,7 +2641,32 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       : activeStage === 'evolve'
         ? renderStrategyEvolutionDashboard(payload)
         : renderDeclarationDashboard(payload, { activeStage });
-  const cockpitState = { ...options, mode: payload.demoMode ? 'demo' : 'real', targetDate: payload.date, dataSources: options.dataSources || {}, fieldCatalog: options.fieldCatalog || {}, marketCockpit: options.marketCockpit || {}, forecastReport: options.forecastReport || {}, strategyReport: { recommendation: payload.declarationRecommendation, trace: options.strategyTrace }, accuracyReport: options.accuracyReport || {}, governanceReport: options.governanceReport || {} };
+  const foundationUi = options.foundationUi || createFoundationUiState();
+  const cockpitState = {
+    ...options,
+    ...foundationUi,
+    mode: payload.demoMode ? 'demo' : 'real',
+    targetDate: payload.date,
+    dataSources: options.dataSources || {},
+    fieldCatalog: options.fieldCatalog || {},
+    marketCockpit: options.marketCockpit || {},
+    forecastReport: options.forecastReport || {},
+    strategyReport: {
+      recommendation: payload.declarationRecommendation,
+      trace: options.strategyTrace,
+    },
+    accuracyReport: options.accuracyReport || {},
+    governanceReport: options.governanceReport || {},
+    openExplanation: foundationUi.explanation,
+    foundationInput: {
+      workbench: payload,
+      ukeyStatus: options.ukeyStatus || {},
+      forecastReport: options.forecastReport || {},
+      accuracyReport: options.accuracyReport || {},
+      marketCockpit: options.marketCockpit || {},
+      strategyTrace: options.strategyTrace || {},
+    },
+  };
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
   const activeCockpitView = options.activeView || 'market-cockpit';
   return `
@@ -2606,11 +2686,26 @@ export function renderWorkbenchMarkup(payload, options = {}) {
   `;
 }
 
+const COCKPIT_VIEW_IDS = new Set([
+  'data-sources',
+  'market-cockpit',
+  'price-forecast',
+  'declaration-strategy',
+  'history-review',
+  'model-governance',
+]);
+
+function initialCockpitView() {
+  if (typeof window === 'undefined') return 'market-cockpit';
+  const requested = new URLSearchParams(window.location.search).get('view');
+  return COCKPIT_VIEW_IDS.has(requested) ? requested : 'market-cockpit';
+}
+
 const browserState = {
   payload: null,
   mode: 'operation',
   activeStage: null,
-  activeView: 'market-cockpit',
+  activeView: initialCockpitView(),
   evidenceOpen: false,
   loading: true,
   forecastReport: null,
@@ -2620,6 +2715,9 @@ const browserState = {
   error: '',
   pendingAction: '',
   evidenceReturnSelector: '#evidence-trigger-sidebar',
+  foundationUi: createFoundationUiState(),
+  ukeyStatus: {},
+  accuracyReport: {},
 };
 
 export function claimPendingAction(state, actionId) {
@@ -2654,6 +2752,28 @@ function focusEvidenceDialog() {
 function closeEvidenceDialog() {
   browserState.evidenceOpen = false;
   const returnSelector = browserState.evidenceReturnSelector;
+  renderBrowser();
+  if (typeof requestAnimationFrame === 'undefined') return;
+  requestAnimationFrame(() => {
+    rootElement()?.querySelector(returnSelector)?.focus();
+  });
+}
+
+function focusFoundationDisclosure() {
+  if (typeof requestAnimationFrame === 'undefined') return;
+  requestAnimationFrame(() => {
+    const selector = browserState.foundationUi.provenanceOpen
+      ? '.foundation-provenance [data-foundation-action="close-provenance"]'
+      : '.foundation-evidence-drawer [data-foundation-action="close-explanation"]';
+    rootElement()?.querySelector(selector)?.focus();
+  });
+}
+
+function closeFoundationDisclosure() {
+  const returnSelector = browserState.foundationUi.returnFocusSelector;
+  browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+    type: 'close_disclosure',
+  });
   renderBrowser();
   if (typeof requestAnimationFrame === 'undefined') return;
   requestAnimationFrame(() => {
@@ -2729,6 +2849,44 @@ async function loadWorkbench(date = '') {
       scenario
     );
     browserState.activeStage = browserState.payload.currentStage;
+    browserState.payload.metrics = {
+      ...(browserState.payload.metrics || {}),
+      marketPricePointCount: 96,
+    };
+    browserState.forecastReport = buildStandaloneDemoForecastReport(
+      browserState.payload.date
+    );
+    browserState.ukeyStatus = {
+      collector: { state: 'stopped' },
+      visibleHistory: {
+        dates: [browserState.payload.date],
+        rowCount: 96,
+        generatedAt: browserState.payload.dataFreshness?.generatedAt,
+      },
+    };
+    browserState.accuracyReport = {
+      metrics: { mae: 21.4, rmse: 31.8, mape: 6.3, baselineSkill: 9.6 },
+      generatedAt: browserState.payload.dataFreshness?.generatedAt,
+      history: [
+        { date: '2026-07-27', value: 8.4 },
+        { date: '2026-07-28', value: 7.1 },
+        { date: '2026-07-29', value: 6.8 },
+        { date: '2026-07-30', value: 7.5 },
+        { date: '2026-07-31', value: 6.3 },
+      ],
+      versions: [
+        {
+          id: 'price-baseline-v3',
+          modelVersion: 'price-baseline-v3',
+          issuedAt: '2026-07-31 07:30',
+          sampleDays: 214,
+          mae: 21.4,
+          baselineSkill: 9.6,
+          status: '演示回测',
+        },
+      ],
+    };
+    browserState.marketCockpit = buildDemoFoundationMarketSeries();
     browserState.loading = false;
     renderBrowser();
     if (browserState.evidenceOpen) focusEvidenceDialog();
@@ -2742,11 +2900,14 @@ async function loadWorkbench(date = '') {
     const selectedDate = browserState.payload?.date || '';
     const asOf = new Date().toISOString();
     const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
-    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace] = await Promise.all([
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport] = await Promise.all([
       fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
       fetch(`/api/strategy/trace?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({stages:[]})),
+      fetch('/api/ukey-assistant',{cache:'no-store'}).then(responseJson).catch(()=>({})),
+      fetch(`/api/forecast/model?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(()=>({})),
+      fetch(`/api/forecast/accuracy?to=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(()=>({})),
     ]);
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
@@ -2863,7 +3024,12 @@ async function runPrimaryAction(actionId) {
     }
   }
   if (actionId === 'collect_today_data') {
-    browserState.actionMessage = '正在打开数据窗口并采集当前页面…';
+    if (browserState.payload?.demoMode) {
+      browserState.actionMessage = '演示环境不会连接真实 UKey；请切换到真实环境启动自动采集。';
+      renderBrowser();
+      return;
+    }
+    browserState.actionMessage = '正在连接数据窗口并启动自动采集…';
     renderBrowser();
     try {
       await fetch('/api/ukey-assistant/browser/start', { method: 'POST', cache: 'no-store' }).then(responseJson);
@@ -2871,7 +3037,15 @@ async function runPrimaryAction(actionId) {
         method: 'POST',
         cache: 'no-store',
       }).then(responseJson);
-      browserState.actionMessage = buildCollectorActionMessage(result);
+      const collector = await fetch('/api/ukey-assistant/collector/start', {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ intervalSeconds: 30 }),
+      }).then(responseJson);
+      browserState.actionMessage = collector?.collector?.state === 'running'
+        ? `${buildCollectorActionMessage(result)} 自动采集已启动，每 30 秒检查一次。`
+        : buildCollectorActionMessage(result);
       await loadWorkbench(browserState.payload?.date || '');
     } catch (error) {
       browserState.error = `采集失败：${error.message}`;
@@ -2913,6 +3087,76 @@ function bindBrowserEvents() {
   const root = rootElement();
   if (!root) return;
   root.addEventListener('click', async (event) => {
+    const forecastTab = event.target.closest('[data-forecast-tab]');
+    if (forecastTab) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'select_tab',
+        id: forecastTab.dataset.forecastTab,
+      });
+      renderBrowser();
+      requestAnimationFrame(() => {
+        rootElement()
+          ?.querySelector(`[data-forecast-tab="${browserState.foundationUi.activeForecastTab}"]`)
+          ?.focus();
+      });
+      return;
+    }
+    const foundationAction = event.target.closest('[data-foundation-action]');
+    if (foundationAction) {
+      const action = foundationAction.dataset.foundationAction;
+      const triggerSelector = foundationAction.dataset.foundationTrigger
+        ? `[data-foundation-trigger="${foundationAction.dataset.foundationTrigger}"]`
+        : foundationAction.dataset.explanationId
+          ? `[data-explanation-id="${foundationAction.dataset.explanationId}"]`
+          : '[data-foundation-action="open-provenance"]';
+      if (action === 'open-explanation') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'open_explanation',
+          id: foundationAction.dataset.explanationId,
+          triggerSelector,
+        });
+        renderBrowser();
+        focusFoundationDisclosure();
+        return;
+      }
+      if (action === 'open-provenance') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'open_provenance',
+          triggerSelector,
+        });
+        renderBrowser();
+        focusFoundationDisclosure();
+        return;
+      }
+      if (action === 'close-explanation' || action === 'close-provenance') {
+        closeFoundationDisclosure();
+        return;
+      }
+      if (action === 'reset-sandbox') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'reset_controls',
+        });
+        renderBrowser();
+        return;
+      }
+      if (action === 'apply-simulation') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'apply_simulation',
+        });
+        browserState.actionMessage = '模拟方案已刷新；正式策略和交易数据未被修改。';
+        renderBrowser();
+        return;
+      }
+    }
+    const riskButton = event.target.closest('[data-risk-profile]');
+    if (riskButton) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'set_risk',
+        id: riskButton.dataset.riskProfile,
+      });
+      renderBrowser();
+      return;
+    }
     const cockpitButton = event.target.closest('[data-cockpit-view]');
     if (cockpitButton) { browserState.activeView = cockpitButton.dataset.cockpitView; const url = new URL(window.location.href); url.searchParams.set('view', browserState.activeView); history.replaceState(null,'',url); renderBrowser(); return; }
     const cockpitEvidence = event.target.closest('[data-evidence-ref]');
@@ -3067,6 +3311,15 @@ function bindBrowserEvents() {
     }
   });
   root.addEventListener('change', async (event) => {
+    if (event.target.matches('[data-sandbox-control]')) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'set_control',
+        id: event.target.dataset.sandboxControl,
+        value: event.target.value,
+      });
+      renderBrowser();
+      return;
+    }
     if (event.target.matches('[data-date-input]')) {
       const previousStage = browserState.activeStage;
       await loadWorkbench(event.target.value);
@@ -3077,6 +3330,13 @@ function bindBrowserEvents() {
     }
   });
   root.addEventListener('keydown', (event) => {
+    const foundationDisclosureOpen =
+      browserState.foundationUi.explanation || browserState.foundationUi.provenanceOpen;
+    if (foundationDisclosureOpen && event.key === 'Escape') {
+      event.preventDefault();
+      closeFoundationDisclosure();
+      return;
+    }
     if (!browserState.evidenceOpen) return;
     const drawer = root.querySelector('.evidence-drawer');
     if (!drawer) return;

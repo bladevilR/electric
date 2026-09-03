@@ -19,6 +19,7 @@ const pointValue = (row = {}) =>
     row.value ??
       row.predictedValue ??
       row.prediction ??
+      row.pointForecast ??
       row.p50 ??
       row.forecast ??
       row.forecastValue
