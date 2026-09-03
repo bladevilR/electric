@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import{buildStrategyTrace}from'../lib/strategy-explanation.mjs';test('strategy trace has seven stages',()=>assert.deepEqual(buildStrategyTrace({}).stages.map(x=>x.id),['evidence','load','price','supplyNetwork','positionLimits','objectiveConstraints','recommendation']));

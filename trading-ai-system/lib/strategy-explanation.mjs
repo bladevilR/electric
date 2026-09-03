@@ -1,0 +1,1 @@
+export function buildStrategyTrace(input={}){const ids=['evidence','load','price','supplyNetwork','positionLimits','objectiveConstraints','recommendation'];return{targetDate:input.targetDate||null,pointIndex:input.pointIndex||null,stages:ids.map(id=>({id,status:input[id]?'available':'missing',data:input[id]||null})),executionAllowed:false};}

@@ -56,6 +56,8 @@ import { findForecastRuns, readForecastLedger } from './lib/forecast-ledger.mjs'
 import { readOutcomeLedger } from './lib/outcome-ledger.mjs';
 import { buildAccuracyReport } from './lib/forecast-evaluation.mjs';
 import { deriveMarketContext } from './lib/market-context.mjs';
+import { buildMarketCockpit } from './lib/market-cockpit.mjs';
+import { buildStrategyTrace } from './lib/strategy-explanation.mjs';
 import {
   createCompetitionMemoryStore,
   competitionRequestRoute,
@@ -619,6 +621,17 @@ async function handleApi(request, response, url) {
   }
   if (request.method === 'GET' && url.pathname === '/api/model/ablation') {
     sendJson(response, { modelId: url.searchParams.get('modelId') || null, evaluationRunId: url.searchParams.get('evaluationRunId') || null, status: 'not_evaluated', variants: [], automaticPromotion: false, requiresHumanApproval: true }); return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/market/cockpit') {
+    const date=url.searchParams.get('date')||'';const asOf=url.searchParams.get('asOf')||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(asOf))){sendJson(response,{error:{code:'market_context_invalid'}},400);return;}
+    const [store,catalog]=await Promise.all([readPointInTimeStore(pointInTimeStorePath),loadFieldCatalog(fieldCatalogPath)]);
+    const requiredFields=['userDeclaredPowerMw','defaultDeclaredPowerMw','dayAheadUserClearedPowerMw','actualAverageLoadMw','systemLoadForecastMw','availableCapacityMw'];
+    const snapshot=buildFeatureSnapshot({facts:store.facts,catalog,targetDate:date,decisionCutoffAt:asOf,requiredFields});
+    sendJson(response,buildMarketCockpit({snapshot,mode:url.searchParams.get('mode')||'real'}));return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/strategy/trace') {
+    sendJson(response,buildStrategyTrace({targetDate:url.searchParams.get('date'),pointIndex:Number(url.searchParams.get('pointIndex'))||null,evidence:{asOf:url.searchParams.get('asOf')}}));return;
   }
   if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
     const runType = url.searchParams.get('runType') || '';
