@@ -940,13 +940,63 @@ function buildDemoFoundationMarketSeries() {
   return {
     identity: { asOf: '2026-07-31T07:30:00+08:00' },
     series: {
-      temperatureActual: series('temperatureActual'),
-      temperatureForecast: series('temperatureForecast'),
-      temperaturePrevious: series('temperaturePrevious'),
-      loadActual: series('loadActual'),
-      loadForecast: series('loadForecast'),
-      loadPrevious: series('loadPrevious'),
+      temperatureActualC: series('temperatureActual'),
+      temperatureForecastC: series('temperatureForecast'),
+      temperaturePreviousForecastC: series('temperaturePrevious'),
+      actualAverageLoadMw: series('loadActual'),
+      systemLoadForecastMw: series('loadForecast'),
+      previousSystemLoadForecastMw: series('loadPrevious'),
     },
+  };
+}
+
+function buildDemoFoundationStrategyTrace(targetDate = '2026-07-31') {
+  const stage = (id, title, evidence = {}) => ({
+    id,
+    title,
+    status: evidence.status || 'available',
+    missingFields: evidence.missingFields || [],
+    conclusion: {
+      conclusionId: `demo:${targetDate}:${id}`,
+      summary: evidence.summary || '演示证据链已形成',
+      status: evidence.status === 'degraded' ? 'degraded' : 'supported',
+      inputRefs: evidence.inputRefs || [],
+      featureSnapshotId: evidence.featureSnapshotId || 'demo:feature-snapshot:v5',
+      forecastRunIds: evidence.forecastRunIds || [],
+      modelVersions: evidence.modelVersions || [],
+      constraintRefs: evidence.constraintRefs || [],
+      warnings: evidence.warnings || [],
+    },
+  });
+  return {
+    targetDate,
+    stages: [
+      stage('evidence', '时点证据', { inputRefs: ['demo:jspec:96-points'] }),
+      stage('load', '负荷预测', {
+        forecastRunIds: ['demo:load-run:20260731'],
+        modelVersions: ['demo:load-forecast-v5'],
+      }),
+      stage('price', '价格分布', {
+        forecastRunIds: ['demo:price-run:20260731'],
+        modelVersions: ['demo:price-baseline-v3'],
+      }),
+      stage('supplyNetwork', '供给与网络', {
+        inputRefs: ['demo:supply-network:snapshot'],
+      }),
+      stage('positionLimits', '持仓与限额', {
+        inputRefs: ['demo:position:snapshot'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+      stage('objectiveConstraints', '目标与硬约束', {
+        modelVersions: ['demo:optimizer-v2'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+      stage('recommendation', '推荐申报', {
+        inputRefs: ['demo:recommendation:96-points'],
+        modelVersions: ['demo:optimizer-v2'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+    ],
   };
 }
 
@@ -2656,6 +2706,7 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       trace: options.strategyTrace,
     },
     accuracyReport: options.accuracyReport || {},
+    forecastRuns: options.forecastRuns || {},
     governanceReport: options.governanceReport || {},
     openExplanation: foundationUi.explanation,
     foundationInput: {
@@ -2663,6 +2714,7 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       ukeyStatus: options.ukeyStatus || {},
       forecastReport: options.forecastReport || {},
       accuracyReport: options.accuracyReport || {},
+      forecastRuns: options.forecastRuns || {},
       marketCockpit: options.marketCockpit || {},
       strategyTrace: options.strategyTrace || {},
     },
@@ -2725,6 +2777,7 @@ const browserState = {
   foundationUi: createFoundationUiState(),
   ukeyStatus: {},
   accuracyReport: {},
+  forecastRuns: {},
 };
 
 export function claimPendingAction(state, actionId) {
@@ -2942,6 +2995,7 @@ async function loadWorkbench(date = '') {
       },
     };
     browserState.marketCockpit = buildDemoFoundationMarketSeries();
+    browserState.strategyTrace = buildDemoFoundationStrategyTrace(browserState.payload.date);
     browserState.loading = false;
     renderBrowser();
     if (browserState.evidenceOpen) focusEvidenceDialog();
@@ -2953,16 +3007,19 @@ async function loadWorkbench(date = '') {
     browserState.activeStage = browserState.payload.currentStage;
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
-    const asOf = new Date().toISOString();
+    // Keep the browser snapshot just behind the server clock so sub-second host skew
+    // cannot make an otherwise valid point-in-time request look like a future query.
+    const asOf = new Date(Date.now() - 1000).toISOString();
     const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
-    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport] = await Promise.all([
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns] = await Promise.all([
       fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
       fetch(`/api/strategy/trace?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({stages:[]})),
-      fetch('/api/ukey-assistant',{cache:'no-store'}).then(responseJson).catch(()=>({})),
-      fetch(`/api/forecast/model?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(()=>({})),
-      fetch(`/api/forecast/accuracy?to=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(()=>({})),
+      fetch('/api/ukey-assistant',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/model?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/accuracy?to=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/runs?date=${encodeURIComponent(selectedDate)}&runType=live_issued&limit=50`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,runs:[]})),
     ]);
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
@@ -3397,6 +3454,30 @@ function bindBrowserEvents() {
     if (foundationDisclosureOpen && event.key === 'Escape') {
       event.preventDefault();
       closeFoundationDisclosure();
+      return;
+    }
+    if (foundationDisclosureOpen && event.key === 'Tab') {
+      const foundationDrawer = browserState.foundationUi.provenanceOpen
+        ? root.querySelector('.foundation-provenance')
+        : root.querySelector('.foundation-evidence-drawer');
+      const focusable = foundationDrawer
+        ? Array.from(
+            foundationDrawer.querySelectorAll(
+              'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          )
+        : [];
+      if (!foundationDrawer || !focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !foundationDrawer.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
       return;
     }
     if (!browserState.evidenceOpen) return;

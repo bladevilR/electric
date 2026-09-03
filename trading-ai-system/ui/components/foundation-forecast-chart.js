@@ -38,12 +38,18 @@ export function renderFoundationForecastChart(tab = {}) {
     title: `${tab.label}曲线`,
     unit: tab.unit,
     series,
-  })}<p class="foundation-chart-note">虚线分界表示预测发布时间；分界后的实际结果仅用于后续回溯。</p></div>`;
+  })}<p class="foundation-chart-note">实线区分实际值与本次预测，虚线表示上一版预测；实际结果仅用于发布后的回溯。</p></div>`;
 }
 
 export function renderAccuracyHistory(history = [], unit = '') {
-  const points = (Array.isArray(history) ? history : [])
-    .map((row, index) => ({ pointIndex: index + 1, value: row.mae ?? row.value }))
+  const rows = Array.isArray(history) ? history : [];
+  const points = rows
+    .map((row, index) => ({
+      pointIndex:
+        rows.length === 1 ? 48 : 1 + (index / Math.max(1, rows.length - 1)) * 95,
+      displayLabel: row.date || index + 1,
+      value: row.mae ?? row.value,
+    }))
     .filter((row) => Number.isFinite(Number(row.value)));
   if (!points.length) {
     return `<div class="foundation-accuracy-empty" role="status"><strong>尚无可回溯的准确度序列</strong><p>预测发布后，需要等待实际结果入库并完成同点位配对。</p></div>`;
@@ -52,6 +58,8 @@ export function renderAccuracyHistory(history = [], unit = '') {
     title: '近 30 个交易日滚动 MAE',
     unit,
     series: [{ label: '滚动 MAE', points }],
+    detailsLabel: '查看历史误差明细',
+    indexLabel: '交易日',
   });
 }
 
@@ -74,8 +82,8 @@ export function renderSandboxChart(formalRows = [], simulatedRows = []) {
     title: '当前策略与微调后策略',
     unit: 'MW',
     series: [
-      { label: '当前策略', points: current },
-      { label: '微调后策略（模拟）', points: simulated },
+      { label: '当前策略', role: 'formal', points: current },
+      { label: '微调后策略（模拟）', role: 'simulation', points: simulated },
     ],
   });
 }

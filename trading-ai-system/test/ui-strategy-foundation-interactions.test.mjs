@@ -65,3 +65,13 @@ test('closing a disclosure preserves the trigger selector for focus restoration'
   assert.equal(state.provenanceOpen, false);
   assert.equal(state.returnFocusSelector, '[data-explanation-id="mape"]');
 });
+
+test('every strategy derivation explanation is accepted', () => {
+  for (const id of ['sources', 'quality', 'forecasts', 'fusion', 'optimizer', 'risk', 'review']) {
+    const state = reduceFoundationUiState(createFoundationUiState(), {
+      type: 'open_explanation',
+      id,
+    });
+    assert.equal(state.explanation, id);
+  }
+});

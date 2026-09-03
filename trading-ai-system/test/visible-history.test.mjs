@@ -39,6 +39,7 @@ test('mergeVisibleHistory keeps prior dates and enriches the same date-point key
   );
 
   assert.deepEqual(enriched.dates, ['2026-08-17', '2026-08-18']);
+  assert.deepEqual(enriched.coverageByDate, { '2026-08-17': 1, '2026-08-18': 2 });
   assert.equal(enriched.rows.length, 3);
   assert.deepEqual(
     enriched.rows.find((row) => row.date === '2026-08-18' && row.pointIndex === 1),

@@ -11,8 +11,8 @@ const roleStyle = (role, index) => {
   };
 };
 
-export function renderSvgTimeseries({title='96点曲线',unit='',series=[]}={}){
-  const points=series.flatMap(s=>s.points||[]).filter(p=>Number.isFinite(Number(p.value)));
+export function renderSvgTimeseries({title='96点曲线',unit='',series=[],detailsLabel='查看96点明细',indexLabel='点'}={}){
+  const points=series.flatMap(s=>(s.points||[]).map(p=>({...p,seriesLabel:s.label||s.fieldId||'序列'}))).filter(p=>Number.isFinite(Number(p.value)));
   const values=points.map(p=>Number(p.value));
   const low=Math.min(...values,0),high=Math.max(...values,1);
   const observedLow=Math.min(...values),observedHigh=Math.max(...values);
@@ -20,5 +20,5 @@ export function renderSvgTimeseries({title='96点曲线',unit='',series=[]}={}){
   const min=values.length?(observedLow<0?observedLow-padding:Math.max(0,observedLow-padding)):low;
   const max=values.length?observedHigh+padding:high;
   const range=max-min||1;
-  return `<figure class="timeseries local-scroll" role="region" aria-label="${esc(title)}，单位 ${esc(unit)}"><figcaption><strong>${esc(title)}</strong> · ${esc(unit)}</figcaption><svg viewBox="0 0 960 260" role="img" aria-label="${esc(title)}"><title>${esc(title)}，单位 ${esc(unit)}</title>${series.map((s,i)=>{const style=roleStyle(s.role,i);return `<polyline data-series-role="${esc(s.role||`series-${i+1}`)}" fill="none" stroke="${style.color}" stroke-width="${style.width}"${style.dash?` stroke-dasharray="${style.dash}"`:''} points="${(s.points||[]).filter(p=>Number.isFinite(Number(p.value))).map(p=>`${Number(p.pointIndex||1)*10},${230-(Number(p.value)-min)/range*200}`).join(' ')}"/>`;}).join('')}</svg><div class="chart-legend">${series.map(s=>`<span data-series-role="${esc(s.role||'series')}">${esc(s.label||s.fieldId)}（${esc(unit)}）</span>`).join('')}</div><details><summary>查看96点明细</summary><table><thead><tr><th>点</th><th>值（${esc(unit)}）</th></tr></thead><tbody>${points.map(p=>`<tr><td>${p.pointIndex}</td><td>${p.value}</td></tr>`).join('')}</tbody></table></details></figure>`;
+  return `<figure class="timeseries local-scroll" role="region" aria-label="${esc(title)}，单位 ${esc(unit)}"><figcaption><strong>${esc(title)}</strong> · ${esc(unit)}</figcaption><svg viewBox="0 0 960 260" role="img" aria-label="${esc(title)}"><title>${esc(title)}，单位 ${esc(unit)}</title>${series.map((s,i)=>{const style=roleStyle(s.role,i);return `<polyline data-series-role="${esc(s.role||`series-${i+1}`)}" fill="none" stroke="${style.color}" stroke-width="${style.width}"${style.dash?` stroke-dasharray="${style.dash}"`:''} points="${(s.points||[]).filter(p=>Number.isFinite(Number(p.value))).map(p=>`${Number(p.pointIndex||1)*10},${230-(Number(p.value)-min)/range*200}`).join(' ')}"/>`;}).join('')}</svg><div class="chart-legend">${series.map(s=>`<span data-series-role="${esc(s.role||'series')}">${esc(s.label||s.fieldId)}（${esc(unit)}）</span>`).join('')}</div><details><summary>${esc(detailsLabel)}</summary><table><thead><tr><th>序列</th><th>${esc(indexLabel)}</th><th>值（${esc(unit)}）</th></tr></thead><tbody>${points.map(p=>`<tr><td>${esc(p.seriesLabel)}</td><td>${esc(p.displayLabel??p.pointIndex)}</td><td>${p.value}</td></tr>`).join('')}</tbody></table></details></figure>`;
 }

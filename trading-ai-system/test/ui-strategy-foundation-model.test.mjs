@@ -47,8 +47,8 @@ test('foundation model exposes price temperature and load tabs with isolated uni
     },
     marketCockpit: {
       series: {
-        temperature: { points: [{ pointIndex: 1, value: 29 }] },
-        load: { points: [{ pointIndex: 1, value: 610 }] },
+        temperatureActualC: { points: [{ pointIndex: 1, value: 29 }] },
+        actualAverageLoadMw: { points: [{ pointIndex: 1, value: 610 }] },
       },
     },
   });
@@ -157,4 +157,197 @@ test('collection evidence carries the exact snapshot and history storage locatio
   assert.equal(model.collection.current.storagePath, 'E:\\electric\\data\\snapshot.json');
   assert.equal(model.collection.history.storagePath, 'C:\\Users\\R\\history.json');
   assert.equal(model.collection.lastPageTitle, '实时价格');
+});
+
+test('demo collection provenance is never labelled as real data', () => {
+  const model = buildStrategyFoundationModel({
+    mode: 'demo',
+    targetDate: '2026-07-31',
+    workbench: {
+      metrics: { marketPricePointCount: 96 },
+      readiness: { status: 'ready' },
+    },
+    ukeyStatus: {
+      visibleHistory: { rowCount: 96, dates: ['2026-07-31'] },
+    },
+  });
+
+  assert.equal(model.collection.current.kind, 'current_simulation');
+  assert.equal(model.collection.current.label, '今日模拟数据');
+  assert.equal(model.collection.history.kind, 'historical_simulation');
+  assert.equal(model.collection.history.label, '历史模拟数据');
+  assert.equal(model.collection.strategyExecutable, false);
+});
+
+test('price chart only accepts the canonical price forecast target', () => {
+  const model = buildStrategyFoundationModel({
+    forecastReport: {
+      forecasts: [
+        { target: 'realTimeAvgPrice', pointIndex: 1, pointForecast: 321 },
+        { target: 'priceSpread', pointIndex: 1, pointForecast: -18 },
+        { target: 'highPriceRiskLabel', pointIndex: 1, pointForecast: 1 },
+      ],
+    },
+  });
+
+  assert.deepEqual(model.forecastTabs[0].series[1].points, [{ pointIndex: 1, value: 321 }]);
+});
+
+test('market cockpit contract maps actual and forecast load without inventing temperature', () => {
+  const model = buildStrategyFoundationModel({
+    marketCockpit: {
+      series: {
+        actualAverageLoadMw: { points: [{ pointIndex: 1, value: 610 }] },
+        systemLoadForecastMw: { points: [{ pointIndex: 1, value: 625 }] },
+      },
+    },
+  });
+
+  assert.equal(model.forecastTabs[2].series[0].points[0].value, 610);
+  assert.equal(model.forecastTabs[2].series[1].points[0].value, 625);
+  assert.deepEqual(model.forecastTabs[1].series.flatMap((series) => series.points), []);
+});
+
+test('evidence cutoff does not reuse the cockpit request time', () => {
+  const model = buildStrategyFoundationModel({
+    now: '2026-09-03T09:30:00+08:00',
+    marketCockpit: { identity: { asOf: '2026-09-03T09:30:00+08:00' } },
+  });
+
+  assert.equal(model.identity.now, '2026-09-03T09:30:00+08:00');
+  assert.equal(model.identity.dataCutoff, null);
+});
+
+test('ratio-form skill versus baseline is normalized to display percent', () => {
+  const model = buildStrategyFoundationModel({
+    accuracyReport: { metrics: { skillVsBaseline: 0.096 } },
+  });
+
+  assert.equal(model.accuracy.metrics.baselineSkill, 9.6);
+});
+
+test('history coverage uses the latest date count instead of the cumulative row count', () => {
+  const model = buildStrategyFoundationModel({
+    ukeyStatus: {
+      visibleHistory: {
+        rowCount: 175,
+        dates: ['2026-06-29', '2026-06-30'],
+        coverageByDate: { '2026-06-29': 96, '2026-06-30': 79 },
+      },
+    },
+  });
+
+  assert.equal(model.collection.history.date, '2026-06-30');
+  assert.equal(model.collection.history.coverage, 79);
+});
+
+test('sandbox does not claim cost peak-valley or risk impact without evidence', () => {
+  const model = buildStrategyFoundationModel({
+    workbench: {
+      declarationRecommendation: {
+        rows: [{ pointIndex: 1, recommendedPowerMw: 100 }],
+      },
+    },
+  });
+  const result = applyFoundationSandbox(model, { riskProfile: 'active' });
+
+  assert.equal(result.estimatedCostChangeYuan, null);
+  assert.equal(result.peakValleyShiftMwh, null);
+  assert.equal(result.riskExposureChangePct, null);
+});
+
+test('issued forecast ledger drives version comparison and decision cutoff evidence', () => {
+  const model = buildStrategyFoundationModel({
+    forecastRuns: {
+      runs: [
+        {
+          forecastRunId: 'run-1',
+          targetField: 'realTimeAvgPrice',
+          modelVersion: 'price-v1',
+          forecastGeneratedAt: '2026-09-03T07:00:00+08:00',
+          decisionCutoffAt: '2026-09-03T06:45:00+08:00',
+          rows: [{ pointIndex: 1, p50: 300 }],
+        },
+        {
+          forecastRunId: 'run-2',
+          targetField: 'realTimeAvgPrice',
+          modelVersion: 'price-v2',
+          forecastGeneratedAt: '2026-09-03T07:30:00+08:00',
+          decisionCutoffAt: '2026-09-03T07:15:00+08:00',
+          rows: [{ pointIndex: 1, p50: 320 }],
+        },
+        {
+          forecastRunId: 'spread-run',
+          targetField: 'priceSpread',
+          modelVersion: 'spread-v1',
+          forecastGeneratedAt: '2026-09-03T07:40:00+08:00',
+          decisionCutoffAt: '2026-09-03T07:20:00+08:00',
+          rows: [{ pointIndex: 1, p50: -20 }],
+        },
+        {
+          forecastRunId: 'replay-run',
+          forecastRunType: 'point_in_time_replay',
+          targetField: 'realTimeAvgPrice',
+          modelVersion: 'replay-v9',
+          forecastGeneratedAt: '2026-09-03T08:00:00+08:00',
+          decisionCutoffAt: '2026-09-03T07:50:00+08:00',
+          rows: [{ pointIndex: 1, p50: 999 }],
+        },
+      ],
+    },
+  });
+
+  assert.equal(model.identity.dataCutoff, '2026-09-03T07:15:00+08:00');
+  assert.equal(model.accuracy.modelVersion, 'price-v2');
+  assert.deepEqual(model.forecastTabs[0].series[1].points, [{ pointIndex: 1, value: 320 }]);
+  assert.deepEqual(model.forecastTabs[0].series[2].points, [{ pointIndex: 1, value: 300 }]);
+  assert.deepEqual(model.accuracy.versions.map((version) => version.modelVersion), [
+    'price-v2',
+    'price-v1',
+  ]);
+});
+
+test('real workbench review states can close complete data without enabling demo execution', () => {
+  for (const status of ['review_required', 'verified']) {
+    const model = buildStrategyFoundationModel({
+      mode: 'real',
+      workbench: { metrics: { marketPricePointCount: 96 }, status },
+    });
+    assert.equal(model.collection.current.complete, true);
+    assert.equal(model.collection.strategyExecutable, true);
+  }
+});
+
+test('strategy trace is indexed into node-specific evidence', () => {
+  const model = buildStrategyFoundationModel({
+    strategyTrace: {
+      stages: [
+        {
+          id: 'objectiveConstraints',
+          title: '目标与硬约束',
+          status: 'available',
+          conclusion: {
+            conclusionId: 'decision:objective',
+            inputRefs: ['fact:price:66'],
+            featureSnapshotId: 'snapshot-7',
+            forecastRunIds: ['forecast-3'],
+            modelVersions: ['optimizer-v2'],
+            constraintRefs: ['constraint-v7'],
+            warnings: [],
+          },
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(model.derivation.evidenceByExplanation.optimizer, {
+    stageStatus: ['目标与硬约束：available'],
+    conclusionIds: ['decision:objective'],
+    inputRefs: ['fact:price:66'],
+    featureSnapshotIds: ['snapshot-7'],
+    forecastRunIds: ['forecast-3'],
+    modelVersions: ['optimizer-v2'],
+    constraintRefs: ['constraint-v7'],
+    warnings: [],
+  });
 });

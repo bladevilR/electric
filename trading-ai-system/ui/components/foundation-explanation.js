@@ -7,10 +7,12 @@ const esc = (value) =>
       ]
   );
 
-export function renderExplanationButton(id, label) {
+export function renderExplanationButton(id, label, triggerKey = '', expanded = false) {
   return `<button type="button" class="foundation-info-button" data-foundation-action="open-explanation" data-explanation-id="${esc(
     id
-  )}" aria-label="${esc(label)}：查看公式与依据" aria-controls="foundationEvidenceDrawer" aria-expanded="false"><span aria-hidden="true">查看公式</span></button>`;
+  )}"${triggerKey ? ` data-foundation-trigger="${esc(triggerKey)}"` : ''} aria-label="${esc(
+    label
+  )}：查看公式与依据" aria-controls="foundationEvidenceDrawer" aria-expanded="${expanded}"><span aria-hidden="true">查看公式</span></button>`;
 }
 
 export function renderFoundationTooltip(explanation = {}) {
@@ -26,11 +28,13 @@ export function renderFoundationTooltip(explanation = {}) {
 }
 
 function evidenceValue(value) {
+  if (Array.isArray(value)) return value.length ? esc(value.join('；')) : '尚无可用证据';
   return value ? esc(value) : '尚无可用证据';
 }
 
 export function renderFoundationEvidenceDrawer(explanation = {}, evidence = {}) {
   if (!explanation.id) return '';
+  const stage = evidence.stageEvidence || null;
   return `
     <aside class="foundation-evidence-drawer" id="foundationEvidenceDrawer" role="dialog" aria-modal="false" aria-labelledby="foundationEvidenceTitle" tabindex="-1">
       <header>
@@ -56,17 +60,33 @@ export function renderFoundationEvidenceDrawer(explanation = {}, evidence = {}) 
               .join('')}</dl></section>`
           : ''
       }
-      <section>
-        <h3>本次使用</h3>
-        <dl class="foundation-evidence-list">
-          <div><dt>数据截止</dt><dd>${evidenceValue(evidence.dataCutoff)}</dd></div>
-          <div><dt>模型版本</dt><dd>${evidenceValue(evidence.modelVersion)}</dd></div>
-          <div><dt>约束版本</dt><dd>${evidenceValue(evidence.constraintVersion)}</dd></div>
-          <div><dt>入选事实</dt><dd>${evidenceValue(evidence.selectedFacts)}</dd></div>
-        </dl>
-      </section>
+      ${
+        stage
+          ? `<section>
+              <h3>${esc(evidence.stageEvidenceLabel || '节点级真实证据')}</h3>
+              <dl class="foundation-evidence-list">
+                <div><dt>节点状态</dt><dd>${evidenceValue(stage.stageStatus)}</dd></div>
+                <div><dt>结论 ID</dt><dd>${evidenceValue(stage.conclusionIds)}</dd></div>
+                <div><dt>输入事实</dt><dd>${evidenceValue(stage.inputRefs)}</dd></div>
+                <div><dt>特征快照</dt><dd>${evidenceValue(stage.featureSnapshotIds)}</dd></div>
+                <div><dt>预测运行</dt><dd>${evidenceValue(stage.forecastRunIds)}</dd></div>
+                <div><dt>模型版本</dt><dd>${evidenceValue(stage.modelVersions)}</dd></div>
+                <div><dt>约束引用</dt><dd>${evidenceValue(stage.constraintRefs)}</dd></div>
+                <div><dt>缺失与警告</dt><dd>${evidenceValue(stage.warnings)}</dd></div>
+              </dl>
+            </section>`
+          : `<section>
+              <h3>本次使用</h3>
+              <dl class="foundation-evidence-list">
+                <div><dt>数据截止</dt><dd>${evidenceValue(evidence.dataCutoff)}</dd></div>
+                <div><dt>模型版本</dt><dd>${evidenceValue(evidence.modelVersion)}</dd></div>
+                <div><dt>约束版本</dt><dd>${evidenceValue(evidence.constraintVersion)}</dd></div>
+                <div><dt>入选事实</dt><dd>${evidenceValue(evidence.selectedFacts)}</dd></div>
+              </dl>
+            </section>`
+      }
       <footer>
-        <button type="button" class="foundation-secondary-button" data-foundation-action="open-provenance">查看完整推导</button>
+        <button type="button" class="foundation-secondary-button" data-foundation-action="open-provenance" data-foundation-trigger="provenance-rail">查看完整推导</button>
         <button type="button" class="foundation-primary-button" data-foundation-action="close-explanation">关闭</button>
       </footer>
     </aside>
@@ -75,7 +95,7 @@ export function renderFoundationEvidenceDrawer(explanation = {}, evidence = {}) 
 
 export function renderFoundationProvenance(open = false, collection = {}) {
   if (!open) {
-    return `<button type="button" class="foundation-provenance-trigger" data-foundation-action="open-provenance" aria-expanded="false" aria-controls="foundationProvenance">数据血缘</button>`;
+    return `<button type="button" class="foundation-provenance-trigger" data-foundation-action="open-provenance" data-foundation-trigger="provenance-rail" aria-expanded="false" aria-controls="foundationProvenance">数据血缘</button>`;
   }
   const stages = [
     ['JSPEC 页面', '实时价格与申报页面'],
@@ -87,7 +107,7 @@ export function renderFoundationProvenance(open = false, collection = {}) {
     ['结果与复核', '解释、审批与回溯'],
   ];
   return `
-    <aside class="foundation-provenance" id="foundationProvenance" aria-label="数据血缘">
+    <aside class="foundation-provenance" id="foundationProvenance" role="dialog" aria-modal="false" aria-label="数据血缘" tabindex="-1">
       <header><strong>数据血缘</strong><button type="button" data-foundation-action="close-provenance">收起</button></header>
       <section class="foundation-storage-evidence">
         <h3>采集数据存放</h3>

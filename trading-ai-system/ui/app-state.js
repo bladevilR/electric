@@ -6,8 +6,13 @@ const FOUNDATION_EXPLANATIONS = new Set([
   'rmse',
   'mape',
   'baselineSkill',
+  'sources',
+  'quality',
+  'forecasts',
+  'fusion',
   'optimizer',
   'risk',
+  'review',
 ]);
 const FOUNDATION_CONTROLS = new Set(['priceWeight', 'temperatureWeight', 'loadWeight']);
 const FOUNDATION_RISK_PROFILES = new Set(['conservative', 'balanced', 'active']);

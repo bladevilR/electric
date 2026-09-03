@@ -595,6 +595,7 @@ async function loadUkeyStatus(dataset = null) {
       rowCount: visibleHistory.rowCount || 0,
       dateCount: visibleHistory.dateCount || 0,
       dates: visibleHistory.dates || [],
+      coverageByDate: visibleHistory.coverageByDate || {},
       generatedAt: visibleHistory.generatedAt || null,
       storagePath: visibleHistoryPath,
     },
@@ -632,7 +633,34 @@ async function handleApi(request, response, url) {
     sendJson(response,buildMarketCockpit({snapshot,mode:url.searchParams.get('mode')||'real'}));return;
   }
   if (request.method === 'GET' && url.pathname === '/api/strategy/trace') {
-    sendJson(response,buildStrategyTrace({targetDate:url.searchParams.get('date'),pointIndex:Number(url.searchParams.get('pointIndex'))||null,evidence:{asOf:url.searchParams.get('asOf')}}));return;
+    const targetDate = url.searchParams.get('date') || '';
+    const asOf = url.searchParams.get('asOf') || '';
+    const requestedPoint = url.searchParams.get('pointIndex');
+    const pointIndex = requestedPoint === null || requestedPoint === '' ? null : Number(requestedPoint);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(targetDate) ||
+      !Number.isFinite(Date.parse(asOf)) ||
+      Date.parse(asOf) > Date.now() ||
+      (pointIndex !== null && (!Number.isInteger(pointIndex) || pointIndex < 1 || pointIndex > 96))
+    ) {
+      sendJson(response, { error: { code: 'strategy_trace_query_invalid' } }, 400);
+      return;
+    }
+    const [store, ledger] = await Promise.all([
+      readPointInTimeStore(pointInTimeStorePath),
+      readForecastLedger(forecastLedgerPath),
+    ]);
+    sendJson(
+      response,
+      buildStrategyTrace({
+        targetDate,
+        pointIndex,
+        asOf,
+        facts: store.facts,
+        forecastRuns: ledger.runs,
+      })
+    );
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
     const runType = url.searchParams.get('runType') || '';

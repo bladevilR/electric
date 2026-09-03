@@ -20,6 +20,17 @@ function sortedRows(rows = []) {
 function normalizeHistory(value = {}) {
   const rows = sortedRows(Array.isArray(value.rows) ? value.rows : []);
   const dates = [...new Set(rows.map((row) => String(row.date || '')).filter(Boolean))].sort();
+  const coverageByDate = Object.fromEntries(
+    dates.map((date) => [
+      date,
+      new Set(
+        rows
+          .filter((row) => String(row.date || '') === date)
+          .map((row) => Number(row.pointIndex))
+          .filter((pointIndex) => Number.isFinite(pointIndex))
+      ).size,
+    ])
+  );
   return {
     version: 1,
     generatedAt: value.generatedAt || null,
@@ -27,6 +38,7 @@ function normalizeHistory(value = {}) {
     rowCount: rows.length,
     dateCount: dates.length,
     dates,
+    coverageByDate,
     rows,
   };
 }

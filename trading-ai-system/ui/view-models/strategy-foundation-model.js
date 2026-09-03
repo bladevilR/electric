@@ -50,6 +50,46 @@ const metric = (source, keys = []) => {
   return null;
 };
 
+const rowsForTarget = (rows = [], target) =>
+  (Array.isArray(rows) ? rows : []).filter((row) => {
+    const rowTarget = row?.target || row?.targetId || row?.fieldId;
+    return !rowTarget || rowTarget === target;
+  });
+
+const percentageMetric = (source = {}) => {
+  const explicitPercent = metric(source, ['baselineSkill', 'relativeImprovementPct']);
+  if (explicitPercent !== null) return explicitPercent;
+  const ratio = metric(source, ['skillVsBaseline']);
+  return ratio === null ? null : Number((ratio * 100).toFixed(4));
+};
+
+const uniqueValues = (values = []) => [
+  ...new Set(values.flat().filter((value) => value !== null && value !== undefined && value !== '')),
+];
+
+function nodeEvidence(stages = [], stageIds = []) {
+  const selected = (Array.isArray(stages) ? stages : []).filter((stage) =>
+    stageIds.includes(stage?.id)
+  );
+  return {
+    stageStatus: selected.map((stage) => `${stage.title || stage.id}：${stage.status || 'unavailable'}`),
+    conclusionIds: uniqueValues(selected.map((stage) => stage.conclusion?.conclusionId)),
+    inputRefs: uniqueValues(selected.map((stage) => stage.conclusion?.inputRefs || [])),
+    featureSnapshotIds: uniqueValues(
+      selected.map((stage) => stage.conclusion?.featureSnapshotId)
+    ),
+    forecastRunIds: uniqueValues(selected.map((stage) => stage.conclusion?.forecastRunIds || [])),
+    modelVersions: uniqueValues(selected.map((stage) => stage.conclusion?.modelVersions || [])),
+    constraintRefs: uniqueValues(selected.map((stage) => stage.conclusion?.constraintRefs || [])),
+    warnings: uniqueValues(
+      selected.flatMap((stage) => [
+        ...(stage.missingFields || []),
+        ...(stage.conclusion?.warnings || []),
+      ])
+    ),
+  };
+}
+
 function forecastTab({ id, label, unit, description, source, actualKeys, currentKeys, previousKeys }) {
   return {
     id,
@@ -65,6 +105,34 @@ function forecastTab({ id, label, unit, description, source, actualKeys, current
 }
 
 const EXPLANATIONS = Object.freeze({
+  sources: {
+    id: 'sources',
+    title: '依据说明 · 数据来源',
+    principle: '只使用能标明业务日期、点位、发布时间和来源页面的数据进入策略链。',
+    formula: '可用输入 = 来源已确认 ∩ 业务日期匹配 ∩ 点位口径一致',
+    caveat: '页面查询时间不是数据发布时间；缺少来源证据时保持为空。',
+  },
+  quality: {
+    id: 'quality',
+    title: '依据说明 · 质量校验与时点快照',
+    principle: '先按 96 个 15 分钟点检查覆盖、重复、空值和时间穿越，再冻结本次决策快照。',
+    formula: '覆盖率 = 有效唯一点位数 / 96；事实可用条件 = availableAt ≤ 决策截止',
+    caveat: '覆盖完整仍不等于可执行，数据新鲜度和生产就绪状态也必须通过。',
+  },
+  forecasts: {
+    id: 'forecasts',
+    title: '依据说明 · 三类预测',
+    principle: '价格、温度和负荷分别建模、分别回测，只有同一目标和单位的序列才能比较。',
+    formula: 'ŷₜ = f(同点位历史、日历、气象、负荷与市场特征)',
+    caveat: '没有真实温度接口时温度曲线保持空白，不用其他序列代替。',
+  },
+  fusion: {
+    id: 'fusion',
+    title: '依据说明 · 特征融合',
+    principle: '将三类预测对齐到相同交易日和 96 点网格，形成可供优化器使用的特征快照。',
+    formula: 'xₜ = [价格预测ₜ, 温度预测ₜ, 负荷预测ₜ, 持仓ₜ, 交易边界ₜ]',
+    caveat: '任何特征都必须保留自身版本和截止时间，不能用后验实际值参与当时决策。',
+  },
   mae: {
     id: 'mae',
     title: 'MAE 平均绝对误差',
@@ -113,6 +181,13 @@ const EXPLANATIONS = Object.freeze({
     formula: '下限ₜ ≤ 申报功率ₜ ≤ 上限ₜ，且 |功率ₜ - 功率ₜ₋₁| ≤ 爬坡上限',
     caveat: '缺少任一强约束时，页面只能展示不可执行的试算结果。',
   },
+  review: {
+    id: 'review',
+    title: '依据说明 · 人工复核',
+    principle: '复核人查看关键变化、约束命中、回退原因和证据完整性后再决定是否采用。',
+    formula: '可采用 = 数据就绪 ∧ 约束通过 ∧ 证据完整 ∧ 人工确认',
+    caveat: '当前页面的模拟微调不会写入正式策略，也不会提交交易。',
+  },
 });
 
 export function buildStrategyFoundationModel(input = {}) {
@@ -125,16 +200,71 @@ export function buildStrategyFoundationModel(input = {}) {
     Math.max(0, Number(workbench.metrics?.marketPricePointCount || 0))
   );
   const historyDate = latestDate(history.dates || []);
-  const historyCoverage = Math.min(POINT_COUNT, Math.max(0, Number(history.rowCount || 0)));
-  const collectorState = String(ukeyStatus.collector?.state || 'stopped');
+  const historyCoverageRaw = historyDate
+    ? history.coverageByDate?.[historyDate] ??
+      (Array.isArray(history.dates) && history.dates.length === 1 ? history.rowCount : 0)
+    : 0;
+  const historyCoverage = Math.min(POINT_COUNT, Math.max(0, Number(historyCoverageRaw || 0)));
   const readinessStatus = String(workbench.readiness?.status || workbench.status || 'data_blocked');
+  const dataReady = ['ready', 'review_ready', 'review_required', 'verified'].includes(
+    readinessStatus
+  );
+  const isDemo = input.mode === 'demo';
+  const collectorError =
+    ukeyStatus.collector?.lastError ||
+    ukeyStatus.browserWindow?.lastError ||
+    ukeyStatus.loadError ||
+    null;
+  const collectorState = String(
+    isDemo
+      ? 'simulation'
+      : ukeyStatus.loadError
+        ? 'unavailable'
+        : ukeyStatus.browserWindow?.available === false
+          ? 'unavailable'
+        : ukeyStatus.collector?.state === 'running' && collectorError
+          ? 'running_with_error'
+          : ukeyStatus.collector?.state || 'stopped'
+  );
   const forecastReport = input.forecastReport || {};
   const marketSeries = input.marketCockpit?.series || {};
   const accuracyReport = input.accuracyReport || {};
-  const predictionRows = forecastReport.forecasts || forecastReport.rows || [];
-  const previousRows = forecastReport.previousForecasts || forecastReport.previous || [];
+  const priceRuns = (input.forecastRuns?.runs || [])
+    .filter(
+      (run) =>
+        run?.targetField === 'realTimeAvgPrice' &&
+        (!run.forecastRunType || run.forecastRunType === 'live_issued')
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(right.forecastGeneratedAt || 0) - Date.parse(left.forecastGeneratedAt || 0)
+    );
+  const latestPriceRun = priceRuns[0] || null;
+  const previousPriceRun = priceRuns[1] || null;
+  const predictionRows = latestPriceRun?.rows?.length
+    ? latestPriceRun.rows
+    : rowsForTarget(forecastReport.forecasts || forecastReport.rows || [], 'realTimeAvgPrice');
+  const previousRows = previousPriceRun?.rows?.length
+    ? previousPriceRun.rows
+    : rowsForTarget(
+        forecastReport.previousForecasts || forecastReport.previous || [],
+        'realTimeAvgPrice'
+      );
+  const issuedVersions = priceRuns.map((run) => ({
+    id: run.forecastRunId,
+    modelVersion: run.modelVersion || run.modelId,
+    issuedAt: run.forecastGeneratedAt,
+    sampleCount: Array.isArray(run.rows) ? run.rows.length : null,
+    mae: null,
+    baselineSkill: null,
+    status: run.forecastRunType === 'point_in_time_replay' ? '时点回放' : '已发布',
+  }));
   const actualPriceRows =
-    forecastReport.actuals || marketSeries.price?.points || marketSeries.realtimePrice?.points || [];
+    rowsForTarget(forecastReport.actuals || [], 'realTimeAvgPrice').length
+      ? rowsForTarget(forecastReport.actuals || [], 'realTimeAvgPrice')
+      : marketSeries.realTimePriceFinalYuanPerMwh?.points ||
+        marketSeries.realTimePriceCurrentYuanPerMwh?.points ||
+        [];
   const formalRows =
     workbench.declarationRecommendation?.rows ||
     workbench.recommendation?.rows ||
@@ -158,9 +288,9 @@ export function buildStrategyFoundationModel(input = {}) {
       unit: '°C',
       description: '查看温度及相关气象因素如何影响用电需求。',
       source: marketSeries,
-      actualKeys: ['temperatureActual', 'temperature'],
-      currentKeys: ['temperatureForecast'],
-      previousKeys: ['temperaturePrevious'],
+      actualKeys: ['temperatureActualC'],
+      currentKeys: ['temperatureForecastC'],
+      previousKeys: ['temperaturePreviousForecastC'],
     }),
     forecastTab({
       id: 'load',
@@ -168,9 +298,9 @@ export function buildStrategyFoundationModel(input = {}) {
       unit: 'MW',
       description: '比较实际负荷、当前负荷预测与上一版本预测。',
       source: marketSeries,
-      actualKeys: ['loadActual', 'load'],
-      currentKeys: ['loadForecast'],
-      previousKeys: ['loadPrevious'],
+      actualKeys: ['actualAverageLoadMw'],
+      currentKeys: ['systemLoadForecastMw', 'netLoadForecastMw'],
+      previousKeys: ['previousSystemLoadForecastMw'],
     }),
   ];
 
@@ -188,26 +318,27 @@ export function buildStrategyFoundationModel(input = {}) {
         mae: metric(accuracySource, ['mae', 'MAE']),
         rmse: metric(accuracySource, ['rmse', 'RMSE']),
         mape: metric(accuracySource, ['mape', 'MAPE']),
-        baselineSkill: metric(accuracySource, [
-          'baselineSkill',
-          'skillVsBaseline',
-          'relativeImprovementPct',
-        ]),
+        baselineSkill: percentageMetric(accuracySource),
       },
       history: Array.isArray(targetAccuracy.history)
         ? targetAccuracy.history
         : allowRootFallback && Array.isArray(accuracyReport.history)
           ? accuracyReport.history
           : [],
-      versions:
+      versions: (
         targetAccuracy.versions ||
         targetForecast.versions ||
         (allowRootFallback
-          ? accuracyReport.versions || forecastReport.versions || forecastReport.candidates || []
-          : []),
+          ? accuracyReport.versions ||
+            forecastReport.versions ||
+            forecastReport.candidates ||
+            issuedVersions
+          : [])
+      ).map((version) => ({ ...version, baselineSkill: percentageMetric(version) })),
       modelVersion:
         targetAccuracy.modelVersion ||
         targetForecast.modelVersion ||
+        (allowRootFallback ? latestPriceRun?.modelVersion || latestPriceRun?.modelId : null) ||
         targetForecast.selectedModel?.id ||
         targetForecast.model?.id ||
         (allowRootFallback
@@ -225,7 +356,10 @@ export function buildStrategyFoundationModel(input = {}) {
         targetAccuracy.generatedAt ||
         targetForecast.lastBacktestAt ||
         (allowRootFallback
-          ? forecastReport.lastBacktestAt || accuracyReport.generatedAt || null
+          ? forecastReport.lastBacktestAt ||
+            accuracyReport.evaluationAsOf ||
+            accuracyReport.generatedAt ||
+            null
           : null),
     };
   };
@@ -234,30 +368,40 @@ export function buildStrategyFoundationModel(input = {}) {
     temperature: accuracyForTarget('temperature'),
     load: accuracyForTarget('load'),
   };
+  const traceStages = input.strategyTrace?.stages || [];
+  const evidenceByExplanation = {
+    sources: nodeEvidence(traceStages, ['evidence']),
+    quality: nodeEvidence(traceStages, ['evidence']),
+    forecasts: nodeEvidence(traceStages, ['load', 'price']),
+    fusion: nodeEvidence(traceStages, ['load', 'price', 'supplyNetwork']),
+    optimizer: nodeEvidence(traceStages, ['objectiveConstraints', 'recommendation']),
+    risk: nodeEvidence(traceStages, ['positionLimits', 'objectiveConstraints']),
+    review: nodeEvidence(traceStages, ['recommendation']),
+  };
 
   return {
     identity: {
-      environment: input.mode === 'demo' ? '演示环境' : '真实环境',
+      environment: isDemo ? '演示环境' : '真实环境',
       targetDate,
-      now: input.now || new Date().toISOString(),
+      now: input.now || null,
       dataCutoff:
+        latestPriceRun?.decisionCutoffAt ||
         forecastReport.dataCutoff ||
-        forecastReport.asOf ||
-        input.marketCockpit?.identity?.asOf ||
+        forecastReport.decisionCutoffAt ||
         null,
     },
     collection: {
       current: {
-        kind: 'current_real',
-        label: '今日真实数据',
+        kind: isDemo ? 'current_simulation' : 'current_real',
+        label: isDemo ? '今日模拟数据' : '今日真实数据',
         date: targetDate,
         coverage: currentCoverage,
-        complete: currentCoverage === POINT_COUNT,
+        complete: currentCoverage === POINT_COUNT && dataReady,
         storagePath: ukeyStatus.visibleSnapshot?.storagePath || null,
       },
       history: {
-        kind: 'historical_real',
-        label: '历史真实数据',
+        kind: isDemo ? 'historical_simulation' : 'historical_real',
+        label: isDemo ? '历史模拟数据' : '历史真实数据',
         date: historyDate,
         coverage: historyCoverage,
         generatedAt: history.generatedAt || null,
@@ -265,15 +409,20 @@ export function buildStrategyFoundationModel(input = {}) {
       },
       simulation: { kind: 'simulation', label: '模拟方案' },
       collectorState,
+      collectorError,
       lastPageTitle: ukeyStatus.collector?.lastPageTitle || null,
       lastPageUrl: ukeyStatus.collector?.lastPageUrl || null,
       lastSampleAt: ukeyStatus.collector?.lastSampleAt || null,
-      strategyExecutable:
-        currentCoverage === POINT_COUNT && ['ready', 'review_ready'].includes(readinessStatus),
+      strategyExecutable: !isDemo && currentCoverage === POINT_COUNT && dataReady,
       readinessStatus,
     },
     forecastTabs: tabs,
     accuracy: { ...accuracyByTab.price, byTab: accuracyByTab },
+    failures: {
+      forecast: forecastReport.loadError || null,
+      accuracy: accuracyReport.loadError || null,
+      versions: input.forecastRuns?.loadError || null,
+    },
     sandbox: {
       formalRows,
       defaults: {
@@ -285,15 +434,16 @@ export function buildStrategyFoundationModel(input = {}) {
     },
     derivation: {
       stages: [
-        { id: 'sources', label: '数据来源' },
-        { id: 'quality', label: '质量校验与时点快照' },
-        { id: 'forecasts', label: '价格 / 温度 / 负荷预测' },
-        { id: 'fusion', label: '特征融合' },
+        { id: 'sources', label: '数据来源', explanationId: 'sources' },
+        { id: 'quality', label: '质量校验与时点快照', explanationId: 'quality' },
+        { id: 'forecasts', label: '价格 / 温度 / 负荷预测', explanationId: 'forecasts' },
+        { id: 'fusion', label: '特征融合', explanationId: 'fusion' },
         { id: 'optimizer', label: '申报优化器', explanationId: 'optimizer' },
         { id: 'risk', label: '风险约束', explanationId: 'risk' },
-        { id: 'review', label: '人工复核' },
+        { id: 'review', label: '人工复核', explanationId: 'review' },
       ],
-      evidenceStages: input.strategyTrace?.stages || [],
+      evidenceStages: traceStages,
+      evidenceByExplanation,
     },
     explanations: EXPLANATIONS,
   };
@@ -348,7 +498,6 @@ export function applyFoundationSandbox(model, controls = {}) {
     };
   }
 
-  const netPowerShift = series.reduce((sum, row) => sum + row.adjustedMw - row.formalMw, 0);
   return {
     kind: 'simulation',
     persisted: false,
@@ -356,8 +505,8 @@ export function applyFoundationSandbox(model, controls = {}) {
     controls: normalized,
     series,
     estimatedCostChangeYuan: null,
-    peakValleyShiftMwh: Number((Math.abs(netPowerShift) * 0.25).toFixed(2)),
-    riskExposureChangePct: Number(((riskFactor - 1) * 10).toFixed(1)),
+    peakValleyShiftMwh: null,
+    riskExposureChangePct: null,
   };
 }
 

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { renderDataSourcesView } from '../ui/views/data-sources-view.js';
+import { renderAccuracyHistory } from '../ui/components/foundation-forecast-chart.js';
 
 function render(overrides = {}) {
   return renderDataSourcesView({
@@ -146,4 +147,143 @@ test('collection status links to the exact local data storage evidence', () => {
   assert.match(html, /E:\\electric\\data\\snapshot\.json/);
   assert.match(html, /C:\\Users\\R\\history\.json/);
   assert.match(html, /实时价格/);
+});
+
+test('short accuracy histories span the chart width instead of collapsing at the left edge', () => {
+  const html = renderAccuracyHistory(
+    [
+      { value: 8.4 },
+      { value: 7.1 },
+      { value: 6.8 },
+      { value: 7.5 },
+      { value: 6.3 },
+    ],
+    '元/MWh'
+  );
+
+  assert.match(html, /points="10,/);
+  assert.match(html, /960,/);
+});
+
+test('every derivation stage opens evidence and disclosure state is announced', () => {
+  const html = render({ openExplanation: 'sources', provenanceOpen: false });
+
+  for (const id of ['sources', 'quality', 'forecasts', 'fusion', 'optimizer', 'risk', 'review']) {
+    assert.match(html, new RegExp(`data-explanation-id="${id}"`));
+  }
+  assert.match(
+    html,
+    /data-foundation-trigger="derivation-sources"[^>]*aria-expanded="true"/
+  );
+  assert.match(html, /foundation-provenance-trigger[^>]*aria-expanded="false"/);
+});
+
+test('collector errors and honest unavailable sandbox outcomes are visible', () => {
+  const html = render({
+    foundationInput: {
+      workbench: {
+        metrics: { marketPricePointCount: 0 },
+        declarationRecommendation: { rows: [{ pointIndex: 1, recommendedPowerMw: 100 }] },
+      },
+      ukeyStatus: {
+        loadError: '采集状态接口不可用',
+        collector: { state: 'error', lastError: 'Chrome 调试端口未连接' },
+        visibleHistory: { rowCount: 0, dates: [] },
+      },
+    },
+  });
+
+  assert.match(html, /采集状态不可用/);
+  assert.match(html, /Chrome 调试端口未连接/);
+  assert.equal((html.match(/证据不足/g) || []).length >= 3, true);
+});
+
+test('running collector and forecast request failures remain visible with attempt time', () => {
+  const html = render({
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 }, status: 'blocked' },
+      ukeyStatus: {
+        collector: {
+          state: 'running',
+          lastError: '页面表格暂未出现',
+          lastSampleAt: '2026-09-03T09:00:00Z',
+        },
+        visibleHistory: { rowCount: 0, dates: [] },
+      },
+      forecastReport: { loadError: '预测模型接口 503' },
+      accuracyReport: { loadError: '准确度接口 500' },
+    },
+  });
+
+  assert.match(html, /运行中，但最近采集失败/);
+  assert.match(html, /页面表格暂未出现/);
+  assert.match(html, /最近尝试：2026-09-03 17:00/);
+  assert.match(html, /预测模型接口 503/);
+  assert.match(html, /准确度接口 500/);
+});
+
+test('strategy explanation drawer shows only its node-level trace evidence', () => {
+  const html = render({
+    openExplanation: 'risk',
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 } },
+      forecastReport: {
+        modelVersion: 'price-v3',
+        decisionCutoffAt: '2026-09-03T07:30:00+08:00',
+      },
+      strategyTrace: {
+        stages: [
+          {
+            id: 'positionLimits',
+            title: '持仓与限额',
+            status: 'degraded',
+            conclusion: {
+              conclusionId: 'decision:risk',
+              inputRefs: ['fact:limit:1'],
+              constraintRefs: ['constraint-v7'],
+              warnings: ['limit_missing'],
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  assert.match(html, /节点级真实证据/);
+  assert.match(html, /持仓与限额：degraded/);
+  assert.match(html, /decision:risk/);
+  assert.match(html, /fact:limit:1/);
+  assert.match(html, /constraint-v7/);
+  assert.match(html, /limit_missing/);
+  assert.doesNotMatch(html, /<dt>模型版本<\/dt><dd>price-v3<\/dd>/);
+});
+
+test('real explanation drawer does not claim real node evidence when no trace references exist', () => {
+  const html = render({
+    openExplanation: 'sources',
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 } },
+      strategyTrace: {
+        stages: [
+          {
+            id: 'evidence',
+            title: '时点证据',
+            status: 'unavailable',
+            conclusion: {
+              conclusionId: null,
+              inputRefs: [],
+              forecastRunIds: [],
+              modelVersions: [],
+              constraintRefs: [],
+              warnings: ['source_evidence_missing'],
+            },
+          },
+        ],
+      },
+    },
+  });
+
+  assert.match(html, /节点级证据状态（未形成）/);
+  assert.doesNotMatch(html, /节点级真实证据/);
+  assert.match(html, /source_evidence_missing/);
 });
