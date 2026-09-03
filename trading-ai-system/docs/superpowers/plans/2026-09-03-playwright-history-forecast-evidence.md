@@ -506,21 +506,21 @@ git commit -m "feat(ui): build data and forecast evidence workbench"
 - Consumes: all earlier tasks.
 - Produces: automated mock-platform proof and a precise manual UKey acceptance procedure.
 
-- [ ] **Step 1: Write the failing Playwright end-to-end test**
+- [x] **Step 1: Write the failing Playwright end-to-end test**
 
 Start a local mock JSPEC server with login, price, weather and load pages; start the application with a temporary SQLite path; launch the collector in headless test mode; backfill three dates; publish one forecast; import actuals; and assert that the workbench renders comparison curves and non-null accuracy metrics.
 
-- [ ] **Step 2: Run the test and verify failure**
+- [x] **Step 2: Run the test and verify failure**
 
 Run: `node --test test/playwright-evidence-loop.test.mjs`
 
 Expected: FAIL at the first missing integration behavior.
 
-- [ ] **Step 3: Complete integration seams exposed by the test**
+- [x] **Step 3: Complete integration seams exposed by the test**
 
 Use only the public interfaces defined in Tasks 1–7. Do not add test-only production branches other than dependency injection for browser executable, launch URL, clock, sleep and SQLite path.
 
-- [ ] **Step 4: Document operation and recovery**
+- [x] **Step 4: Document operation and recovery**
 
 Document exact buttons and states for first UKey login, starting full backfill, pausing, resuming after restart, handling login expiry, handling rate limits, exporting data, publishing a forecast, and reading live accuracy. State that the dedicated Chrome window must remain open during collection.
 
@@ -538,7 +538,7 @@ Expected: all tests PASS, delivery verification succeeds, and diff check emits n
 
 Start the app, launch the dedicated visible Chrome, let the user complete UKey login, query one known historical date for each of price, temperature and load, verify accepted rows in SQLite, and leave the full backfill job paused or running according to the user's final choice. Do not claim full-history completion until the job itself reports all chunks complete.
 
-- [ ] **Step 7: Commit verification and docs**
+- [x] **Step 7: Commit verification and docs**
 
 ```bash
 git add test/playwright-evidence-loop.test.mjs docs/production-runbook.md README.md

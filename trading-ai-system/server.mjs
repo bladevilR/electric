@@ -124,23 +124,38 @@ const outcomeLedgerPath = path.resolve(getArgValue('--outcome-ledger', process.e
 const evidenceStorePath = path.resolve(getArgValue('--evidence-store', process.env.TRADING_EVIDENCE_STORE_PATH || path.join(ledgerDataRoot, 'trading-evidence.sqlite')));
 const collectorProfilePath = path.resolve(getArgValue('--collector-profile', process.env.TRADING_COLLECTOR_PROFILE_PATH || path.join(ledgerDataRoot, 'jspec-playwright-profile')));
 const expectedPointCount = Number(getArgValue('--expected-point-count', process.env.TRADING_EXPECTED_POINT_COUNT || 96));
+const collectorLaunchUrl = getArgValue('--collector-launch-url', process.env.TRADING_COLLECTOR_LAUNCH_URL || '');
+const collectorExecutablePath = getArgValue('--collector-executable', process.env.TRADING_COLLECTOR_EXECUTABLE_PATH || '');
+const collectorHeadless = String(getArgValue('--collector-headless', process.env.TRADING_COLLECTOR_HEADLESS || 'false')).toLowerCase() === 'true';
+const collectorQueryDelayMs = Number(getArgValue('--collector-query-delay-ms', process.env.TRADING_COLLECTOR_QUERY_DELAY_MS || 20000));
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 const evidenceStore = openTradingEvidenceStore({ filePath: evidenceStorePath });
-const collectorRuntime = createPlaywrightCollectorRuntime({ rootDir, profileDir: collectorProfilePath, env: process.env });
+const collectorRuntime = createPlaywrightCollectorRuntime({
+  rootDir,
+  profileDir: collectorProfilePath,
+  env: process.env,
+  ...(collectorLaunchUrl ? { launchUrl: collectorLaunchUrl } : {}),
+  ...(collectorExecutablePath ? { executablePath: collectorExecutablePath } : {}),
+  headless: collectorHeadless,
+});
 const weatherConfig = {
   provider: 'Open-Meteo',
   locationId: process.env.TRADING_WEATHER_LOCATION_ID || 'suzhou-center-v1',
   latitude: Number(process.env.TRADING_WEATHER_LATITUDE || 31.2989),
   longitude: Number(process.env.TRADING_WEATHER_LONGITUDE || 120.5853),
   forecastLeadHours: Number(process.env.TRADING_WEATHER_FORECAST_LEAD_HOURS || 24),
+  earliestDate: getArgValue('--weather-earliest', process.env.TRADING_WEATHER_EARLIEST || '2024-01-01'),
+  latestDate: getArgValue('--weather-latest', process.env.TRADING_WEATHER_LATEST || '' ) || undefined,
+  previousRunsEndpoint: getArgValue('--weather-forecast-endpoint', process.env.TRADING_WEATHER_FORECAST_ENDPOINT || '') || undefined,
+  archiveEndpoint: getArgValue('--weather-archive-endpoint', process.env.TRADING_WEATHER_ARCHIVE_ENDPOINT || '') || undefined,
 };
 const evidenceAdapters = [
-  createPriceAdapter(),
-  createLoadAdapter(),
+  createPriceAdapter({ expectedPointCount }),
+  createLoadAdapter({ expectedPointCount }),
   createOpenMeteoTemperatureAdapter(weatherConfig),
 ];
-const collectionRunner = createCollectionJobRunner({ store: evidenceStore, runtime: collectorRuntime, adapters: evidenceAdapters });
+const collectionRunner = createCollectionJobRunner({ store: evidenceStore, runtime: collectorRuntime, adapters: evidenceAdapters, queryDelayMs: collectorQueryDelayMs });
 const forecastPublisher = createForecastPublisher({
   store: evidenceStore,
   codeCommitSha: process.env.TRADING_CODE_COMMIT_SHA || 'working-tree',
@@ -679,6 +694,11 @@ function evidenceRange(url) {
   return { from, to };
 }
 
+function csvCell(value) {
+  const text = value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
 function publicCollectorStatus() {
   const raw = collectorRuntime.status();
   return {
@@ -807,6 +827,37 @@ async function handleApi(request, response, url) {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/api/history/export') {
+    try {
+      const { from, to } = evidenceRange(url);
+      const format = url.searchParams.get('format') || 'csv';
+      if (!['csv', 'json'].includes(format)) throw new Error('export_format_invalid');
+      const query = {
+        fieldId: url.searchParams.get('fieldId') || undefined,
+        sourceId: url.searchParams.get('sourceId') || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        limit: 100000,
+      };
+      const rows = evidenceStore.queryFacts(query);
+      if (format === 'json') {
+        sendJson(response, { query, rows, exportedAt: new Date().toISOString() });
+        return;
+      }
+      const columns = ['businessDate', 'pointIndex', 'fieldId', 'value', 'unit', 'sourceId', 'availableAt', 'capturedAt', 'sourceRevision', 'factId'];
+      const csv = [columns.join(','), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(','))].join('\r\n');
+      response.writeHead(200, {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="trading-evidence-${from || 'all'}-${to || 'all'}.csv"`,
+        'cache-control': 'no-store',
+      });
+      response.end(`\ufeff${csv}\r\n`);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
     try {
       const { from, to } = evidenceRange(url);
@@ -825,6 +876,25 @@ async function handleApi(request, response, url) {
       const run = forecastPublisher.publishLiveForecast(targetDate, { decisionCutoffAt: body.decisionCutoffAt, forecastRunId: body.forecastRunId });
       await appendAuditEvent(auditLogPath, { type: 'live_forecast_published', actor: request.headers['x-operator-id'] || 'local-operator', outcome: 'published', forecastRunId: run.forecastRunId, targetDate });
       sendJson(response, { run }, 201);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/forecast/outcomes/backfill') {
+    try {
+      const body = await readJsonBody(request);
+      const from = assertEvidenceDate(body.from, 'from_date');
+      const to = assertEvidenceDate(body.to || body.from, 'to_date');
+      if (from > to) throw new Error('date_range_invalid');
+      const result = forecastPublisher.backfillOutcomes({
+        from,
+        to,
+        targetField: body.targetField,
+        actualLabelVersion: body.actualLabelVersion || 'final',
+      });
+      sendJson(response, result, 201);
     } catch (error) {
       sendEvidenceError(response, error);
     }

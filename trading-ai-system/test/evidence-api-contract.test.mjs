@@ -106,3 +106,17 @@ test('forecast runs come from the evidence store and invalid queries are rejecte
     await server.close();
   }
 });
+
+test('history export returns a credential-free CSV evidence extract', async () => {
+  const server = await startServer();
+  try {
+    const response = await fetch(`${server.baseUrl}/api/history/export?format=csv&from=2026-07-01&to=2026-07-01`);
+    const body = await response.text();
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /text\/csv/);
+    assert.match(body, /dayAheadUserPriceFinalYuanPerMwh/);
+    assert.doesNotMatch(body, /cookie|token|password|^pin$/i);
+  } finally {
+    await server.close();
+  }
+});

@@ -94,6 +94,8 @@ export function createOpenMeteoTemperatureAdapter(options = {}) {
   const earliestDate = assertDate(options.earliestDate || '2024-01-01', 'earliest_date');
   const latestDate = assertDate(options.latestDate || previousDate(clock().slice(0, 10)), 'latest_date');
   const forecastLeadHours = Number(options.forecastLeadHours || 24);
+  const previousRunsEndpoint = String(options.previousRunsEndpoint || PREVIOUS_RUNS_ENDPOINT);
+  const archiveEndpoint = String(options.archiveEndpoint || ARCHIVE_ENDPOINT);
   if (![24, 48, 72, 96, 120, 144, 168].includes(forecastLeadHours)) throw new Error('weather_forecast_lead_invalid');
   const leadDays = forecastLeadHours / 24;
   const forecastField = `temperature_2m_previous_day${leadDays}`;
@@ -112,13 +114,13 @@ export function createOpenMeteoTemperatureAdapter(options = {}) {
   async function extract(_page, input = {}) {
     const businessDate = assertDate(input.businessDate || selectedDate, 'business_date');
     const capturedAt = input.capturedAt || clock();
-    const forecastUrl = buildUrl(PREVIOUS_RUNS_ENDPOINT, {
+    const forecastUrl = buildUrl(previousRunsEndpoint, {
       latitude,
       longitude,
       businessDate,
       hourly: forecastField,
     });
-    const actualUrl = buildUrl(ARCHIVE_ENDPOINT, {
+    const actualUrl = buildUrl(archiveEndpoint, {
       latitude,
       longitude,
       businessDate,

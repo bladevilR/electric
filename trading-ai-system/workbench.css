@@ -8062,8 +8062,16 @@ body {
   line-height: 1.6;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .foundation-truth-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .foundation-forecast-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-model-evidence dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -8126,5 +8134,13 @@ body {
   .foundation-strip-actions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .foundation-model-evidence dl {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-model-evidence dl div {
+    grid-template-columns: 88px minmax(0, 1fr);
   }
 }

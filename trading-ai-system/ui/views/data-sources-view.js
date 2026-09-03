@@ -71,6 +71,13 @@ function truthStrip(model) {
   const history = model.collection.history;
   const lastAttempt = evidenceTimeText(model.collection.lastSampleAt);
   const collector = {
+    ready: ['采集器已就绪', '专用 Chrome 已识别业务页面', 'is-ready'],
+    collecting: ['正在采集', '正在按断点逐日写入规范化事实', 'is-ready'],
+    paused: ['采集已暂停', '检查点已保存，可从原位置继续', 'is-warning'],
+    rate_limited: ['访问频率受限', '任务已退避，达到重试时点后继续', 'is-warning'],
+    login_required: ['等待 UKey 登录', '请在专用 Chrome 中手工完成登录', 'is-warning'],
+    login_expired: ['UKey 登录已过期', '请在专用 Chrome 中重新登录后继续', 'is-danger'],
+    page_changed: ['未识别业务页面', '请在专用 Chrome 中打开 JSPEC 业务数据页面', 'is-warning'],
     running: ['采集器运行中', '约每 30 秒检查一次当前页', 'is-ready'],
     running_with_error: [
       '运行中，但最近采集失败',
@@ -108,13 +115,16 @@ function truthStrip(model) {
   const rangeText = range.earliestDate && range.latestDate
     ? `${range.earliestDate} 至 ${range.latestDate}`
     : '尚未形成历史覆盖';
+  const browserActionAttribute = model.identity.environment === '演示环境'
+    ? 'data-primary-action="collect_today_data"'
+    : 'data-foundation-action="start-browser"';
   return `
     <section class="foundation-truth-strip" aria-label="专用浏览器、UKey 与历史回填状态">
       <div class="foundation-truth-item ${chromeConnected ? 'is-ready' : collector[2]}">
         <small>专用 Chrome</small>
         <strong>${chromeConnected ? '已连接' : '未连接'}</strong>
         <span>${esc(collector[0])} · ${esc(collector[1])}${lastAttempt ? ` · 最近尝试：${esc(lastAttempt)}` : ''}</span>
-        <span class="foundation-legacy-truth">${current.complete ? '今日数据已闭环' : '今日数据未闭环'} · ${esc(collector[0])}</span>
+        <span class="foundation-legacy-truth">${esc(current.label)} · ${current.complete ? '今日数据已闭环' : '今日数据未闭环'} · ${esc(collector[0])}</span>
       </div>
       <div class="foundation-truth-item ${ukeyLoggedIn ? 'is-ready' : 'is-warning'}">
         <small>UKey</small>
@@ -131,7 +141,7 @@ function truthStrip(model) {
         <small>回填进度</small>
         <strong>${numberText(backfill.progressPct, '%')}</strong>
         <span>${backfill.totalChunks ? `${backfill.completedChunks}/${backfill.totalChunks} 个分片` : '尚未开始全量历史回填'}</span>
-        <div class="foundation-strip-actions"><button type="button" class="foundation-secondary-button" data-foundation-action="start-browser">打开专用 Chrome</button><button type="button" class="foundation-primary-button" data-foundation-action="${jobAction.id}" data-job-id="${esc(backfill.id || '')}">${jobAction.label}</button></div>
+        <div class="foundation-strip-actions"><button type="button" class="foundation-secondary-button" ${browserActionAttribute}>打开专用 Chrome</button><button type="button" class="foundation-primary-button" data-foundation-action="${jobAction.id}" data-job-id="${esc(backfill.id || '')}">${jobAction.label}</button></div>
       </div>
     </section>
   `;
@@ -391,7 +401,7 @@ export function renderDataSourcesView(state = {}) {
               activeTab.label
             )}）</h2></div></header>
             <dl>
-              <div><dt>数据来源</dt><dd>${activeId === 'temperature' ? `${esc(model.collection.weather.provider || '天气预报源')} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : 'JSPEC 历史价格 + 温度预报 + 负荷预测'}</dd></div>
+              <div><dt>数据来源</dt><dd>${activeId === 'temperature' ? `${esc(model.collection.weather.provider || '天气预报源')} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : `JSPEC 历史价格 + ${esc(model.collection.weather.provider || '天气预报源')} 温度预报 + JSPEC 负荷预测`}</dd></div>
               <div><dt>核心公式</dt><dd>${activeId === 'price' ? '价格 = 同点基线 + 温度贡献 + 负荷贡献' : activeId === 'temperature' ? '小时预报 → 15分钟线性对齐' : '同点历史 + 日历与气象特征'}</dd></div>
               <div><dt>当前模型</dt><dd>${esc(activeAccuracy.modelVersion || '尚无有效版本')}</dd></div>
               <div><dt>数据截止</dt><dd>${esc(evidenceTimeText(model.identity.dataCutoff) || '尚无可用证据')}</dd></div>
