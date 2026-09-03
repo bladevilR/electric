@@ -363,6 +363,7 @@ export function renderDataSourcesView(state = {}) {
     : 'price';
   const activeTab = model.forecastTabs.find((tab) => tab.id === activeId);
   const activeAccuracy = model.accuracy.byTab?.[activeId] || model.accuracy;
+  const activeForecastEvidence = model.forecast.evidenceByTab?.[activeId] || {};
   const explanation = model.explanations[state.openExplanation] || null;
   const activeTriggerKey =
     String(state.returnFocusSelector || '').match(/data-foundation-trigger="([^"]+)"/)?.[1] || '';
@@ -401,12 +402,13 @@ export function renderDataSourcesView(state = {}) {
               activeTab.label
             )}）</h2></div></header>
             <dl>
-              <div><dt>数据来源</dt><dd>${activeId === 'temperature' ? `${esc(model.collection.weather.provider || '天气预报源')} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : `JSPEC 历史价格 + ${esc(model.collection.weather.provider || '天气预报源')} 温度预报 + JSPEC 负荷预测`}</dd></div>
-              <div><dt>核心公式</dt><dd>${activeId === 'price' ? '价格 = 同点基线 + 温度贡献 + 负荷贡献' : activeId === 'temperature' ? '小时预报 → 15分钟线性对齐' : '同点历史 + 日历与气象特征'}</dd></div>
+              <div><dt>数据来源</dt><dd>${esc(activeForecastEvidence.source || (activeId === 'temperature' ? `${model.collection.weather.provider || '天气预报源'} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : `JSPEC 历史价格 + ${model.collection.weather.provider || '天气预报源'} 温度预报 + JSPEC 负荷预测`))}</dd></div>
+              <div><dt>核心公式</dt><dd>${esc(activeForecastEvidence.formula || (activeId === 'price' ? '价格 = 同点基线 + 温度贡献 + 负荷贡献' : activeId === 'temperature' ? '小时预报 → 15分钟线性对齐' : '同点历史 + 日历与气象特征'))}</dd></div>
               <div><dt>当前模型</dt><dd>${esc(activeAccuracy.modelVersion || '尚无有效版本')}</dd></div>
               <div><dt>数据截止</dt><dd>${esc(evidenceTimeText(model.identity.dataCutoff) || '尚无可用证据')}</dd></div>
               <div><dt>样本天数</dt><dd>${numberText(activeAccuracy.sampleDays, ' 天')}</dd></div>
               <div><dt>最近回测</dt><dd>${esc(evidenceTimeText(activeAccuracy.lastBacktestAt) || '尚未完成')}</dd></div>
+              ${activeForecastEvidence.caveat ? `<div><dt>当前限制</dt><dd>${esc(activeForecastEvidence.caveat)}</dd></div>` : ''}
             </dl>
             <button type="button" class="foundation-secondary-button" data-foundation-action="open-explanation" data-explanation-id="baselineSkill" data-foundation-trigger="model-choice" aria-controls="foundationEvidenceDrawer" aria-expanded="${
               state.openExplanation === 'baselineSkill' && activeTriggerKey === 'model-choice'

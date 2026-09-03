@@ -93,11 +93,19 @@ export function createCollectionJobRunner(options = {}) {
 
   async function createFullBackfill(input = {}) {
     const page = await requireReady();
+    const requestedFrom = input.fromDate ? assertDate(input.fromDate, 'from_date') : null;
+    const requestedTo = input.toDate ? assertDate(input.toDate, 'to_date') : null;
+    if (requestedFrom && requestedTo && dateMs(requestedFrom) > dateMs(requestedTo)) {
+      throw errorWithCode('collection_range_invalid');
+    }
     const discovered = [];
     for (const adapter of adapters) {
       await adapter.navigate(page);
       const bounds = await adapter.discoverBounds(page);
-      discovered.push({ adapter, ...bounds });
+      const earliestDate = requestedFrom ? laterDate(bounds.earliestDate, requestedFrom) : bounds.earliestDate;
+      const latestDate = requestedTo ? earlierDate(bounds.latestDate, requestedTo) : bounds.latestDate;
+      if (dateMs(earliestDate) > dateMs(latestDate)) throw errorWithCode('collection_range_invalid');
+      discovered.push({ adapter, earliestDate, latestDate });
     }
     const earliestDate = discovered.map((item) => item.earliestDate).reduce(earlierDate);
     const latestDate = discovered.map((item) => item.latestDate).reduce(laterDate);

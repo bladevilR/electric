@@ -18,6 +18,12 @@ async function createFixtureServer() {
       </body></html>`);
       return;
     }
+    if (request.url.startsWith('/authenticated-shell')) {
+      response.end(`<!doctype html><html><head><title>电力交易平台</title></head><body>
+        <main><h1>欢迎回来</h1><p>请选择业务功能。</p></main>
+      </body></html>`);
+      return;
+    }
     response.end(`<!doctype html><html><head><title>电力交易平台</title></head><body>
       <main><h1>外网登录</h1><button>UKey 登录</button></main>
     </body></html>`);
@@ -119,6 +125,30 @@ test('login redirect after readiness is reported as login_expired', async () => 
     assert.equal((await context.runtime.healthCheck()).state, 'ready');
     await page.goto(`${context.server.baseUrl}/out#/outNet`);
     assert.equal((await context.runtime.healthCheck()).state, 'login_expired');
+  } finally {
+    await context.close();
+  }
+});
+
+test('an authenticated JSPEC dashboard route is ready before a business table is selected', async () => {
+  const context = await runtimeFixture();
+  try {
+    await context.runtime.start();
+    const page = await context.runtime.getPage();
+    await page.goto(`${context.server.baseUrl}/authenticated-shell#/dashboard`);
+    assert.equal((await context.runtime.healthCheck()).state, 'ready');
+  } finally {
+    await context.close();
+  }
+});
+
+test('an authenticated JSPEC micro-frontend route remains ready while its controls mount', async () => {
+  const context = await runtimeFixture();
+  try {
+    await context.runtime.start();
+    const page = await context.runtime.getPage();
+    await page.goto(`${context.server.baseUrl}/authenticated-shell#/pxf-spotgoods-province-extranet/Dd2jyUserClearingResult/Dd2jyRqClearing`);
+    assert.equal((await context.runtime.healthCheck()).state, 'ready');
   } finally {
     await context.close();
   }

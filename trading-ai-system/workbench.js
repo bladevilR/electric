@@ -3139,6 +3139,19 @@ export function buildCollectorBrowserStartMessage(browser = {}) {
   return '专用 Chrome 已置前并连接。';
 }
 
+export function buildCollectorBackfillPrerequisiteMessage(browser = {}) {
+  if (browser.state === 'page_changed') {
+    return '你已经登录；请在专用 Chrome 中进入任一 JSPEC 业务数据页面，然后再次点击“开始全量回填”。';
+  }
+  if (browser.state === 'login_expired') {
+    return '专用 Chrome 的 UKey 登录已过期；重新登录后再次点击“开始全量回填”。';
+  }
+  if (browser.state === 'error') {
+    return `采集器暂未就绪：${browser.lastErrorMessage || '请检查专用 Chrome 状态。'}`;
+  }
+  return '请在专用 Chrome 中完成 UKey 登录；登录后再次点击“开始全量回填”。';
+}
+
 async function runPrimaryAction(actionId) {
   browserState.error = '';
   browserState.actionMessage = '';
@@ -3270,7 +3283,7 @@ function bindBrowserEvents() {
           }
           if (action === 'start-backfill') {
             if (!['ready', 'collecting', 'paused', 'rate_limited'].includes(browser.state)) {
-              browserState.actionMessage = '专用 Chrome 已打开，请在该窗口完成 UKey 登录；登录后再次点击“开始全量回填”。';
+              browserState.actionMessage = buildCollectorBackfillPrerequisiteMessage(browser);
             } else {
               const result = await fetch('/api/collector/jobs/backfill', {
                 method: 'POST',

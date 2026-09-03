@@ -3,6 +3,13 @@ import { createHash } from 'node:crypto';
 const LOGIN_PATTERN = /(?:#\/outNet|\/outNet|\/login|\/signin)|UKey\s*登录|外网登录|用户登录|请登录/i;
 const RATE_LIMIT_PATTERN = /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
 const EMPTY_PATTERN = /暂无数据|无数据|查询结果为空|没有符合条件的数据/i;
+const DATE_INPUT_SELECTOR = [
+  'input[type="date"]',
+  'input[placeholder*="日期"]',
+  'input[placeholder*="时间"]',
+  '.el-date-editor input',
+  '.ant-picker input',
+].join(', ');
 
 function sha256(value) {
   return createHash('sha256').update(String(value)).digest('hex');
@@ -61,19 +68,62 @@ function resolveNavigationUrl(config, page) {
   if (!config.routeFragment) fail('source_route_unconfigured', `${config.id} has no confirmed route.`);
   const current = new URL(page.url());
   const origin = config.baseUrl ? new URL(config.baseUrl).origin : current.origin;
-  return `${origin}/#${config.routeFragment.startsWith('/') ? config.routeFragment : `/${config.routeFragment}`}`;
+  const route = config.routeFragment.startsWith('/') ? config.routeFragment : `/${config.routeFragment}`;
+  if (route === '/dashboard') return `${origin}/#/dashboard`;
+  const appName = route.split('/').filter(Boolean)[0];
+  if (!appName) fail('source_route_unconfigured', `${config.id} has no micro-frontend route.`);
+  return `${origin}/${appName}/#${route}`;
 }
 
 async function bodyText(page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
 
-async function findDateInput(page) {
-  const byLabel = page.getByLabel(/交易日期|业务日期|预报日期|查询日期|日期/).first();
-  if (await byLabel.count()) return byLabel;
-  const byAttribute = page.locator('input[type="date"], input[placeholder*="日期"], input[placeholder*="时间"]').first();
-  if (await byAttribute.count()) return byAttribute;
+function searchableContexts(page) {
+  try {
+    const frames = page.frames?.();
+    if (Array.isArray(frames) && frames.length) return frames;
+  } catch {
+    // Some test doubles expose only the locator surface.
+  }
+  return [page];
+}
+
+async function firstVisible(locator) {
+  const count = await locator.count().catch(() => 0);
+  for (let index = 0; index < count; index += 1) {
+    const candidate = locator.nth(index);
+    if (await candidate.isVisible().catch(() => false)) return candidate;
+  }
+  return null;
+}
+
+async function findDateInput(page, timeoutMs = 15000) {
+  const deadline = Date.now() + Math.max(0, Number(timeoutMs) || 0);
+  do {
+    for (const context of searchableContexts(page)) {
+      const byLabel = await firstVisible(context.getByLabel(/交易日期|业务日期|预报日期|查询日期|日期/));
+      if (byLabel) return byLabel;
+      const byAttribute = await firstVisible(context.locator(DATE_INPUT_SELECTOR));
+      if (byAttribute) return byAttribute;
+    }
+    if (Date.now() >= deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(100, deadline - Date.now())));
+  } while (Date.now() <= deadline);
   fail('date_control_missing', 'No visible business-date input was found.');
+}
+
+async function visibleDateInputs(page) {
+  const inputs = [];
+  for (const context of searchableContexts(page)) {
+    const locator = context.locator(DATE_INPUT_SELECTOR);
+    const count = await locator.count().catch(() => 0);
+    for (let index = 0; index < count; index += 1) {
+      const candidate = locator.nth(index);
+      if (await candidate.isVisible().catch(() => false)) inputs.push(candidate);
+    }
+  }
+  return inputs;
 }
 
 async function setInputValue(input, value) {
@@ -87,6 +137,7 @@ async function setInputValue(input, value) {
       element.dispatchEvent(new Event('change', { bubbles: true }));
     }, value);
   }
+  await input.press('Enter').catch(() => {});
 }
 
 function mapHeaders(headers, columns) {
@@ -115,6 +166,7 @@ export function createJspecAdapter(config = {}) {
   const pointPatterns = config.pointPatterns || [/点位|序号|时段序号|节点序号|point|index/i];
   const timePatterns = config.timePatterns || [/时点|时间点|时间|时段|交易时段|period|time/i];
   const datePatterns = config.datePatterns || [/交易日期|业务日期|预报日期|日期|date/i];
+  const verifiedQueryPages = new WeakSet();
 
   async function detect(page) {
     const text = `${page.url()}\n${await bodyText(page)}`;
@@ -131,10 +183,10 @@ export function createJspecAdapter(config = {}) {
   }
 
   async function discoverBounds(page) {
-    const input = await findDateInput(page);
+    const input = await findDateInput(page, config.dateControlTimeoutMs);
     const [minimum, maximum] = await Promise.all([input.getAttribute('min'), input.getAttribute('max')]);
-    const earliestDate = dateFromText(minimum);
-    const latestDate = dateFromText(maximum);
+    const earliestDate = dateFromText(minimum) || dateFromText(config.earliestDate);
+    const latestDate = dateFromText(maximum) || dateFromText(config.latestDate);
     if (!earliestDate || !latestDate) {
       fail('history_bounds_unavailable', 'The page did not expose a reliable historical date range.');
     }
@@ -144,22 +196,45 @@ export function createJspecAdapter(config = {}) {
   async function setQuery(page, query = {}) {
     const businessDate = dateFromText(query.businessDate);
     if (!businessDate) fail('business_date_invalid', 'A YYYY-MM-DD business date is required.');
-    const input = await findDateInput(page);
-    await setInputValue(input, businessDate);
+    const firstInput = await findDateInput(page, config.dateControlTimeoutMs);
+    const inputs = config.fillAllDateInputs ? await visibleDateInputs(page) : [firstInput];
+    for (const input of inputs.length ? inputs : [firstInput]) await setInputValue(input, businessDate);
     return { businessDate };
   }
 
   async function submit(page) {
-    const button = page.getByRole('button', { name: /查询|搜索|检索/ }).first();
+    const button = page.getByRole('button', { name: /查\s*询|搜\s*索|检\s*索/ }).first();
     if (!await button.count()) fail('query_button_missing', 'No query button was found.');
+    const responsePattern = config.responseUrlPattern;
+    const responsePromise = responsePattern && typeof page.waitForResponse === 'function'
+      ? page.waitForResponse((response) => {
+        if (responsePattern instanceof RegExp) return new RegExp(responsePattern.source, responsePattern.flags.replace('g', '')).test(response.url());
+        return response.url().includes(String(responsePattern));
+      }, { timeout: Number(config.resultTimeoutMs || 15000) })
+      : null;
     await button.click();
+    if (responsePromise) {
+      let response;
+      try {
+        response = await responsePromise;
+        await response.finished().catch(() => {});
+      } catch {
+        fail('query_response_timeout', 'The JSPEC query response did not arrive before the timeout.');
+      }
+      if (!response.ok()) fail('query_response_failed', `JSPEC query returned HTTP ${response.status()}.`);
+      const responseText = await response.text().catch(() => '');
+      if (RATE_LIMIT_PATTERN.test(responseText)) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
+      verifiedQueryPages.add(page);
+      await page.waitForTimeout(Math.max(0, Number(config.postSubmitSettleMs || 0)));
+    }
   }
 
   async function waitForResult(page) {
+    const responseVerified = verifiedQueryPages.has(page);
+    verifiedQueryPages.delete(page);
     const state = await detect(page);
     if (state.state === 'login_expired') fail('login_expired', 'The dedicated browser session requires UKey login.');
-    if (state.state === 'rate_limited') fail('rate_limited', 'JSPEC reported an access-frequency limit.');
-    if (state.state === 'no_data') fail('no_data', 'The query completed with no business data.');
+    if (state.state === 'rate_limited' && !responseVerified) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
     const row = page.locator('table tbody tr').first();
     try {
       await row.waitFor({ state: 'visible', timeout: Number(config.resultTimeoutMs || 15000) });
@@ -178,12 +253,23 @@ export function createJspecAdapter(config = {}) {
         const style = getComputedStyle(element);
         return style.display !== 'none' && style.visibility !== 'hidden';
       };
-      const tables = [...document.querySelectorAll('table')].filter(visible).map((table) => ({
+      const readHeaders = (root) => [...root.querySelectorAll('thead th')].map((cell) => cell.innerText || cell.textContent || '');
+      const readRows = (root) => [...root.querySelectorAll('tbody tr')].filter(visible).map((row) =>
+        [...row.querySelectorAll('td')].map((cell) => cell.innerText || cell.textContent || '')
+      );
+      const elementTables = [...document.querySelectorAll('.el-table')].filter(visible).map((root) => ({
+        headers: readHeaders(root.querySelector('.el-table__header-wrapper') || root),
+        rows: readRows(root.querySelector('.el-table__body-wrapper') || root),
+      }));
+      const genericTables = [...document.querySelectorAll('table')]
+        .filter((table) => visible(table) && !table.closest('.el-table'))
+        .map((table) => ({
         headers: [...table.querySelectorAll('thead th')].map((cell) => cell.innerText || cell.textContent || ''),
         rows: [...table.querySelectorAll('tbody tr')].filter(visible).map((row) =>
           [...row.querySelectorAll('td')].map((cell) => cell.innerText || cell.textContent || '')
         ),
       }));
+      const tables = [...elementTables, ...genericTables];
       const dateInput = document.querySelector('input[type="date"], input[placeholder*="日期"], input[placeholder*="时间"]');
       const output = document.querySelector('output, [data-query-date], .query-date');
       return {

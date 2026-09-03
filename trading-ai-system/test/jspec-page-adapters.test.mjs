@@ -27,6 +27,132 @@ async function withPage(run) {
   }
 }
 
+test('production JSPEC adapters navigate through their micro-frontend base paths', async () => {
+  const visited = [];
+  const page = {
+    url: () => 'https://www.jspec.com.cn/#/dashboard',
+    goto: async (url) => visited.push(url),
+  };
+  await createPriceAdapter().navigate(page);
+  await createLoadAdapter().navigate(page);
+  assert.deepEqual(visited, [
+    'https://www.jspec.com.cn/pxf-spotgoods-province-extranet/#/pxf-spotgoods-province-extranet/Dd2jyUserClearingResult/Dd2jyRqClearing',
+    'https://www.jspec.com.cn/pxf-js-outer-deferrableload/#/pxf-js-outer-deferrableload/dayElectricity',
+  ]);
+});
+
+test('adapter waits for a date control rendered asynchronously inside a micro-frontend frame', async () => {
+  await withPage(async (page) => {
+    await page.setContent(`<!doctype html><html><body>
+      <iframe srcdoc="<main id='root'></main><script>setTimeout(() => { const input = document.createElement('input'); input.placeholder = '交易日期'; input.min = '2026-05-01'; input.max = '2026-07-31'; document.querySelector('#root').appendChild(input); }, 80);<\/script>"></iframe>
+    </body></html>`);
+    const adapter = createPriceAdapter({ dateControlTimeoutMs: 1000 });
+    assert.deepEqual(await adapter.discoverBounds(page), {
+      earliestDate: '2026-05-01',
+      latestDate: '2026-07-31',
+    });
+  });
+});
+
+test('adapter supports Element Plus date controls, spaced query labels, and split tables', async () => {
+  await withPage(async (page) => {
+    await page.setContent(`<!doctype html><html><body>
+      <input class="el-input__inner" placeholder="日期" value="2026-09-04">
+      <button onclick="document.querySelector('output').textContent=document.querySelector('input').value">查 询</button>
+      <output data-query-date></output>
+      <div class="el-table">
+        <div class="el-table__header-wrapper"><table><thead><tr>
+          <th>时间</th><th>出清电力</th><th>统一结算点电价临时结果</th><th>统一结算点电价最终结果</th>
+        </tr></thead></table></div>
+        <div class="el-table__body-wrapper"><table><tbody>
+          <tr><td>00:15</td><td>59.8</td><td>366.4</td><td>366.4</td></tr>
+          <tr><td>00:30</td><td>59.8</td><td>361.4</td><td>361.4</td></tr>
+        </tbody></table></div>
+      </div>
+    </body></html>`);
+    const adapter = createPriceAdapter({
+      expectedPointCount: 2,
+      earliestDate: '2024-01-01',
+      latestDate: '2026-09-03',
+    });
+    assert.deepEqual(await adapter.discoverBounds(page), {
+      earliestDate: '2024-01-01',
+      latestDate: '2026-09-03',
+    });
+    await adapter.setQuery(page, { businessDate: '2026-09-02' });
+    await adapter.submit(page);
+    const result = adapter.validate(await adapter.extract(page, {
+      businessDate: '2026-09-02',
+      capturedAt: '2026-09-03T10:00:00.000Z',
+    }), { businessDate: '2026-09-02' });
+    assert.equal(result.queryDate, '2026-09-02');
+    assert.equal(result.facts.filter((fact) => fact.fieldId === 'dayAheadUserPriceFinalYuanPerMwh').length, 2);
+    assert.equal(result.facts[0].pointIndex, 1);
+  });
+});
+
+test('visible result rows take precedence over a stale empty-state message', async () => {
+  await withPage(async (page) => {
+    await page.setContent(`<!doctype html><html><body>
+      <div class="el-table__empty-text">暂无数据</div>
+      <table><tbody><tr><td>00:15</td><td>366.4</td></tr></tbody></table>
+    </body></html>`);
+    const adapter = createPriceAdapter({ resultTimeoutMs: 100 });
+    assert.deepEqual(await adapter.waitForResult(page), { state: 'ready' });
+  });
+});
+
+test('price submit waits for the JSPEC query response before extraction', async () => {
+  await withPage(async (page) => {
+    await page.route('https://fixture.test/**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    await page.setContent(`<!doctype html><html><body>
+      <button onclick="fetch('https://fixture.test/px-spotgoods-province/Dd2jyUserClearingResult/queryDd2jyRqClearing').then(() => setTimeout(() => document.querySelector('output').textContent='done', 80))">查 询</button>
+      <output></output>
+    </body></html>`);
+    const adapter = createPriceAdapter({
+      responseUrlPattern: /Dd2jyUserClearingResult\/queryDd2jyRqClearing/i,
+      postSubmitSettleMs: 120,
+    });
+    await adapter.submit(page);
+    assert.equal(await page.locator('output').textContent(), 'done');
+  });
+});
+
+test('price submit rejects an HTTP-200 JSPEC response that contains a rate-limit warning', async () => {
+  await withPage(async (page) => {
+    await page.route('https://fixture.test/**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{"message":"API访问频率过高，请稍后重试"}',
+    }));
+    await page.setContent(`<!doctype html><html><body>
+      <button onclick="fetch('https://fixture.test/px-spotgoods-province/Dd2jyUserClearingResult/queryDd2jyRqClearing')">查 询</button>
+    </body></html>`);
+    const adapter = createPriceAdapter({
+      responseUrlPattern: /Dd2jyUserClearingResult\/queryDd2jyRqClearing/i,
+    });
+    await assert.rejects(() => adapter.submit(page), (error) => error.code === 'rate_limited');
+  });
+});
+
+test('load adapter sets both start and end date controls for a one-day query', async () => {
+  await withPage(async (page) => {
+    await page.setContent(`<!doctype html><html><body>
+      <label>开始时间：<input placeholder="选择日期"></label>
+      <label>结束时间：<input placeholder="选择日期"></label>
+    </body></html>`);
+    const adapter = createLoadAdapter();
+    await adapter.setQuery(page, { businessDate: '2026-09-02' });
+    assert.deepEqual(await page.locator('input').evaluateAll((inputs) => inputs.map((input) => input.value)), [
+      '2026-09-02',
+      '2026-09-02',
+    ]);
+  });
+});
+
 test('price, weather, and load adapters query dates and extract typed facts', async () => {
   await withPage(async (page) => {
     const cases = [

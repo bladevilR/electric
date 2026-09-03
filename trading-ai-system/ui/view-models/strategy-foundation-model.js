@@ -270,7 +270,10 @@ export function buildStrategyFoundationModel(input = {}) {
           ? 'running_with_error'
           : ukeyStatus.collector?.state || 'stopped'
   );
-  const latestCollectionJob = (collectorStatus.jobs || [])[0] || null;
+  const latestCollectionJob = [...(collectorStatus.jobs || [])]
+    .sort((left, right) =>
+      (Date.parse(right?.createdAt || '') || 0) - (Date.parse(left?.createdAt || '') || 0)
+    )[0] || null;
   const completedChunks = Number(latestCollectionJob?.completedChunks || 0);
   const totalChunks = Number(latestCollectionJob?.totalChunks || 0);
   const backfillProgressPct = totalChunks
@@ -410,7 +413,9 @@ export function buildStrategyFoundationModel(input = {}) {
       modelVersion:
         targetAccuracy.modelVersion ||
         targetForecast.modelVersion ||
-        (allowRootFallback ? latestPriceRun?.modelVersion || latestPriceRun?.modelId : null) ||
+        (allowRootFallback && (latestPriceRun?.modelId || latestPriceRun?.modelVersion)
+          ? [latestPriceRun.modelId, latestPriceRun.modelVersion].filter(Boolean).join(' · ')
+          : null) ||
         targetForecast.selectedModel?.id ||
         targetForecast.model?.id ||
         (allowRootFallback
@@ -422,6 +427,7 @@ export function buildStrategyFoundationModel(input = {}) {
       sampleDays:
         metric(targetAccuracy, ['sampleDays', 'historyDateCount']) ??
         metric(targetForecast, ['sampleDays', 'historyDateCount']) ??
+        (allowRootFallback ? metric(latestPriceRun?.readiness, ['historicalCompleteDateCount']) : null) ??
         (allowRootFallback ? metric(forecastReport, ['sampleDays', 'historyDateCount']) : null),
       lastBacktestAt:
         targetAccuracy.lastBacktestAt ||
@@ -439,6 +445,21 @@ export function buildStrategyFoundationModel(input = {}) {
     price: accuracyForTarget('price'),
     temperature: accuracyForTarget('temperature'),
     load: accuracyForTarget('load'),
+  };
+  const priceReadiness = latestPriceRun?.readiness || {};
+  const priceMissingReasonLabels = {
+    historical_complete_dates_below_30: '完整历史少于 30 天，暂不启用多因素模型',
+    multivariate_training_dates_below_5: '温度与负荷联合样本少于 5 天',
+    target_weather_or_load_forecast_incomplete: '目标日温度或负荷预测不完整',
+  };
+  const priceEvidence = {
+    source: priceReadiness.status === 'baseline_only'
+      ? 'JSPEC 最终日前电价（同点历史；未使用缺失的温度和负荷）'
+      : `JSPEC 历史价格 + ${collectorStatus.weather?.provider || '天气预报源'} 温度预报 + JSPEC 负荷预测`,
+    formula: latestPriceRun?.algorithm?.formula || '价格 = 同点基线 + 温度贡献 + 负荷贡献',
+    caveat: (priceReadiness.missingReasons || [])
+      .map((reason) => priceMissingReasonLabels[reason] || reason)
+      .join('；') || null,
   };
   const traceStages = input.strategyTrace?.stages || [];
   const evidenceByExplanation = {
@@ -516,6 +537,9 @@ export function buildStrategyFoundationModel(input = {}) {
     },
     forecastTabs: tabs,
     forecast: {
+      evidenceByTab: {
+        price: priceEvidence,
+      },
       tabs: tabs.map((tab) => {
         const interval = tab.series.find((series) => series.role === 'interval');
         return {

@@ -18,6 +18,7 @@ const STATES = new Set([
 
 const LOGIN_URL_PATTERN = /(?:#\/outNet|\/outNet|\/login|\/signin)(?:[/?#]|$)/i;
 const LOGIN_TEXT_PATTERN = /UKey\s*登录|外网登录|用户登录|请登录/i;
+const AUTHENTICATED_ROUTE_PATTERN = /#\/(?:dashboard|pxf-[a-z0-9-]+)(?:[/?#]|$)/i;
 const BUSINESS_TEXT_PATTERN = /日前交易|实时市场|结算管理|电力交易工作台/i;
 const BUSINESS_LANDMARKS = '[data-jspec-business-root], [data-jspec-page="business"]';
 
@@ -151,7 +152,9 @@ export function createPlaywrightCollectorRuntime(options = {}) {
           errorMessage: everReady ? 'The dedicated JSPEC session requires login again.' : null,
         });
       }
-      if (landmarkCount > 0 || BUSINESS_TEXT_PATTERN.test(bodyText)) return transition('ready');
+      if (landmarkCount > 0 || BUSINESS_TEXT_PATTERN.test(bodyText) || AUTHENTICATED_ROUTE_PATTERN.test(lastPageUrl)) {
+        return transition('ready');
+      }
       return transition('page_changed', {
         errorCode: 'business_landmark_missing',
         errorMessage: 'The current page does not expose a recognized JSPEC business landmark.',

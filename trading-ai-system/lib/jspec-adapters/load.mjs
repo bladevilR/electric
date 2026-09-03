@@ -5,6 +5,7 @@ export function createLoadAdapter(options = {}) {
     id: 'load',
     sourceId: 'JSPEC-LOAD',
     routeFragment: '/pxf-js-outer-deferrableload/dayElectricity',
+    fillAllDateInputs: true,
     ...options,
     columns: [
       { fieldId: 'actualLoadMw', patterns: [/实际负荷.*MW|平均负荷|实际功率/i], unit: 'MW' },

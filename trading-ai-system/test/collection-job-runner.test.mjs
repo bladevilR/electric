@@ -134,6 +134,32 @@ test('full backfill creates source-month chunks and resumes from the committed n
   }
 });
 
+test('full backfill can be safely limited to an explicit verification range', async () => {
+  const context = await fixture([
+    adapter({ id: 'price', sourceId: 'JSPEC-PRICE', earliestDate: '2024-01-01', latestDate: '2026-09-03' }),
+    adapter({ id: 'load', sourceId: 'JSPEC-LOAD', earliestDate: '2025-01-01', latestDate: '2026-09-02' }),
+  ]);
+  try {
+    const job = await context.runner.createFullBackfill({
+      id: 'job-bounded',
+      fromDate: '2026-09-02',
+      toDate: '2026-09-02',
+    });
+    assert.equal(job.earliestDate, '2026-09-02');
+    assert.equal(job.latestDate, '2026-09-02');
+    assert.deepEqual(context.store.listCollectionChunks(job.id).map((chunk) => ({
+      sourceId: chunk.sourceId,
+      startDate: chunk.startDate,
+      endDate: chunk.endDate,
+    })), [
+      { sourceId: 'JSPEC-LOAD', startDate: '2026-09-02', endDate: '2026-09-02' },
+      { sourceId: 'JSPEC-PRICE', startDate: '2026-09-02', endDate: '2026-09-02' },
+    ]);
+  } finally {
+    await context.close();
+  }
+});
+
 test('pause and resume persist job state instead of relying on process memory', async () => {
   const context = await fixture([
     adapter({ id: 'price', sourceId: 'JSPEC-PRICE', earliestDate: '2026-07-01', latestDate: '2026-07-01' }),

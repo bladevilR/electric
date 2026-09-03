@@ -128,6 +128,11 @@ const collectorLaunchUrl = getArgValue('--collector-launch-url', process.env.TRA
 const collectorExecutablePath = getArgValue('--collector-executable', process.env.TRADING_COLLECTOR_EXECUTABLE_PATH || '');
 const collectorHeadless = String(getArgValue('--collector-headless', process.env.TRADING_COLLECTOR_HEADLESS || 'false')).toLowerCase() === 'true';
 const collectorQueryDelayMs = Number(getArgValue('--collector-query-delay-ms', process.env.TRADING_COLLECTOR_QUERY_DELAY_MS || 20000));
+const collectorHistoryEarliest = getArgValue('--collector-history-earliest', process.env.TRADING_COLLECTOR_HISTORY_EARLIEST || '2024-01-01');
+const collectorHistoryLatest = getArgValue(
+  '--collector-history-latest',
+  process.env.TRADING_COLLECTOR_HISTORY_LATEST || new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+);
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 const evidenceStore = openTradingEvidenceStore({ filePath: evidenceStorePath });
@@ -151,8 +156,15 @@ const weatherConfig = {
   archiveEndpoint: getArgValue('--weather-archive-endpoint', process.env.TRADING_WEATHER_ARCHIVE_ENDPOINT || '') || undefined,
 };
 const evidenceAdapters = [
-  createPriceAdapter({ expectedPointCount }),
-  createLoadAdapter({ expectedPointCount }),
+  createPriceAdapter({
+    expectedPointCount,
+    earliestDate: collectorHistoryEarliest,
+    latestDate: collectorHistoryLatest,
+    ...(!collectorLaunchUrl || /jspec\.com\.cn/i.test(collectorLaunchUrl)
+      ? { responseUrlPattern: /Dd2jyUserClearingResult\/queryDd2jyRqClearing/i, postSubmitSettleMs: 500 }
+      : {}),
+  }),
+  createLoadAdapter({ expectedPointCount, earliestDate: collectorHistoryEarliest, latestDate: collectorHistoryLatest }),
   createOpenMeteoTemperatureAdapter(weatherConfig),
 ];
 const collectionRunner = createCollectionJobRunner({ store: evidenceStore, runtime: collectorRuntime, adapters: evidenceAdapters, queryDelayMs: collectorQueryDelayMs });
@@ -713,7 +725,7 @@ function publicCollectorStatus() {
       forecastInputField: 'temperatureForecastC',
       actualEvaluationField: 'temperatureActualC',
     },
-    jobs: evidenceStore.listCollectionJobs().slice(-10).reverse(),
+    jobs: evidenceStore.listCollectionJobs().slice(0, 10),
     storage: { engine: 'SQLite', path: evidenceStorePath },
   };
 }
@@ -768,7 +780,11 @@ async function handleApi(request, response, url) {
     try {
       await evidenceMigrationPromise;
       const body = await readJsonBody(request);
-      const job = await collectionRunner.createFullBackfill({ id: body.id });
+      const job = await collectionRunner.createFullBackfill({
+        id: body.id,
+        fromDate: body.fromDate || body.from,
+        toDate: body.toDate || body.to,
+      });
       startCollectionLoop(job.id);
       await appendAuditEvent(auditLogPath, { type: 'evidence_backfill_started', actor: request.headers['x-operator-id'] || 'local-operator', outcome: 'started', jobId: job.id });
       sendJson(response, { job, started: true }, 202);

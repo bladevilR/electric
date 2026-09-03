@@ -34,6 +34,18 @@ test('dedicated browser start message does not call an unrecognized JSPEC page c
   );
 });
 
+test('backfill prerequisite message distinguishes a business-page issue from missing login', () => {
+  assert.equal(typeof workbenchModule.buildCollectorBackfillPrerequisiteMessage, 'function');
+  assert.equal(
+    workbenchModule.buildCollectorBackfillPrerequisiteMessage({ state: 'page_changed' }),
+    '你已经登录；请在专用 Chrome 中进入任一 JSPEC 业务数据页面，然后再次点击“开始全量回填”。'
+  );
+  assert.equal(
+    workbenchModule.buildCollectorBackfillPrerequisiteMessage({ state: 'login_required' }),
+    '请在专用 Chrome 中完成 UKey 登录；登录后再次点击“开始全量回填”。'
+  );
+});
+
 test('pending action gate rejects repeat dispatch until the first action is released', () => {
   const state = { pendingAction: '' };
   assert.equal(

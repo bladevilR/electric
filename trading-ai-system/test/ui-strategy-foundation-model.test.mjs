@@ -400,3 +400,52 @@ test('SQLite evidence workbench separates actual, p50 and interval series and ex
   assert.equal(model.collection.weather.provider, 'Open-Meteo');
   assert.equal(model.collection.storagePath, 'C:\\evidence.sqlite');
 });
+
+test('foundation model reports the newest collection job instead of a stale completed job', () => {
+  const model = buildStrategyFoundationModel({
+    mode: 'real',
+    targetDate: '2026-09-03',
+    collectorStatus: {
+      browser: { state: 'rate_limited' },
+      jobs: [
+        { id: 'old', state: 'completed', createdAt: '2026-09-03T10:00:00.000Z', completedChunks: 3, totalChunks: 3 },
+        { id: 'new', state: 'running', createdAt: '2026-09-03T13:00:00.000Z', completedChunks: 0, totalChunks: 6 },
+      ],
+    },
+  });
+  assert.equal(model.collection.backfill.id, 'new');
+  assert.equal(model.collection.backfill.state, 'running');
+  assert.equal(model.collection.backfill.progressPct, 0);
+});
+
+test('baseline-only price evidence names the real inputs formula and missing drivers', () => {
+  const model = buildStrategyFoundationModel({
+    mode: 'real',
+    targetDate: '2026-09-04',
+    forecastRuns: { runs: [{
+      forecastRunId: 'live-baseline',
+      forecastRunType: 'live_issued',
+      targetField: 'dayAheadUserPriceFinalYuanPerMwh',
+      targetTradingDate: '2026-09-04',
+      forecastGeneratedAt: '2026-09-03T13:35:51.700Z',
+      decisionCutoffAt: '2026-09-03T13:35:51.663Z',
+      modelId: 'rolling_same_slot_median_28',
+      modelVersion: '1.0.0',
+      readiness: {
+        status: 'baseline_only',
+        historicalCompleteDateCount: 5,
+        missingReasons: ['target_weather_or_load_forecast_incomplete'],
+      },
+      algorithm: {
+        formula: 'price = median(last_28_same_slot_prices)',
+        inputs: ['dayAheadUserPriceFinalYuanPerMwh'],
+      },
+      rows: [{ pointIndex: 1, p10: 300, p50: 320, p90: 340 }],
+    }] },
+  });
+  assert.equal(model.accuracy.sampleDays, 5);
+  assert.match(model.accuracy.modelVersion, /rolling_same_slot_median_28/);
+  assert.match(model.forecast.evidenceByTab.price.source, /未使用缺失的温度和负荷/);
+  assert.equal(model.forecast.evidenceByTab.price.formula, 'price = median(last_28_same_slot_prices)');
+  assert.match(model.forecast.evidenceByTab.price.caveat, /温度或负荷/);
+});
