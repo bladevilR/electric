@@ -51,7 +51,10 @@ test('buildForecastFeatureStore merges raw price, declaration, and system rows i
     capture(
       'system-forecast.json',
       'https://www.jspec.com.cn/px-spotgoods-province/glbecoParamvalue/getCurve',
-      { 4: ['80100', '80200'] }
+      [
+        { dataTime: '2026-06-29', pointIndex: 1, value: '80100' },
+        { dataTime: '2026-06-29', pointIndex: 2, value: '80200' },
+      ]
     ),
     capture(
       'actual-system.json',
@@ -176,4 +179,24 @@ test('buildForecastFeatureStore merges transaction calculation usage and submiss
   assert.equal(row.sourceEndpoints.includes('transaction-calculation-standardized'), true);
   assert.equal(store.summary.fieldCompleteness.actualKwh, 1);
   assert.equal(store.summary.fieldCompleteness.declarationPower, 1);
+});
+
+test('undated system forecast is not copied across all dates', () => {
+  const dataset = { rows: [{ date: '2026-06-29', pointIndex: 1, realTimeAvgPrice: 320 }] };
+  const assets = {
+    systemLoadForecasts: [{ raw: { timePoint: '00:15', value: 80100 }, sourceFile: 'undated.json' }],
+  };
+  const featureStore = buildForecastFeatureStore(dataset, { assets });
+  assert.equal(featureStore.rows.some((row) => row.systemLoadForecast !== null), false);
+  assert.ok(featureStore.summary.warnings.includes('undated_time_varying_fact_rejected'));
+});
+
+test('legacy feature store can consume canonical point-in-time snapshot rows', () => {
+  const featureStore = buildForecastFeatureStore({}, {
+    featureSnapshot: {
+      rows: [{ businessDate: '2026-06-29', pointIndex: 1, fields: { systemLoadForecastMw: 80100 } }],
+    },
+  });
+  assert.equal(featureStore.sourceMode, 'point_in_time_snapshot');
+  assert.equal(featureStore.rows[0].systemLoadForecast, 80100);
 });
