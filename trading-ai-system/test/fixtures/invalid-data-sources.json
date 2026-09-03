@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "sources": [
+    { "sourceId": "DUP", "status": "unknown", "containsCredentials": true },
+    { "sourceId": "DUP", "status": "unknown", "containsCredentials": true }
+  ]
+}
