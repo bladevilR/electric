@@ -90,3 +90,13 @@ present by Si hang
 ## 竞赛最终材料
 
 竞赛正式上传目录为 `competition-delivery/upload/`，只提交其中的 `traces.json`、`traces-dynamic.json` 和 `information.json`。完整验收结果、数据边界和复现命令见 `docs/competition-final-delivery.md`。
+# 时点数据与规范字段
+
+生产采集只处理当前账号授权的只读页面可见数据。数据源和字段契约分别位于
+`config/data-sources.json` 与 `config/field-catalog.json`；用户日前出清电力使用
+`dayAheadUserClearedPowerMw`，不得回填主动申报、缺省申报或实际负荷。
+
+日前价格按临时价、最终价、有效价三类保存，有效价仅是查询视图。模型输入必须满足
+`availableAt <= decisionCutoffAt`，无日期的时变数据不会复制到历史日期。
+
+只读接口：`/api/data-sources`、`/api/field-catalog` 和 `/api/point-in-time/context`。

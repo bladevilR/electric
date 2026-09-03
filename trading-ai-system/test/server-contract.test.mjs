@@ -701,3 +701,16 @@ test('one-minute onboarding page is friendly and launchable', async () => {
   assert.doesNotMatch(packageScript, /ukey-visible-history\.json/);
   assert.ok(iconInfo.size > 1000);
 });
+
+test('documentation connects onsite evidence to canonical point-in-time fields', async () => {
+  const [readme, taskSheet, dictionary] = await Promise.all([
+    readFile(path.join(systemRoot, 'README.md'), 'utf8'),
+    readFile(path.join(systemRoot, 'docs/ukey现场字段探索任务单.md'), 'utf8'),
+    readFile(path.join(systemRoot, 'docs/data-source-field-dictionary-v1.md'), 'utf8'),
+  ]);
+  const documentation = `${readme}\n${taskSheet}\n${dictionary}`;
+  assert.match(documentation, /dayAheadUserClearedPowerMw/);
+  assert.match(documentation, /临时价、最终价、有效价/);
+  assert.match(documentation, /availableAt <= decisionCutoffAt/);
+  assert.match(documentation, /只读页面可见数据/);
+});
