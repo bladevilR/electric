@@ -5,7 +5,16 @@ import {
   computeRegressionMetrics,
   computeStrategyBacktest,
   runForecastBacktest,
+  runPointInTimeBacktest,
+  validateBacktestSplit,
 } from '../lib/backtest-engine.mjs';
+
+test('point-in-time backtest uses isolated snapshots and split dates cannot overlap', async () => {
+  const split = validateBacktestSplit({trainingDates:['2026-01-01'],validationDates:['2026-01-02'],holdoutDates:['2026-01-02'],liveDates:[]});
+  assert.equal(split.ok,false);assert.ok(split.errors.includes('split_dates_overlap'));
+  const report=await runPointInTimeBacktest({dates:['2026-08-24'],buildSnapshot:async()=>({selectedFactIds:['safe-r1'],rows:[]}),forecast:async()=>[],outcomes:[],config:{decisionCutoffAt:'2026-08-23T10:00:00+08:00'}});
+  assert.equal(report.runType,'point_in_time_replay');assert.deepEqual(report.usedFactIds,['safe-r1']);
+});
 
 const rows = [
   { date: '2026-06-24', pointIndex: 1, realTimeAvgPrice: 100, priceSpread: 1 },
