@@ -20,6 +20,7 @@
 - 不读取或保存 Cookie、Token、Authorization、UKey PIN、证书、私钥或密码。
 - 不自动申报、不自动交易、不自动模型晋级。
 - 每个阶段完成后必须运行该阶段的聚焦测试和全量回归，再进入下一阶段。
+- `2026-09-03-implementation-clarifications.md` 对所有子计划具有优先解释效力。
 
 ---
 
@@ -30,13 +31,15 @@
 1. `trading-ai-system/docs/superpowers/specs/2026-09-03-point-in-time-forecast-cockpit-design.md`
 2. `trading-ai-system/docs/data-source-field-dictionary-v1.md`
 3. `trading-ai-system/docs/research-data-source-and-forecasting-evidence.md`
-4. `trading-ai-system/docs/ukey现场字段探索任务单.md`
-5. `trading-ai-system/docs/superpowers/plans/2026-09-03-data-catalog-and-point-in-time-store.md`
-6. `trading-ai-system/docs/superpowers/plans/2026-09-03-forecast-ledger-and-accuracy-review.md`
-7. `trading-ai-system/docs/superpowers/plans/2026-09-03-weather-generation-and-price-model.md`
-8. `trading-ai-system/docs/superpowers/plans/2026-09-03-market-cockpit-and-strategy-explainability.md`
-9. `STATUS.md`
-10. `trading-ai-system/CURRENT_HANDOFF.md`
+4. `trading-ai-system/docs/superpowers/plans/2026-09-03-implementation-clarifications.md`
+5. `trading-ai-system/docs/ukey现场字段探索任务单.md`
+6. `trading-ai-system/docs/现场字段探索补充-天气机组与预测准确度.md`
+7. `trading-ai-system/docs/superpowers/plans/2026-09-03-data-catalog-and-point-in-time-store.md`
+8. `trading-ai-system/docs/superpowers/plans/2026-09-03-forecast-ledger-and-accuracy-review.md`
+9. `trading-ai-system/docs/superpowers/plans/2026-09-03-weather-generation-and-price-model.md`
+10. `trading-ai-system/docs/superpowers/plans/2026-09-03-market-cockpit-and-strategy-explainability.md`
+11. `STATUS.md`
+12. `trading-ai-system/CURRENT_HANDOFF.md`
 
 若 `main` 在执行时已前进，先比较最新 `main` 与 `e14dddce`，把已实现内容从计划中勾销或调整，不要机械重复实现。
 
@@ -108,7 +111,7 @@ live_issued与point_in_time_replay不混算
 必须完成：
 
 - 天气快照版本合约；
-- 小时/3小时数据到96点的语义对齐；
+- 小时/3小时/6小时数据到96点的语义对齐；
 - 累计降水和辐射正确拆分；
 - 机组/供给/网络字段的确认状态门禁；
 - 净负荷、备用、爬坡、断面等衍生特征；
@@ -157,7 +160,7 @@ Python不可用时回退真实基线而非Mock
 
 代码实施不应阻塞现场记录工具，但真实多因素上线必须等待现场证据。
 
-现场继续按 `ukey现场字段探索任务单.md` 完成 P0-1～P0-8、P1-1～P1-3，并把结果回填到 `data-source-field-dictionary-v1.md` 及机器可读 catalog。机组和网络页面按江苏 2026 信息披露要求补充探索，但没有页面证据时不得写映射。
+现场继续按 `ukey现场字段探索任务单.md` 完成 P0-1～P0-8、P1-1～P1-3，并按 `现场字段探索补充-天气机组与预测准确度.md` 探索天气、供给、断面、跨区和预测账本验收；结果回填到 `data-source-field-dictionary-v1.md` 及机器可读 catalog。没有页面证据时不得写映射。
 
 每个现场字段完成的定义：
 
@@ -209,7 +212,7 @@ git diff main...origin/plan/point-in-time-forecast-cockpit-20260903 -- trading-a
 
 ## 7. 全量验收命令
 
-Node：
+Node测试：
 
 ```bash
 cd trading-ai-system
@@ -225,11 +228,14 @@ python -m unittest discover -s python/forecasting -p 'test_*.py'
 语法和差异：
 
 ```bash
-node --check server.mjs workbench.js
-node --check lib/*.mjs
-node --check ui/*.js ui/views/*.js ui/view-models/*.js ui/components/*.js
+for file in server.mjs workbench.js lib/*.mjs ui/*.js ui/views/*.js ui/view-models/*.js ui/components/*.js; do
+  [ -e "$file" ] || continue
+  node --check "$file"
+done
 git diff --check
 ```
+
+Windows PowerShell 等价语法检查见 `2026-09-03-implementation-clarifications.md`。
 
 浏览器：使用隔离运行时数据，分别验证真实完整、真实缺失天气/供给、演示三种模式；视口为 1440、1024、768、390、320 px。
 
