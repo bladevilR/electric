@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { createForecastRun } from './forecast-ledger.mjs';
 
-const SENSITIVE_KEY = /cookie|token|ticket|authorization|password|passwd|secret|credential|cert|private.?key|pin/i;
+const SENSITIVE_KEY = /cookie|token|ticket|authorization|password|passwd|secret|credential|cert|private.?key|^pin(?:[_-]?code)?$/i;
 const OUTCOME_LABELS = new Set(['temporary', 'current', 'final', 'settlement_initial', 'settlement_final', 'settlement_adjusted']);
 const RUN_TYPES = new Set(['live_issued', 'point_in_time_replay']);
 
@@ -541,6 +541,7 @@ export function openTradingEvidenceStore(options = {}) {
       to: { column: 'business_date', operator: '<=', normalize: (value) => assertDate(value, 'to_date') },
       businessDate: { column: 'business_date', normalize: (value) => assertDate(value, 'business_date') },
       pointIndex: { column: 'point_index', normalize: Number },
+      asOf: { column: 'available_at', operator: '<=', normalize: (value) => assertIso(value, 'as_of') },
     });
     const limit = Math.min(Math.max(Number(filters.limit || 10000), 1), 100000);
     const offset = Math.max(Number(filters.offset || 0), 0);

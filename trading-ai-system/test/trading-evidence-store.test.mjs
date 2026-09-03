@@ -77,6 +77,26 @@ test('facts are idempotent, versioned, and queryable with literal coverage', asy
   });
 });
 
+test('as-of fact queries exclude revisions published after the decision cutoff', async () => {
+  await withStore((store) => {
+    store.appendFacts([
+      priceFact,
+      {
+        ...priceFact,
+        value: 399,
+        availableAt: '2026-06-30T12:00:00.000Z',
+        capturedAt: '2026-06-30T12:05:00.000Z',
+        sourceRevision: 'page-20260629-late-correction',
+      },
+    ]);
+    const visible = store.queryFacts({
+      fieldId: priceFact.fieldId,
+      asOf: '2026-06-30T10:00:00.000Z',
+    });
+    assert.deepEqual(visible.map((fact) => fact.value), [362.5]);
+  });
+});
+
 test('collection jobs and chunks keep restart checkpoints', async () => {
   await withStore((store) => {
     const job = store.createCollectionJob({

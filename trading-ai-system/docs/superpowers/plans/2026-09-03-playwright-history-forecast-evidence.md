@@ -319,7 +319,7 @@ git commit -m "feat(collector): backfill JSPEC history with Playwright adapters"
 - Consumes: store from Task 1 and existing forecast model report functions.
 - Produces: `createForecastPublisher({ store, buildModelReport, clock?, codeCommitSha })` with `readiness(targetDate)`, `publishLiveForecast(targetDate)`, `backfillOutcomes(query)`, and `evaluate(query)`.
 
-- [ ] **Step 1: Write failing readiness and immutability tests**
+- [x] **Step 1: Write failing readiness and immutability tests**
 
 ```js
 test('publisher blocks fewer than five complete dates and labels 5-29 as baseline', () => {
@@ -336,27 +336,27 @@ test('a live issued run cannot be regenerated over the same run id', () => {
 });
 ```
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run: `node --test test/forecast-publisher.test.mjs`
 
 Expected: FAIL because the publisher does not exist.
 
-- [ ] **Step 3: Implement feature snapshot and publication**
+- [x] **Step 3: Implement feature snapshot and publication**
 
 Read only facts available at the decision cutoff, calculate completeness, persist a frozen feature snapshot, call the existing model report, validate 96 points and monotonic quantiles, and append an immutable `live_issued` run in one transaction.
 
-- [ ] **Step 4: Implement outcome evaluation**
+- [x] **Step 4: Implement outcome evaluation**
 
 Match on target field, business date and point index; select the requested actual label revision; calculate MAE, RMSE, Bias, MAPE, MASE, spike metrics, Brier score, pinball loss, interval coverage and interval width; return `no_comparable_outcomes` with null metrics when no pairs exist.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `node --test test/forecast-publisher.test.mjs test/forecast-evaluation.test.mjs test/forecast-ledger.test.mjs test/outcome-ledger.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit forecast loop**
+- [x] **Step 6: Commit forecast loop**
 
 ```bash
 git add lib/forecast-publisher.mjs lib/forecast-evaluation.mjs test/forecast-publisher.test.mjs
