@@ -87,6 +87,15 @@ const visibleHistoryPath = path.resolve(
     process.env.TRADING_VISIBLE_HISTORY_PATH || path.resolve(rootDir, 'data/ukey-visible-history.json')
   )
 );
+const defaultPointInTimeStorePath = process.platform === 'win32' && process.env.LOCALAPPDATA
+  ? path.resolve(process.env.LOCALAPPDATA, 'ElectricTradingAI/data/point-in-time-facts.json')
+  : path.resolve(rootDir, 'data/point-in-time-facts.json');
+const pointInTimeStorePath = path.resolve(
+  getArgValue(
+    '--point-in-time-store',
+    process.env.TRADING_POINT_IN_TIME_STORE_PATH || defaultPointInTimeStorePath
+  )
+);
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 let settlementReferenceCache = null;
@@ -576,6 +585,7 @@ async function handleApi(request, response, url) {
       integrationSummaryPath,
       auditLogPath,
       visibleHistoryPath,
+      pointInTimeStorePath,
       businessInputsDir,
       pythonPath: await resolvePythonPath(pythonPath),
       modelRuntime: buildModelConfig(process.env),

@@ -30,6 +30,7 @@ async function startServer(options = {}) {
   const auditPath = path.join(temp, 'audit-log.ndjson');
   const visibleSnapshotPath = path.join(temp, 'ukey-visible-snapshot.json');
   const visibleHistoryPath = path.join(temp, 'ukey-visible-history.json');
+  const pointInTimeStorePath = path.join(temp, 'point-in-time-facts.json');
   const args = [
     'server.mjs',
     '--port',
@@ -40,6 +41,8 @@ async function startServer(options = {}) {
     visibleSnapshotPath,
     '--visible-history',
     visibleHistoryPath,
+    '--point-in-time-store',
+    pointInTimeStorePath,
   ];
   if (options.standard) args.push('--standard', options.standard);
   if (options.python) args.push('--python', options.python);
@@ -77,6 +80,7 @@ async function startServer(options = {}) {
   return {
     baseUrl: `http://${options.clientHost || '127.0.0.1'}:${port}`,
     visibleHistoryPath,
+    pointInTimeStorePath,
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
@@ -376,6 +380,7 @@ test('local server exposes the P0 system loop', async () => {
     assert.equal(health.name, 'trading-ai-system');
     assert.equal(health.modelRuntime.provider, 'openai_compatible');
     assert.equal(health.modelRuntime.configured, false);
+    assert.equal(health.pointInTimeStorePath, server.pointInTimeStorePath);
 
     assert.equal(summary.rowCount, expectedStandardSummary.rowCount);
     assert.equal(summary.p0SourceCoverage.present, 8);

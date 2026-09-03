@@ -52,6 +52,8 @@ test('Windows launcher stores cumulative trading history in LocalAppData', async
   assert.match(launcher, /LOCALAPPDATA/);
   assert.match(launcher, /ElectricTradingAI/);
   assert.match(launcher, /TRADING_VISIBLE_HISTORY_PATH/);
+  assert.match(launcher, /TRADING_POINT_IN_TIME_STORE_PATH/);
+  assert.match(launcher, /point-in-time-facts\.json/);
   assert.match(launcher, /ukey-visible-history\.json/);
 });
 
