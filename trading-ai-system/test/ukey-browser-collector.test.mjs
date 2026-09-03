@@ -10,7 +10,9 @@ import {
   buildManagedBrowserLaunch,
   createUkeyBrowserCollector,
   detectSweepRateLimitWarning,
+  normalizeVisibleDayAheadUserRow,
   parseVisibleBusinessSnapshot,
+  selectEffectivePrice,
 } from '../lib/ukey-browser-collector.mjs';
 import * as ukeyBrowserCollectorModule from '../lib/ukey-browser-collector.mjs';
 import { chromium } from 'playwright';
@@ -387,17 +389,59 @@ test('parseVisibleBusinessSnapshot maps the real user day-ahead clearing headers
       date: '2026-08-26',
       pointIndex: 1,
       timePoint: '00:15',
+      dayAheadUserClearedPowerMw: 64.8,
+      dayAheadUserPriceTemporaryYuanPerMwh: 372.5,
+      dayAheadUserPriceFinalYuanPerMwh: null,
+      dayAheadUserPriceEffectiveYuanPerMwh: 372.5,
+      dayAheadUserPriceEffectiveSource: 'temporary',
       dayAheadUserPrice: 372.5,
+      dayAheadUserClearingPower: 64.8,
+      evidence: {
+        visibleFields: [
+          { header: '时间', value: '00:15' },
+          { header: '出清电力', value: '64.800' },
+          { header: '统一结算点电价临时结果', value: '372.5' },
+          { header: '统一结算点电价最终结果', value: '-' },
+        ],
+      },
       sourceTargets: ['visible_page_snapshot'],
     },
     {
       date: '2026-08-26',
       pointIndex: 2,
       timePoint: '00:30',
+      dayAheadUserClearedPowerMw: 64.8,
+      dayAheadUserPriceTemporaryYuanPerMwh: 368.4,
+      dayAheadUserPriceFinalYuanPerMwh: 369.1,
+      dayAheadUserPriceEffectiveYuanPerMwh: 369.1,
+      dayAheadUserPriceEffectiveSource: 'final',
       dayAheadUserPrice: 369.1,
+      dayAheadUserClearingPower: 64.8,
+      evidence: {
+        visibleFields: [
+          { header: '时间', value: '00:30' },
+          { header: '出清电力', value: '64.800' },
+          { header: '统一结算点电价临时结果', value: '368.4' },
+          { header: '统一结算点电价最终结果', value: '369.1' },
+        ],
+      },
       sourceTargets: ['visible_page_snapshot'],
     },
   ]);
+});
+
+test('visible day-ahead normalization keeps clearing, declaration, and price revisions isolated', () => {
+  const headers = ['时间', '出清电力', '统一结算点电价临时结果', '统一结算点电价最终结果'];
+  const first = normalizeVisibleDayAheadUserRow(['00:15', '612.4', '318.50', '-'], headers);
+  const second = normalizeVisibleDayAheadUserRow(['00:30', '615.1', '320.00', '319.80'], headers);
+  assert.equal(first.dayAheadUserClearedPowerMw, 612.4);
+  assert.equal(first.userDeclaredPowerMw, undefined);
+  assert.equal(first.defaultDeclaredPowerMw, undefined);
+  assert.equal(first.dayAheadUserPriceFinalYuanPerMwh, null);
+  assert.equal(first.dayAheadUserPriceEffectiveSource, 'temporary');
+  assert.equal(second.dayAheadUserPriceEffectiveYuanPerMwh, 319.8);
+  assert.equal(second.dayAheadUserPriceEffectiveSource, 'final');
+  assert.deepEqual(selectEffectivePrice({ temporary: '-', final: '-' }), { value: null, source: 'unavailable' });
 });
 
 test('parseVisibleBusinessSnapshot uses JSPEC clearing-page context for generic settlement price headers', () => {

@@ -41,7 +41,7 @@ test('buildForecastFeatureStore merges raw price, declaration, and system rows i
     capture(
       'user-clearing.json',
       'https://www.jspec.com.cn/px-spotgoods-province/Dd2jyUserClearingResult/queryDd2jyRqClearing',
-      [{ dataTime: '2026-06-29', timePoint: '00:15', unitPrice: 355 }]
+      [{ dataTime: '2026-06-29', timePoint: '00:15', clearingPower: 612.4, unitPrice: 354, userClearingPriceFinal: 355 }]
     ),
     capture(
       'default-bid.json',
@@ -66,6 +66,10 @@ test('buildForecastFeatureStore merges raw price, declaration, and system rows i
   assert.equal(row.realTimeAvgPrice, 320);
   assert.equal(row.dayAheadPublicPrice, 350);
   assert.equal(row.dayAheadUserPrice, 355);
+  assert.equal(row.dayAheadUserClearedPowerMw, 612.4);
+  assert.equal(row.dayAheadUserPriceTemporaryYuanPerMwh, 354);
+  assert.equal(row.dayAheadUserPriceFinalYuanPerMwh, 355);
+  assert.equal(row.dayAheadUserPriceEffectiveSource, 'final');
   assert.equal(row.defaultDeclarationPower, 21);
   assert.equal(row.systemLoadForecast, 80100);
   assert.equal(row.actualSystemLoad, 81100);

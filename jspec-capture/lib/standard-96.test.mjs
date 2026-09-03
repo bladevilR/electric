@@ -81,6 +81,24 @@ test('buildStandardDataset merges declaration and price captures by date and poi
   assert.equal(defaultRow.dayAheadPublicClearingPower, 1000);
 });
 
+test('day-ahead user capture preserves cleared power and temporary/final prices separately', () => {
+  const dataset = buildStandardDataset([
+    capture({
+      id: 'dayahead_user_clearing',
+      request: { dataTime: '2026-05-08' },
+      data: [{ timePoint: '00:15', clearingPower: '612.4', unitPrice: '318.5', userClearingPriceFinal: '319.8' }],
+    }),
+  ]);
+  const row = dataset.rows[0];
+  assert.equal(row.dayAheadUserClearedPowerMw, 612.4);
+  assert.equal(row.dayAheadUserPriceTemporaryYuanPerMwh, 318.5);
+  assert.equal(row.dayAheadUserPriceFinalYuanPerMwh, 319.8);
+  assert.equal(row.dayAheadUserPriceEffectiveYuanPerMwh, 319.8);
+  assert.equal(row.dayAheadUserPriceEffectiveSource, 'final');
+  assert.equal(row.userDeclaredPowerMw, undefined);
+  assert.equal(row.defaultDeclaredPowerMw, undefined);
+});
+
 test('buildStandardDataset reports empty actual-load rows as a data gap', () => {
   const dataset = buildStandardDataset([
     capture({

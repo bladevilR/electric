@@ -29,6 +29,11 @@ export const STANDARD_COLUMNS = [
   'dayAheadUserClearingPower',
   'dayAheadUserPrice',
   'dayAheadUserPriceFinal',
+  'dayAheadUserClearedPowerMw',
+  'dayAheadUserPriceTemporaryYuanPerMwh',
+  'dayAheadUserPriceFinalYuanPerMwh',
+  'dayAheadUserPriceEffectiveYuanPerMwh',
+  'dayAheadUserPriceEffectiveSource',
   'dayAheadUserSouthPrice',
   'dayAheadUserNorthPrice',
   'dayAheadPublicClearingPower',
@@ -220,6 +225,11 @@ function createRow({ date, timePoint }) {
     dayAheadUserClearingPower: null,
     dayAheadUserPrice: null,
     dayAheadUserPriceFinal: null,
+    dayAheadUserClearedPowerMw: null,
+    dayAheadUserPriceTemporaryYuanPerMwh: null,
+    dayAheadUserPriceFinalYuanPerMwh: null,
+    dayAheadUserPriceEffectiveYuanPerMwh: null,
+    dayAheadUserPriceEffectiveSource: null,
     dayAheadUserSouthPrice: null,
     dayAheadUserNorthPrice: null,
     dayAheadPublicClearingPower: null,
@@ -317,6 +327,41 @@ function arrayRows(capture, fieldMap) {
     }));
 }
 
+function dayAheadUserRows(capture) {
+  return arrayRows(capture, {
+    numeric: {
+      dayAheadUserMediumLongPower: 'mediumLongPower',
+      dayAheadUserStandardPower: 'standardPower',
+      dayAheadUserSumPower: 'sumPower',
+      dayAheadUserClearingPower: 'clearingPower',
+      dayAheadUserPrice: 'unitPrice',
+      dayAheadUserPriceFinal: 'userClearingPriceFinal',
+      dayAheadUserClearedPowerMw: 'clearingPower',
+      dayAheadUserPriceTemporaryYuanPerMwh: 'unitPrice',
+      dayAheadUserPriceFinalYuanPerMwh: 'userClearingPriceFinal',
+      dayAheadUserSouthPrice: 'southPrice',
+      dayAheadUserNorthPrice: 'northPrice',
+    },
+  }).map((row) => {
+    const final = row.values.dayAheadUserPriceFinalYuanPerMwh;
+    const temporary = row.values.dayAheadUserPriceTemporaryYuanPerMwh;
+    const effective = final ?? temporary ?? null;
+    return {
+      ...row,
+      values: {
+        ...row.values,
+        dayAheadUserPriceEffectiveYuanPerMwh: effective,
+        dayAheadUserPriceEffectiveSource: final !== null && final !== undefined
+          ? 'final'
+          : temporary !== null && temporary !== undefined
+            ? 'temporary'
+            : 'unavailable',
+        dayAheadUserPrice: effective,
+      },
+    };
+  });
+}
+
 function actualLoadRows(capture) {
   const data = getCaptureData(capture);
   const heads = Array.isArray(data?.listTableHead) ? data.listTableHead : [];
@@ -380,18 +425,7 @@ export function extractRowsFromCapture(capture) {
     case 'user_default_bid_96':
       return declarationRows(capture, targetId);
     case 'dayahead_user_clearing':
-      return arrayRows(capture, {
-        numeric: {
-          dayAheadUserMediumLongPower: 'mediumLongPower',
-          dayAheadUserStandardPower: 'standardPower',
-          dayAheadUserSumPower: 'sumPower',
-          dayAheadUserClearingPower: 'clearingPower',
-          dayAheadUserPrice: 'unitPrice',
-          dayAheadUserPriceFinal: 'userClearingPriceFinal',
-          dayAheadUserSouthPrice: 'southPrice',
-          dayAheadUserNorthPrice: 'northPrice',
-        },
-      });
+      return dayAheadUserRows(capture);
     case 'dayahead_public_clearing':
       return arrayRows(capture, {
         numeric: {

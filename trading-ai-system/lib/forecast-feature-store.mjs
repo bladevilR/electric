@@ -4,6 +4,11 @@ const FEATURE_FIELDS = [
   'realTimeAvgPrice',
   'dayAheadPublicPrice',
   'dayAheadUserPrice',
+  'dayAheadUserClearedPowerMw',
+  'dayAheadUserPriceTemporaryYuanPerMwh',
+  'dayAheadUserPriceFinalYuanPerMwh',
+  'dayAheadUserPriceEffectiveYuanPerMwh',
+  'dayAheadUserPriceEffectiveSource',
   'realTimePointPriceCurrent',
   'declarationPower',
   'defaultDeclarationPower',
@@ -183,7 +188,22 @@ export function normalizeAssetRows(inventory = {}) {
 
   (assets.dayAheadUserClearing || []).forEach((record) => {
     const raw = record.raw || {};
-    rows.push(normalizedRecord('dayAheadUserClearing', record, { dayAheadUserPrice: raw.unitPrice ?? raw.dayAheadUserPrice }));
+    const temporary = numberOrNull(raw.unitPrice ?? raw.dayAheadUserPriceTemporaryYuanPerMwh ?? raw.dayAheadUserPrice);
+    const final = numberOrNull(raw.userClearingPriceFinal ?? raw.dayAheadUserPriceFinalYuanPerMwh);
+    const effective = final ?? temporary;
+    const normalized = normalizedRecord('dayAheadUserClearing', record, {
+      dayAheadUserClearedPowerMw: raw.clearingPower ?? raw.dayAheadUserClearedPowerMw,
+      dayAheadUserPriceTemporaryYuanPerMwh: temporary,
+      dayAheadUserPriceFinalYuanPerMwh: final,
+      dayAheadUserPriceEffectiveYuanPerMwh: effective,
+      dayAheadUserPrice: effective,
+    });
+    normalized.fields.dayAheadUserPriceEffectiveSource = final !== null
+      ? 'final'
+      : temporary !== null
+        ? 'temporary'
+        : 'unavailable';
+    rows.push(normalized);
   });
 
   (assets.realtimePublicClearing || []).forEach((record) => {
@@ -254,6 +274,11 @@ function emptyFeature(date, pointIndex, timePoint = '') {
     realTimeAvgPrice: null,
     dayAheadPublicPrice: null,
     dayAheadUserPrice: null,
+    dayAheadUserClearedPowerMw: null,
+    dayAheadUserPriceTemporaryYuanPerMwh: null,
+    dayAheadUserPriceFinalYuanPerMwh: null,
+    dayAheadUserPriceEffectiveYuanPerMwh: null,
+    dayAheadUserPriceEffectiveSource: null,
     realTimePointPriceCurrent: null,
     declarationPower: null,
     defaultDeclarationPower: null,
