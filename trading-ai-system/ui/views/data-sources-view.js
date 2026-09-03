@@ -25,7 +25,9 @@ const esc = (value) =>
   );
 
 const numberText = (value, suffix = '') =>
-  Number.isFinite(Number(value)) ? `${Number(value).toLocaleString('zh-CN')}${suffix}` : '—';
+  value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+    ? `${Number(value).toLocaleString('zh-CN')}${suffix}`
+    : '—';
 
 const metricCard = (id, label, value, suffix, explanation, openExplanation) => `
   <div class="foundation-metric${openExplanation === id ? ' is-explained' : ''}">
@@ -55,6 +57,7 @@ function truthStrip(model) {
         <small>历史真实数据</small>
         <strong>${history.coverage}/96点</strong>
         <span>${esc(history.date || '尚无历史日期')}</span>
+        <button type="button" class="foundation-storage-link" data-foundation-action="open-provenance" data-foundation-trigger="storage-location">查看采集数据位置</button>
       </div>
       <button type="button" class="foundation-primary-button" data-primary-action="collect_today_data">开始自动采集</button>
     </section>
@@ -77,34 +80,34 @@ function forecastTabs(model, activeId) {
   `;
 }
 
-function accuracySection(model, activeTab, openExplanation) {
-  const metrics = model.accuracy.metrics;
+function accuracySection(accuracy, activeTab, openExplanation, explanations) {
+  const metrics = accuracy.metrics;
   return `
     <section class="foundation-section foundation-accuracy" aria-labelledby="foundationAccuracyTitle">
       <header class="foundation-section-heading">
         <div><small>FORECAST AUDIT</small><h2 id="foundationAccuracyTitle">预测准确度回溯</h2></div>
-        <div class="foundation-heading-actions"><button type="button">查看预测版本</button><button type="button">查看回测证据</button></div>
+        <div class="foundation-heading-actions"><button type="button" data-foundation-action="focus-versions">查看预测版本</button><button type="button" data-foundation-action="open-explanation" data-explanation-id="baselineSkill">查看回测证据</button></div>
       </header>
       <div class="foundation-metrics-grid">
-        ${metricCard('mae', 'MAE', metrics.mae, activeTab.unit, model.explanations.mae, openExplanation)}
-        ${metricCard('rmse', 'RMSE', metrics.rmse, activeTab.unit, model.explanations.rmse, openExplanation)}
-        ${metricCard('mape', 'MAPE', metrics.mape, '%', model.explanations.mape, openExplanation)}
+        ${metricCard('mae', 'MAE', metrics.mae, activeTab.unit, explanations.mae, openExplanation)}
+        ${metricCard('rmse', 'RMSE', metrics.rmse, activeTab.unit, explanations.rmse, openExplanation)}
+        ${metricCard('mape', 'MAPE', metrics.mape, '%', explanations.mape, openExplanation)}
         ${metricCard(
           'baselineSkill',
           '相对基线改善',
           metrics.baselineSkill,
           '%',
-          model.explanations.baselineSkill,
+          explanations.baselineSkill,
           openExplanation
         )}
       </div>
       <div class="foundation-accuracy-grid">
-        <div>${renderAccuracyHistory(model.accuracy.history, activeTab.unit)}</div>
-        <div class="foundation-version-panel">
+        <div>${renderAccuracyHistory(accuracy.history, activeTab.unit)}</div>
+        <div class="foundation-version-panel" id="foundationVersionPanel" tabindex="-1">
           <h3>版本对比（${esc(activeTab.label)}）</h3>
           ${
-            model.accuracy.versions.length
-              ? `<div class="local-scroll"><table><thead><tr><th>模型版本</th><th>发布时间</th><th>样本量</th><th>MAE</th><th>相对基线</th><th>状态</th></tr></thead><tbody>${model.accuracy.versions
+            accuracy.versions.length
+              ? `<div class="local-scroll"><table><thead><tr><th>模型版本</th><th>发布时间</th><th>样本量</th><th>MAE</th><th>相对基线</th><th>状态</th></tr></thead><tbody>${accuracy.versions
                   .map(
                     (version) =>
                       `<tr><td>${esc(version.modelVersion || version.id)}</td><td>${esc(
@@ -231,6 +234,7 @@ export function renderDataSourcesView(state = {}) {
     ? state.activeForecastTab
     : 'price';
   const activeTab = model.forecastTabs.find((tab) => tab.id === activeId);
+  const activeAccuracy = model.accuracy.byTab?.[activeId] || model.accuracy;
   const explanation = model.explanations[state.openExplanation] || null;
   const catalogModel = { fields: state.fieldCatalog?.fields || [] };
   return `
@@ -253,25 +257,25 @@ export function renderDataSourcesView(state = {}) {
               activeTab.label
             )}）</h2></div></header>
             <dl>
-              <div><dt>当前模型</dt><dd>${esc(model.accuracy.modelVersion || '尚无有效版本')}</dd></div>
+              <div><dt>当前模型</dt><dd>${esc(activeAccuracy.modelVersion || '尚无有效版本')}</dd></div>
               <div><dt>数据截止</dt><dd>${esc(model.identity.dataCutoff || '尚无可用证据')}</dd></div>
-              <div><dt>样本天数</dt><dd>${numberText(model.accuracy.sampleDays, ' 天')}</dd></div>
-              <div><dt>最近回测</dt><dd>${esc(model.accuracy.lastBacktestAt || '尚未完成')}</dd></div>
+              <div><dt>样本天数</dt><dd>${numberText(activeAccuracy.sampleDays, ' 天')}</dd></div>
+              <div><dt>最近回测</dt><dd>${esc(activeAccuracy.lastBacktestAt || '尚未完成')}</dd></div>
             </dl>
             <button type="button" class="foundation-secondary-button" data-foundation-action="open-explanation" data-explanation-id="baselineSkill">解释模型选择</button>
           </aside>
         </div>
       </section>
-      ${accuracySection(model, activeTab, state.openExplanation)}
+      ${accuracySection(activeAccuracy, activeTab, state.openExplanation, model.explanations)}
       ${sandboxSection(model, state.sandboxControls || model.sandbox.defaults)}
       ${derivationSection(model)}
       <details class="foundation-catalog"><summary>完整字段目录与原始证据</summary>${renderFieldCatalogTable(
         catalogModel
       )}</details>
-      ${renderFoundationProvenance(Boolean(state.provenanceOpen))}
+      ${renderFoundationProvenance(Boolean(state.provenanceOpen), model.collection)}
       ${renderFoundationEvidenceDrawer(explanation || {}, {
         dataCutoff: model.identity.dataCutoff,
-        modelVersion: model.accuracy.modelVersion,
+        modelVersion: activeAccuracy.modelVersion,
         constraintVersion: state.constraintVersion || null,
         selectedFacts: model.derivation.evidenceStages.length
           ? `${model.derivation.evidenceStages.length} 个阶段`

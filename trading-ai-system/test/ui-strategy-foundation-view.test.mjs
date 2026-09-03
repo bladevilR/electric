@@ -100,3 +100,50 @@ test('foundation view keeps field catalog available as progressive evidence', ()
   assert.match(html, /代码已支持，尚无非空实值/);
   assert.match(html, /页面原始表头/);
 });
+
+test('forecast comparison exposes semantic line roles and working evidence actions', () => {
+  const html = render({
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 96 } },
+      forecastReport: {
+        forecasts: [{ pointIndex: 1, pointForecast: 420 }],
+        actuals: [{ pointIndex: 1, value: 405 }],
+        previousForecasts: [{ pointIndex: 1, value: 438 }],
+      },
+    },
+  });
+
+  assert.match(html, /data-series-role="actual"/);
+  assert.match(html, /data-series-role="forecast"/);
+  assert.match(html, /data-series-role="previous"[^>]*stroke-dasharray/);
+  assert.match(html, /data-foundation-action="focus-versions"/);
+  assert.match(html, /id="foundationVersionPanel"/);
+  assert.match(
+    html,
+    /data-foundation-action="open-explanation" data-explanation-id="baselineSkill"/
+  );
+});
+
+test('collection status links to the exact local data storage evidence', () => {
+  const html = render({
+    provenanceOpen: true,
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 } },
+      ukeyStatus: {
+        collector: { state: 'stopped', lastPageTitle: '实时价格' },
+        visibleSnapshot: { storagePath: 'E:\\electric\\data\\snapshot.json' },
+        visibleHistory: {
+          storagePath: 'C:\\Users\\R\\history.json',
+          rowCount: 79,
+          dates: ['2026-06-29'],
+        },
+      },
+    },
+  });
+
+  assert.match(html, /data-foundation-trigger="storage-location"/);
+  assert.match(html, /采集数据存放/);
+  assert.match(html, /E:\\electric\\data\\snapshot\.json/);
+  assert.match(html, /C:\\Users\\R\\history\.json/);
+  assert.match(html, /实时价格/);
+});

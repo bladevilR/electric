@@ -130,7 +130,7 @@ export function buildStrategyFoundationModel(input = {}) {
   const readinessStatus = String(workbench.readiness?.status || workbench.status || 'data_blocked');
   const forecastReport = input.forecastReport || {};
   const marketSeries = input.marketCockpit?.series || {};
-  const accuracySource = input.accuracyReport?.metrics || input.accuracyReport || forecastReport.metrics || {};
+  const accuracyReport = input.accuracyReport || {};
   const predictionRows = forecastReport.forecasts || forecastReport.rows || [];
   const previousRows = forecastReport.previousForecasts || forecastReport.previous || [];
   const actualPriceRows =
@@ -174,6 +174,67 @@ export function buildStrategyFoundationModel(input = {}) {
     }),
   ];
 
+  const accuracyForTarget = (targetId) => {
+    const targetAccuracy = accuracyReport.byTarget?.[targetId] || {};
+    const targetForecast = forecastReport.byTarget?.[targetId] || {};
+    const allowRootFallback = targetId === 'price';
+    const accuracySource =
+      targetAccuracy.metrics ||
+      (allowRootFallback ? accuracyReport.metrics || accuracyReport : {}) ||
+      targetForecast.metrics ||
+      (allowRootFallback ? forecastReport.metrics || {} : {});
+    return {
+      metrics: {
+        mae: metric(accuracySource, ['mae', 'MAE']),
+        rmse: metric(accuracySource, ['rmse', 'RMSE']),
+        mape: metric(accuracySource, ['mape', 'MAPE']),
+        baselineSkill: metric(accuracySource, [
+          'baselineSkill',
+          'skillVsBaseline',
+          'relativeImprovementPct',
+        ]),
+      },
+      history: Array.isArray(targetAccuracy.history)
+        ? targetAccuracy.history
+        : allowRootFallback && Array.isArray(accuracyReport.history)
+          ? accuracyReport.history
+          : [],
+      versions:
+        targetAccuracy.versions ||
+        targetForecast.versions ||
+        (allowRootFallback
+          ? accuracyReport.versions || forecastReport.versions || forecastReport.candidates || []
+          : []),
+      modelVersion:
+        targetAccuracy.modelVersion ||
+        targetForecast.modelVersion ||
+        targetForecast.selectedModel?.id ||
+        targetForecast.model?.id ||
+        (allowRootFallback
+          ? forecastReport.modelVersion ||
+            forecastReport.selectedModel?.id ||
+            forecastReport.model?.id ||
+            null
+          : null),
+      sampleDays:
+        metric(targetAccuracy, ['sampleDays', 'historyDateCount']) ??
+        metric(targetForecast, ['sampleDays', 'historyDateCount']) ??
+        (allowRootFallback ? metric(forecastReport, ['sampleDays', 'historyDateCount']) : null),
+      lastBacktestAt:
+        targetAccuracy.lastBacktestAt ||
+        targetAccuracy.generatedAt ||
+        targetForecast.lastBacktestAt ||
+        (allowRootFallback
+          ? forecastReport.lastBacktestAt || accuracyReport.generatedAt || null
+          : null),
+    };
+  };
+  const accuracyByTab = {
+    price: accuracyForTarget('price'),
+    temperature: accuracyForTarget('temperature'),
+    load: accuracyForTarget('load'),
+  };
+
   return {
     identity: {
       environment: input.mode === 'demo' ? '演示环境' : '真实环境',
@@ -192,6 +253,7 @@ export function buildStrategyFoundationModel(input = {}) {
         date: targetDate,
         coverage: currentCoverage,
         complete: currentCoverage === POINT_COUNT,
+        storagePath: ukeyStatus.visibleSnapshot?.storagePath || null,
       },
       history: {
         kind: 'historical_real',
@@ -199,35 +261,19 @@ export function buildStrategyFoundationModel(input = {}) {
         date: historyDate,
         coverage: historyCoverage,
         generatedAt: history.generatedAt || null,
+        storagePath: history.storagePath || null,
       },
       simulation: { kind: 'simulation', label: '模拟方案' },
       collectorState,
+      lastPageTitle: ukeyStatus.collector?.lastPageTitle || null,
+      lastPageUrl: ukeyStatus.collector?.lastPageUrl || null,
+      lastSampleAt: ukeyStatus.collector?.lastSampleAt || null,
       strategyExecutable:
         currentCoverage === POINT_COUNT && ['ready', 'review_ready'].includes(readinessStatus),
       readinessStatus,
     },
     forecastTabs: tabs,
-    accuracy: {
-      metrics: {
-        mae: metric(accuracySource, ['mae', 'MAE']),
-        rmse: metric(accuracySource, ['rmse', 'RMSE']),
-        mape: metric(accuracySource, ['mape', 'MAPE']),
-        baselineSkill: metric(accuracySource, [
-          'baselineSkill',
-          'skillVsBaseline',
-          'relativeImprovementPct',
-        ]),
-      },
-      history: Array.isArray(input.accuracyReport?.history)
-        ? input.accuracyReport.history
-        : [],
-      versions:
-        input.accuracyReport?.versions || forecastReport.versions || forecastReport.candidates || [],
-      modelVersion:
-        forecastReport.modelVersion || forecastReport.selectedModel?.id || forecastReport.model?.id || null,
-      sampleDays: metric(forecastReport, ['sampleDays', 'historyDateCount']),
-      lastBacktestAt: forecastReport.lastBacktestAt || input.accuracyReport?.generatedAt || null,
-    },
+    accuracy: { ...accuracyByTab.price, byTab: accuracyByTab },
     sandbox: {
       formalRows,
       defaults: {

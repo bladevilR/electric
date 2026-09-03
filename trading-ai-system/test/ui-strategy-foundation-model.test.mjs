@@ -117,3 +117,44 @@ test('sandbox with no formal recommendation does not invent a strategy or saving
   assert.equal(result.estimatedCostChangeYuan, null);
   assert.equal(result.riskExposureChangePct, null);
 });
+
+test('accuracy evidence is isolated by prediction target instead of reusing price metrics', () => {
+  const model = buildStrategyFoundationModel({
+    accuracyReport: {
+      metrics: { mae: 21.4, rmse: 31.8, mape: 6.3 },
+      byTarget: {
+        temperature: {
+          metrics: { mae: 0.8, rmse: 1.1, mape: 2.4 },
+          modelVersion: 'temp-v6',
+        },
+      },
+    },
+  });
+
+  assert.equal(model.accuracy.byTab.price.metrics.mae, 21.4);
+  assert.equal(model.accuracy.byTab.temperature.metrics.mae, 0.8);
+  assert.equal(model.accuracy.byTab.temperature.modelVersion, 'temp-v6');
+  assert.equal(model.accuracy.byTab.load.metrics.mae, null);
+});
+
+test('collection evidence carries the exact snapshot and history storage locations', () => {
+  const model = buildStrategyFoundationModel({
+    ukeyStatus: {
+      visibleSnapshot: { storagePath: 'E:\\electric\\data\\snapshot.json' },
+      visibleHistory: {
+        storagePath: 'C:\\Users\\R\\history.json',
+        rowCount: 79,
+        dates: ['2026-06-29'],
+      },
+      collector: {
+        state: 'stopped',
+        lastPageTitle: '实时价格',
+        lastPageUrl: 'https://example.invalid/realtime',
+      },
+    },
+  });
+
+  assert.equal(model.collection.current.storagePath, 'E:\\electric\\data\\snapshot.json');
+  assert.equal(model.collection.history.storagePath, 'C:\\Users\\R\\history.json');
+  assert.equal(model.collection.lastPageTitle, '实时价格');
+});

@@ -73,7 +73,7 @@ export function renderFoundationEvidenceDrawer(explanation = {}, evidence = {}) 
   `;
 }
 
-export function renderFoundationProvenance(open = false) {
+export function renderFoundationProvenance(open = false, collection = {}) {
   if (!open) {
     return `<button type="button" class="foundation-provenance-trigger" data-foundation-action="open-provenance" aria-expanded="false" aria-controls="foundationProvenance">数据血缘</button>`;
   }
@@ -89,6 +89,19 @@ export function renderFoundationProvenance(open = false) {
   return `
     <aside class="foundation-provenance" id="foundationProvenance" aria-label="数据血缘">
       <header><strong>数据血缘</strong><button type="button" data-foundation-action="close-provenance">收起</button></header>
+      <section class="foundation-storage-evidence">
+        <h3>采集数据存放</h3>
+        <dl>
+          <div><dt>当前快照</dt><dd><code>${evidenceValue(
+            collection.current?.storagePath
+          )}</code></dd></div>
+          <div><dt>累计历史</dt><dd><code>${evidenceValue(
+            collection.history?.storagePath
+          )}</code></dd></div>
+          <div><dt>最近页面</dt><dd>${evidenceValue(collection.lastPageTitle)}</dd></div>
+          <div><dt>最近采集</dt><dd>${evidenceValue(collection.lastSampleAt)}</dd></div>
+        </dl>
+      </section>
       <ol>${stages
         .map(([title, detail]) => `<li><strong>${title}</strong><small>${detail}</small></li>`)
         .join('')}</ol>

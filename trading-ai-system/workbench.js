@@ -1181,7 +1181,7 @@ export function buildDemoActionResult(payload, actionId) {
 
 function dashboardSidebar(payload, activeStage, dialogOpen = false) {
   const navItems = [
-    { id: 'foundation', stage: 'foundation', label: '基础数据', icon: '数' },
+    { id: 'foundation', stage: 'foundation', label: '基础数据与依据', icon: '数' },
     { id: 'optimize', stage: 'connect', label: '申报优化', icon: '⌁' },
     { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
     { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
@@ -1200,7 +1200,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
   return `
     <aside class="dashboard-sidebar"${dialogOpen ? ' inert' : ''}>
       <div class="dashboard-brand">
-        <span class="brand-mark" aria-hidden="true">ϟ</span>
+        <img class="brand-mark" src="./assets/app-icon.png" alt="">
         <div class="brand-copy">
           <strong>电力交易 AI</strong>
           <small>智能申报决策</small>
@@ -2669,17 +2669,24 @@ export function renderWorkbenchMarkup(payload, options = {}) {
   };
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
   const activeCockpitView = options.activeView || 'market-cockpit';
+  const legacyWorkspace =
+    activeCockpitView === 'data-sources'
+      ? ''
+      : `${dashboardTopbar(payload, mode)}${mainContent}`;
   return `
     <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
-      ${dashboardSidebar(payload, activeStage, evidenceOpen)}
+      ${dashboardSidebar(
+        payload,
+        activeCockpitView === 'data-sources' ? 'foundation' : activeStage,
+        evidenceOpen
+      )}
       <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
         ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
         <section class="cockpit-experience" aria-label="六步市场决策工作流">
           ${renderNavigation({ activeView: activeCockpitView })}
           ${cockpitViews[activeCockpitView](cockpitState)}
         </section>
-        ${dashboardTopbar(payload, mode)}
-        ${mainContent}
+        ${legacyWorkspace}
       </main>
       ${evidenceDrawer(payload, evidenceOpen)}
     </div>
@@ -2885,6 +2892,54 @@ async function loadWorkbench(date = '') {
           status: '演示回测',
         },
       ],
+      byTarget: {
+        temperature: {
+          metrics: { mae: 0.8, rmse: 1.1, mape: 2.7, baselineSkill: 12.4 },
+          modelVersion: 'temp-forecast-v6',
+          sampleDays: 180,
+          lastBacktestAt: '2026-07-31 07:20',
+          history: [
+            { date: '2026-07-27', value: 1.1 },
+            { date: '2026-07-28', value: 0.9 },
+            { date: '2026-07-29', value: 0.85 },
+            { date: '2026-07-30', value: 0.94 },
+            { date: '2026-07-31', value: 0.8 },
+          ],
+          versions: [
+            {
+              id: 'temp-forecast-v6',
+              issuedAt: '2026-07-31 07:20',
+              sampleDays: 180,
+              mae: 0.8,
+              baselineSkill: 12.4,
+              status: '演示回测',
+            },
+          ],
+        },
+        load: {
+          metrics: { mae: 11.8, rmse: 16.2, mape: 2.1, baselineSkill: 8.7 },
+          modelVersion: 'load-forecast-v5',
+          sampleDays: 180,
+          lastBacktestAt: '2026-07-31 07:22',
+          history: [
+            { date: '2026-07-27', value: 14.2 },
+            { date: '2026-07-28', value: 13.4 },
+            { date: '2026-07-29', value: 12.7 },
+            { date: '2026-07-30', value: 12.1 },
+            { date: '2026-07-31', value: 11.8 },
+          ],
+          versions: [
+            {
+              id: 'load-forecast-v5',
+              issuedAt: '2026-07-31 07:22',
+              sampleDays: 180,
+              mae: 11.8,
+              baselineSkill: 8.7,
+              status: '演示回测',
+            },
+          ],
+        },
+      },
     };
     browserState.marketCockpit = buildDemoFoundationMarketSeries();
     browserState.loading = false;
@@ -3145,6 +3200,13 @@ function bindBrowserEvents() {
         });
         browserState.actionMessage = '模拟方案已刷新；正式策略和交易数据未被修改。';
         renderBrowser();
+        return;
+      }
+      if (action === 'focus-versions') {
+        rootElement()?.querySelector('#foundationVersionPanel')?.focus();
+        rootElement()
+          ?.querySelector('#foundationVersionPanel')
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
     }
