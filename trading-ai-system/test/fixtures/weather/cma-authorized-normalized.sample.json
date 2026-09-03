@@ -1,0 +1,1 @@
+{"sourceId":"CMA-AUTHORIZED","provider":"CMA","modelName":"authorized-feed","dataClass":"forecast","forecastIssuedAt":"2026-08-23T00:00:00Z","targetTime":"2026-08-24T06:00:00Z","locationId":"suzhou-grid-001","nativeGranularityMinutes":60,"sourceRevision":"20260823T0000Z","values":{"temperatureK":299,"windU10Mps":2,"windV10Mps":1}}

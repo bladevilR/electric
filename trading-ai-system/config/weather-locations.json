@@ -1,1 +1,1 @@
-{"version":1,"locationSets":{"suzhou_load":{"weightVersion":"pending_authorization","locations":[]},"jiangsu_market":{"weightVersion":"pending_authorization","locations":[]}}}
+{"version":1,"locationSets":[{"locationSetId":"suzhou_metro_load_v1","status":"experimental","minimumAvailableWeightPct":80,"members":[],"warnings":["weather_location_set_unconfigured"]},{"locationSetId":"jiangsu_market_weather_v1","status":"experimental","minimumAvailableWeightPct":80,"members":[],"warnings":["weather_location_set_unconfigured"]}]}

@@ -1,8 +1,15 @@
 import json
-def validate_forecast(payload):
-    rows=payload.get("rows",[])
+FORBIDDEN = ('actual', 'settlement')
+def validate_training_row(row):
+    for key in row.get('features', {}):
+        if key.lower().startswith(FORBIDDEN) or 'backfilled' in key.lower(): raise ValueError('forbidden_feature')
+    if row.get('split') not in ('train','validation','holdout','shadow'): raise ValueError('split_invalid')
+    return row
+def validate_forecast_output(payload):
+    rows = payload.get('rows', [payload])
     for row in rows:
-        if not 1 <= int(row["pointIndex"]) <= 96: raise ValueError("point_index_invalid")
-        if not row["p10"] <= row["p50"] <= row["p90"]: raise ValueError("quantiles_not_monotonic")
+        if 'pointIndex' in row and not 1 <= int(row['pointIndex']) <= 96: raise ValueError('point_index_invalid')
+        if not float(row['p10']) <= float(row['p50']) <= float(row['p90']): raise ValueError('quantile_order_invalid')
     return payload
-def emit(payload): print(json.dumps(validate_forecast(payload),ensure_ascii=False))
+def validate_forecast(payload): return validate_forecast_output(payload)
+def emit(payload): print(json.dumps(validate_forecast_output(payload), ensure_ascii=False))

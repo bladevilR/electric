@@ -1,2 +1,16 @@
-export function alignWeatherSeriesTo96(series=[],options={}){const by=new Map(series.map(x=>[x.pointIndex,x.value]));const out=[];for(let p=1;p<=96;p++){let value=by.get(p)??null;if(value===null&&options.method==='linear_interpolate'){const before=[...by.keys()].filter(x=>x<p).sort((a,b)=>b-a)[0],after=[...by.keys()].filter(x=>x>p).sort((a,b)=>a-b)[0];if(before&&after)value=by.get(before)+(by.get(after)-by.get(before))*(p-before)/(after-before);}out.push({pointIndex:p,value,alignmentMethod:by.has(p)?'native':options.method});}return out;}
-export function aggregateWeatherLocations(series=[],set={}){const groups=Map.groupBy(series,x=>x.pointIndex);return[...groups].map(([pointIndex,rows])=>{const weighted=rows.map(r=>[r.value,set.weights?.[r.locationId]??1]).filter(([v])=>Number.isFinite(v));const total=weighted.reduce((s,[,w])=>s+w,0);return{pointIndex,value:total?weighted.reduce((s,[v,w])=>s+v*w,0)/total:null,weightVersion:set.version||'explicit'};});}
+export function radiationEnergyToIrradiance({ joulesPerSquareMetre, intervalSeconds }) { return Number(joulesPerSquareMetre) / Number(intervalSeconds); }
+function pointIndex(time, date) { const start = Date.parse(`${date}T00:00:00+08:00`); return Math.round((Date.parse(time) - start) / 900000) + 1; }
+export function alignWeatherSeriesTo96(series = [], options = {}) {
+  const normalized = series.map((row) => ({ ...row, pointIndex: row.pointIndex || pointIndex(row.targetTime, options.businessDate) })), by = new Map(normalized.map((row) => [row.pointIndex, Number(row.value)])), output = [];
+  for (let point = 1; point <= 96; point++) {
+    let value = by.get(point) ?? null, method = by.has(point) ? 'native' : null;
+    if (value === null && (options.semantic === 'instantaneous' || options.method === 'linear_interpolate')) { const left = normalized.filter((row) => row.pointIndex < point).at(-1), right = normalized.find((row) => row.pointIndex > point); if (left && right) { value = left.value + (right.value - left.value) * (point - left.pointIndex) / (right.pointIndex - left.pointIndex); method = 'linear_interpolate'; } }
+    if (options.semantic === 'accumulated') { const owner = normalized.find((row) => point > row.pointIndex - (options.accumulationMinutes || 60) / 15 && point <= row.pointIndex); value = owner ? Number(owner.value) / ((options.accumulationMinutes || 60) / 15) : null; method = owner ? 'accumulation_split' : null; }
+    output.push({ pointIndex: point, value, alignmentMethod: method || 'missing' });
+  }
+  return output;
+}
+export function aggregateWeatherLocations(series = [], set = {}) {
+  const groups = Map.groupBy(series, (row) => row.pointIndex), configured = set.members || [], totalWeight = configured.reduce((sum, item) => sum + Number(item.weight || 0), 0) || Object.values(set.weights || {}).reduce((sum, weight) => sum + Number(weight), 0) || 1;
+  return [...groups].map(([pointIndex, rows]) => { const weighted = rows.map((row) => [Number(row.value), Number(set.weights?.[row.locationId] ?? configured.find((item) => item.locationId === row.locationId)?.weight ?? 0)]).filter(([value, weight]) => Number.isFinite(value) && weight > 0), available = weighted.reduce((sum, [, weight]) => sum + weight, 0), coverage = available / totalWeight * 100, threshold = set.minimumAvailableWeightPct ?? 80; return { pointIndex, value: coverage >= threshold && available ? weighted.reduce((sum, [value, weight]) => sum + value * weight, 0) / available : null, availableWeightPct: coverage, weightVersion: set.version || 'explicit', warnings: coverage >= threshold ? [] : ['spatial_coverage_insufficient'] }; });
+}

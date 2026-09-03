@@ -1,0 +1,1 @@
+{"sourceId":"ECMWF-OPEN","provider":"ECMWF","modelName":"IFS","dataClass":"forecast","forecastIssuedAt":"2026-08-23T00:00:00Z","targetTime":"2026-08-24T06:00:00Z","locationId":"suzhou-grid-001","nativeGranularityMinutes":180,"sourceRevision":"20260823T0000Z-step30","values":{"temperatureK":300,"relativeHumidityPct":70}}
