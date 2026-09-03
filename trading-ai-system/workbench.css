@@ -7799,3 +7799,332 @@ body {
     padding: 18px;
   }
 }
+
+/* Evidence workbench v2 — aligned to the approved generated target. */
+.foundation-page-heading {
+  min-height: 92px;
+  padding: 8px 2px 10px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.foundation-page-heading h1 {
+  font-size: clamp(27px, 2.2vw, 36px);
+}
+
+.foundation-heading-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.foundation-heading-controls label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #43536a;
+  background: #fff;
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+  font-weight: 750;
+}
+
+.foundation-heading-controls input {
+  color: #17243d;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 750;
+}
+
+.foundation-truth-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: visible;
+  background: #fff;
+  border-color: #d9e2ed;
+  box-shadow: 0 8px 28px rgb(31 59 96 / 0.055);
+}
+
+.foundation-truth-item {
+  min-height: 94px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.foundation-truth-item:last-child {
+  border-right: 0;
+}
+
+.foundation-truth-item > strong {
+  color: #1d2c45;
+  font-size: 15px;
+}
+
+.foundation-legacy-truth {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.foundation-strip-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.foundation-strip-actions button {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.foundation-tabs {
+  width: fit-content;
+  min-width: 420px;
+}
+
+.foundation-tabs button {
+  min-width: 140px;
+}
+
+.foundation-forecast {
+  padding: 16px;
+}
+
+.foundation-forecast-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 0.34fr);
+  gap: 16px;
+}
+
+.foundation-model-evidence {
+  background: #fbfcff;
+}
+
+.foundation-model-evidence dl div {
+  grid-template-columns: minmax(92px, 0.5fr) minmax(0, 1fr);
+}
+
+.foundation-chart .chart-legend span[data-series-role="interval"]::before {
+  height: 9px;
+  background: #dbeafe;
+  border: 1px solid #bfd7fb;
+}
+
+.foundation-derivation-chain li:not(:last-child)::after {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  right: -8px;
+  content: "›";
+  color: #7b96c0;
+  font-size: 19px;
+  font-weight: 850;
+  transform: translate(50%, -50%);
+}
+
+.foundation-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(390px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.foundation-bottom-grid > .foundation-section {
+  height: 100%;
+}
+
+.foundation-bottom-grid .foundation-sandbox-controls {
+  grid-template-columns: 1fr;
+}
+
+.foundation-bottom-grid .foundation-weight-controls {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.foundation-bottom-grid .foundation-impact-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.foundation-history-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.foundation-history-filters label {
+  display: grid;
+  gap: 6px;
+  color: #66758a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.foundation-history-filters input,
+.foundation-history-filters select {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: #263851;
+  background: #fff;
+  border: 1px solid #d8e1ec;
+  border-radius: 7px;
+  font: inherit;
+}
+
+.foundation-history-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.foundation-history-modes button {
+  min-height: 42px;
+  color: #3d5271;
+  background: #fff;
+  border: 1px solid #d5deea;
+  border-radius: 7px;
+  font-weight: 780;
+}
+
+.foundation-history-modes button.is-active {
+  color: #fff;
+  background: var(--foundation-blue);
+  border-color: var(--foundation-blue);
+}
+
+.foundation-storage-badge {
+  padding: 6px 10px;
+  color: #087b5a;
+  background: #eaf8f2;
+  border: 1px solid #c8eadf;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.foundation-history-table,
+.foundation-history-empty {
+  margin-top: 12px;
+  border: 1px solid #e0e7f0;
+  border-radius: 8px;
+}
+
+.foundation-history-table {
+  max-height: 330px;
+}
+
+.foundation-history-table table {
+  min-width: 760px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.foundation-history-table th,
+.foundation-history-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #e7ebf1;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.foundation-history-table th {
+  position: sticky;
+  top: 0;
+  background: #f4f7fb;
+}
+
+.foundation-history-empty {
+  min-height: 170px;
+  display: grid;
+  place-content: center;
+  gap: 7px;
+  padding: 22px;
+  color: #65758c;
+  background: #fbfcfe;
+  border-style: dashed;
+  text-align: center;
+}
+
+.foundation-history-empty p {
+  max-width: 470px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  .foundation-truth-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .foundation-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .foundation-forecast-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-page-heading,
+  .foundation-heading-controls {
+    align-items: flex-start;
+  }
+
+  .foundation-page-heading {
+    display: grid;
+  }
+
+  .foundation-heading-controls {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .foundation-workbench {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .foundation-truth-strip,
+  .foundation-history-filters,
+  .foundation-bottom-grid .foundation-impact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-truth-item {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .foundation-tabs {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .foundation-tabs button {
+    min-width: 0;
+  }
+
+  .foundation-heading-controls,
+  .foundation-heading-controls label,
+  .foundation-heading-controls button {
+    width: 100%;
+  }
+
+  .foundation-strip-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

@@ -96,25 +96,43 @@ function truthStrip(model) {
     model.collection.collectorError || '等待状态更新',
     'is-warning',
   ];
+  const chromeConnected = model.collection.dedicatedChrome.connected;
+  const ukeyLoggedIn = model.collection.ukey.state === 'logged_in';
+  const range = model.collection.range;
+  const backfill = model.collection.backfill;
+  const jobAction = backfill.state === 'running'
+    ? { id: 'pause-backfill', label: '暂停回填' }
+    : backfill.state === 'paused'
+      ? { id: 'resume-backfill', label: '继续回填' }
+      : { id: 'start-backfill', label: '开始全量回填' };
+  const rangeText = range.earliestDate && range.latestDate
+    ? `${range.earliestDate} 至 ${range.latestDate}`
+    : '尚未形成历史覆盖';
   return `
-    <section class="foundation-truth-strip" aria-label="数据真实性和采集状态">
-      <div class="foundation-truth-item is-warning">
-        <small>${esc(current.label)}</small>
-        <strong>${current.complete ? '今日数据已闭环' : '今日数据未闭环'}</strong>
-        <span>${current.coverage}/96点${current.complete ? '' : `（缺${96 - current.coverage}点）`}</span>
+    <section class="foundation-truth-strip" aria-label="专用浏览器、UKey 与历史回填状态">
+      <div class="foundation-truth-item ${chromeConnected ? 'is-ready' : collector[2]}">
+        <small>专用 Chrome</small>
+        <strong>${chromeConnected ? '已连接' : '未连接'}</strong>
+        <span>${esc(collector[0])} · ${esc(collector[1])}${lastAttempt ? ` · 最近尝试：${esc(lastAttempt)}` : ''}</span>
+        <span class="foundation-legacy-truth">${current.complete ? '今日数据已闭环' : '今日数据未闭环'} · ${esc(collector[0])}</span>
       </div>
-      <div class="foundation-truth-item ${collector[2]}">
-        <small>采集状态</small>
-        <strong>${esc(collector[0])}</strong>
-        <span>${esc(collector[1])}</span>
+      <div class="foundation-truth-item ${ukeyLoggedIn ? 'is-ready' : 'is-warning'}">
+        <small>UKey</small>
+        <strong>${ukeyLoggedIn ? '已登录' : model.collection.ukey.state === 'login_expired' ? '登录已过期' : '等待人工登录'}</strong>
+        <span>登录只在专用窗口中完成，系统不读取口令或凭据</span>
       </div>
-      <div class="foundation-truth-item is-ready">
-        <small>${esc(history.label)}</small>
-        <strong>${history.coverage}/96点</strong>
-        <span>${esc(history.date || '尚无历史日期')}</span>
-        <button type="button" class="foundation-storage-link" data-foundation-action="open-provenance" data-foundation-trigger="storage-location">查看采集数据位置</button>
+      <div class="foundation-truth-item ${range.dateCount ? 'is-ready' : 'is-warning'}">
+        <small>历史覆盖</small>
+        <strong>${esc(rangeText)}</strong>
+        <span>${range.dateCount ? `${range.dateCount} 个业务日` : `${esc(history.label)} · ${history.coverage}/96点`}</span>
+        <button type="button" class="foundation-storage-link" data-foundation-action="open-provenance" data-foundation-trigger="storage-location">${esc(model.collection.storageEngine || 'SQLite')} · 查看采集数据位置</button>
       </div>
-      <button type="button" class="foundation-primary-button" data-primary-action="collect_today_data">开始自动采集</button>
+      <div class="foundation-truth-item ${backfill.state === 'completed' ? 'is-ready' : 'is-warning'}">
+        <small>回填进度</small>
+        <strong>${numberText(backfill.progressPct, '%')}</strong>
+        <span>${backfill.totalChunks ? `${backfill.completedChunks}/${backfill.totalChunks} 个分片` : '尚未开始全量历史回填'}</span>
+        <div class="foundation-strip-actions"><button type="button" class="foundation-secondary-button" data-foundation-action="start-browser">打开专用 Chrome</button><button type="button" class="foundation-primary-button" data-foundation-action="${jobAction.id}" data-job-id="${esc(backfill.id || '')}">${jobAction.label}</button></div>
+      </div>
     </section>
   `;
 }
@@ -203,7 +221,7 @@ function sandboxSection(model, controls, openExplanation, activeTriggerKey) {
   return `
     <section class="foundation-section foundation-sandbox" aria-labelledby="foundationSandboxTitle">
       <header class="foundation-section-heading">
-        <div><small>SENSITIVITY SANDBOX</small><h2 id="foundationSandboxTitle">策略微调沙盒</h2><p>仅模拟，不会提交交易；不修改正式模型和正式推荐。</p></div>
+        <div><small>SENSITIVITY SANDBOX</small><h2 id="foundationSandboxTitle">策略微调沙盒 · 演示</h2><p><strong>仅演示，不修改正式策略</strong>；仅模拟，不会提交交易，也不会写入预测账本。</p></div>
         <span class="foundation-simulation-label">模拟测算</span>
       </header>
       <div class="foundation-sandbox-controls">
@@ -260,10 +278,37 @@ function sandboxSection(model, controls, openExplanation, activeTriggerKey) {
   `;
 }
 
+function historySection(model) {
+  const rows = model.historyExplorer.rows || [];
+  const preview = rows.slice(0, 12);
+  return `
+    <section class="foundation-section foundation-history" aria-labelledby="foundationHistoryTitle">
+      <header class="foundation-section-heading">
+        <div><small>CANONICAL HISTORY</small><h2 id="foundationHistoryTitle">基础数据历史</h2><p>查询规范化事实、版本和采集证据；数据保存在 ${esc(model.collection.storageEngine || 'SQLite')}。</p></div>
+        <span class="foundation-storage-badge">${esc(model.collection.storageEngine || '尚未初始化')}</span>
+      </header>
+      <div class="foundation-history-filters">
+        <label>开始日期<input type="date" value="${esc(model.historyExplorer.range.earliestDate || '')}" data-history-filter="from"></label>
+        <label>结束日期<input type="date" value="${esc(model.historyExplorer.range.latestDate || '')}" data-history-filter="to"></label>
+        <label>数据字段<select data-history-filter="field"><option value="">全部</option><option value="dayAheadUserPriceFinalYuanPerMwh">价格</option><option value="temperatureForecastC">温度预报</option><option value="loadForecastMw">负荷预测</option></select></label>
+        <label>数据来源<select data-history-filter="source"><option value="">全部</option><option value="JSPEC-DAYAHEAD-USER">JSPEC 价格</option><option value="JSPEC-LOAD">JSPEC 负荷</option><option value="OPEN-METEO-PREVIOUS-RUNS:suzhou-center-v1">Open-Meteo</option></select></label>
+      </div>
+      <div class="foundation-history-modes" role="group" aria-label="历史数据查看形式">
+        <button type="button" class="is-active" data-history-mode="chart">曲线</button>
+        <button type="button" data-history-mode="detail">明细</button>
+        <button type="button" data-history-mode="evidence">采集证据</button>
+      </div>
+      ${preview.length
+        ? `<div class="local-scroll foundation-history-table"><table><thead><tr><th>业务日期</th><th>点位</th><th>字段</th><th>值</th><th>来源</th><th>可用时间</th><th>版本</th></tr></thead><tbody>${preview.map((row) => `<tr><td>${esc(row.businessDate)}</td><td>${esc(row.pointIndex)}</td><td>${esc(row.fieldId)}</td><td>${esc(row.value)}</td><td>${esc(row.sourceId)}</td><td>${esc(evidenceTimeText(row.availableAt) || row.availableAt)}</td><td>${esc(row.sourceRevision)}</td></tr>`).join('')}</tbody></table></div>`
+        : `<div class="foundation-history-empty" role="status"><strong>尚无可查询的基础数据历史</strong><p>打开专用 Chrome 完成 UKey 登录并启动回填后，价格与负荷将写入 SQLite；温度预报由 Open-Meteo 独立补齐。</p></div>`}
+    </section>
+  `;
+}
+
 function derivationSection(model, openExplanation, activeTriggerKey) {
   return `
     <section class="foundation-section foundation-derivation" aria-labelledby="foundationDerivationTitle">
-      <header class="foundation-section-heading"><div><small>STRATEGY EVIDENCE</small><h2 id="foundationDerivationTitle">整体策略依据</h2><p>从原始数据到人工复核，每一步都保留来源、版本与时点。</p></div></header>
+      <header class="foundation-section-heading"><div><small>STRATEGY EVIDENCE</small><h2 id="foundationDerivationTitle">策略形成 · 整体策略依据</h2><p>从原始数据到人工复核，每一步都保留来源、版本与时点。</p></div></header>
       <ol class="foundation-derivation-chain">${model.derivation.stages
         .map(
           (stage) =>
@@ -298,6 +343,9 @@ export function renderDataSourcesView(state = {}) {
     forecastRuns: state.foundationInput?.forecastRuns || state.forecastRuns || {},
     marketCockpit: state.foundationInput?.marketCockpit || state.marketCockpit || {},
     strategyTrace: state.foundationInput?.strategyTrace || state.strategyTrace || {},
+    collectorStatus: state.foundationInput?.collectorStatus || state.collectorStatus || {},
+    historyFacts: state.foundationInput?.historyFacts || state.historyFacts || {},
+    historyCoverage: state.foundationInput?.historyCoverage || state.historyCoverage || {},
   };
   const model = buildStrategyFoundationModel(input);
   const activeId = model.forecastTabs.some((tab) => tab.id === state.activeForecastTab)
@@ -325,13 +373,11 @@ export function renderDataSourcesView(state = {}) {
     <section class="cockpit-view foundation-workbench${state.openExplanation ? ' has-evidence-open' : ''}${
       state.provenanceOpen ? ' has-provenance-open' : ''
     }" data-view="data-sources" data-foundation-root>
-      ${truthStrip(model)}
       <header class="foundation-page-heading">
         <div><small>FOUNDATION &amp; FORECAST EVIDENCE</small><h1>基础数据与预测依据</h1><p>价格、温度与负荷共同影响 96 点申报策略；每条预测均可追溯来源、版本与准确度。</p></div>
-        <span class="mode-identity">${esc(model.identity.environment)} · ${esc(
-          model.identity.targetDate || '未选择交易日'
-        )}</span>
+        <div class="foundation-heading-controls"><label>交易日<input type="date" value="${esc(model.identity.targetDate || '')}" data-foundation-date></label><button type="button" class="foundation-primary-button" data-foundation-action="start-backfill">开始全量回填</button><span class="mode-identity">${esc(model.identity.environment)}</span></div>
       </header>
+      ${truthStrip(model)}
       ${forecastTabs(model, activeId)}
       <section class="foundation-section foundation-forecast" id="foundationForecastPanel" role="tabpanel" aria-labelledby="foundationTab-${activeId}">
         ${inlineAlert(
@@ -340,11 +386,13 @@ export function renderDataSourcesView(state = {}) {
         )}
         <div class="foundation-forecast-layout">
           ${renderFoundationForecastChart(activeTab)}
-          <aside class="foundation-model-evidence" aria-label="${esc(activeTab.label)}模型证据">
-            <header><div><small>MODEL EVIDENCE</small><h2>模型证据（${esc(
+          <aside class="foundation-model-evidence" aria-label="${esc(activeTab.label)}预测依据">
+            <header><div><small>MODEL EVIDENCE</small><h2>预测依据（${esc(
               activeTab.label
             )}）</h2></div></header>
             <dl>
+              <div><dt>数据来源</dt><dd>${activeId === 'temperature' ? `${esc(model.collection.weather.provider || '天气预报源')} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : 'JSPEC 历史价格 + 温度预报 + 负荷预测'}</dd></div>
+              <div><dt>核心公式</dt><dd>${activeId === 'price' ? '价格 = 同点基线 + 温度贡献 + 负荷贡献' : activeId === 'temperature' ? '小时预报 → 15分钟线性对齐' : '同点历史 + 日历与气象特征'}</dd></div>
               <div><dt>当前模型</dt><dd>${esc(activeAccuracy.modelVersion || '尚无有效版本')}</dd></div>
               <div><dt>数据截止</dt><dd>${esc(evidenceTimeText(model.identity.dataCutoff) || '尚无可用证据')}</dd></div>
               <div><dt>样本天数</dt><dd>${numberText(activeAccuracy.sampleDays, ' 天')}</dd></div>
@@ -364,8 +412,11 @@ export function renderDataSourcesView(state = {}) {
         activeTriggerKey,
         model.failures.accuracy
       )}
-      ${sandboxSection(model, state.sandboxControls || model.sandbox.defaults, state.openExplanation, activeTriggerKey)}
       ${derivationSection(model, state.openExplanation, activeTriggerKey)}
+      <div class="foundation-bottom-grid">
+        ${sandboxSection(model, state.sandboxControls || model.sandbox.defaults, state.openExplanation, activeTriggerKey)}
+        ${historySection(model)}
+      </div>
       <details class="foundation-catalog"><summary>完整字段目录与原始证据</summary>${renderFieldCatalogTable(
         catalogModel
       )}</details>

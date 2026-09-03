@@ -447,7 +447,7 @@ git commit -m "feat(api): expose collection and forecast evidence endpoints"
 - Consumes: Task 6 API response contracts.
 - Produces: one “数据与预测依据” view with operational status, three forecast tabs, evidence inspector, strategy flow, simulation sandbox, and history explorer.
 
-- [ ] **Step 1: Write failing model tests**
+- [x] **Step 1: Write failing model tests**
 
 ```js
 test('workbench separates actual, p50 and interval series for each domain', () => {
@@ -458,35 +458,35 @@ test('workbench separates actual, p50 and interval series for each domain', () =
 });
 ```
 
-- [ ] **Step 2: Write failing view tests**
+- [x] **Step 2: Write failing view tests**
 
 Assert exact visible labels: `专用 Chrome`, `UKey`, `历史覆盖`, `价格预测`, `温度预测`, `负荷预测`, `预测依据`, `策略形成`, `仅演示，不修改正式策略`, `基础数据历史`, `曲线`, `明细`, and `采集证据`.
 
-- [ ] **Step 3: Verify failures**
+- [x] **Step 3: Verify failures**
 
 Run: `node --test test/ui-strategy-foundation-model.test.mjs test/ui-strategy-foundation-view.test.mjs`
 
 Expected: FAIL because the approved layout contract is absent.
 
-- [ ] **Step 4: Implement model and rendering**
+- [x] **Step 4: Implement model and rendering**
 
 Match `docs/design-reference/data-forecast-evidence-playwright-target-v1.png`: one top status strip, one main chart/evidence split, connected strategy nodes, compact simulation panel, and collapsible history query. Empty and error states must state concrete missing evidence instead of showing fabricated metrics.
 
-- [ ] **Step 5: Wire interactions**
+- [x] **Step 5: Wire interactions**
 
 Load status, history, runs, and accuracy independently; wire browser start/stop, backfill start/pause/resume, date/field/source filters, three tabs, evidence sections, strategy nodes, and simulation controls. Preserve keyboard focus trapping for drawers and the simulation-only guard.
 
-- [ ] **Step 6: Implement responsive CSS**
+- [x] **Step 6: Implement responsive CSS**
 
 Use the existing design tokens; at desktop widths use a chart plus evidence panel grid, at widths below 900px stack sections, and at 390/320px collapse filters without horizontal document overflow.
 
-- [ ] **Step 7: Run UI tests**
+- [x] **Step 7: Run UI tests**
 
 Run: `node --test test/ui-strategy-foundation-model.test.mjs test/ui-strategy-foundation-view.test.mjs test/workbench-accessibility.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 8: Commit workbench**
+- [x] **Step 8: Commit workbench**
 
 ```bash
 git add ui/view-models/strategy-foundation-model.js ui/views/data-sources-view.js app.js styles.css test/ui-strategy-foundation-model.test.mjs test/ui-strategy-foundation-view.test.mjs

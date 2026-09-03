@@ -2717,6 +2717,9 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       forecastRuns: options.forecastRuns || {},
       marketCockpit: options.marketCockpit || {},
       strategyTrace: options.strategyTrace || {},
+      collectorStatus: options.collectorStatus || {},
+      historyFacts: options.historyFacts || {},
+      historyCoverage: options.historyCoverage || {},
     },
   };
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
@@ -2778,6 +2781,9 @@ const browserState = {
   ukeyStatus: {},
   accuracyReport: {},
   forecastRuns: {},
+  collectorStatus: {},
+  historyFacts: {},
+  historyCoverage: {},
 };
 
 export function claimPendingAction(state, actionId) {
@@ -2894,7 +2900,7 @@ function renderBrowser() {
 
 async function responseJson(response) {
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `服务返回 ${response.status}`);
+  if (!response.ok) throw new Error(payload.error?.message || payload.error?.code || payload.error || `服务返回 ${response.status}`);
   return payload;
 }
 
@@ -2923,6 +2929,12 @@ async function loadWorkbench(date = '') {
         rowCount: 96,
         generatedAt: browserState.payload.dataFreshness?.generatedAt,
       },
+    };
+    browserState.collectorStatus = {
+      browser: { state: 'ready' },
+      weather: { provider: 'Open-Meteo', forecastLeadHours: 24 },
+      jobs: [{ id: 'demo-backfill', state: 'completed', completedChunks: 50, totalChunks: 50 }],
+      storage: { engine: 'SQLite', path: '演示数据（不落生产库）' },
     };
     browserState.accuracyReport = {
       metrics: { mae: 21.4, rmse: 31.8, mape: 6.3, baselineSkill: 9.6 },
@@ -3011,7 +3023,7 @@ async function loadWorkbench(date = '') {
     // cannot make an otherwise valid point-in-time request look like a future query.
     const asOf = new Date(Date.now() - 1000).toISOString();
     const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
-    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns] = await Promise.all([
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns,browserState.collectorStatus,browserState.historyFacts,browserState.historyCoverage] = await Promise.all([
       fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
@@ -3020,7 +3032,15 @@ async function loadWorkbench(date = '') {
       fetch(`/api/forecast/model?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
       fetch(`/api/forecast/accuracy?to=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
       fetch(`/api/forecast/runs?date=${encodeURIComponent(selectedDate)}&runType=live_issued&limit=50`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,runs:[]})),
+      fetch('/api/collector/status',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,browser:{state:'unavailable'},jobs:[]})),
+      fetch(`/api/history/facts?date=${encodeURIComponent(selectedDate)}&limit=1000`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,rows:[]})),
+      fetch('/api/history/coverage',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,coverage:{}})),
     ]);
+    if (!browserState.historyFacts?.rows?.length && browserState.historyCoverage?.coverage?.latestDate) {
+      browserState.historyFacts = await fetch(`/api/history/facts?date=${encodeURIComponent(browserState.historyCoverage.coverage.latestDate)}&limit=1000`, { cache: 'no-store' })
+        .then(responseJson)
+        .catch((error) => ({ loadError: error.message, rows: [] }));
+    }
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
         fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
@@ -3221,6 +3241,59 @@ function bindBrowserEvents() {
         : foundationAction.dataset.explanationId
           ? `[data-explanation-id="${foundationAction.dataset.explanationId}"]`
           : '[data-foundation-action="open-provenance"]';
+      if (action === 'start-browser' || action === 'start-backfill') {
+        if (!claimPendingAction(browserState, action)) return;
+        browserState.error = '';
+        browserState.actionMessage = action === 'start-browser' ? '正在打开专用 Chrome…' : '正在检查专用 Chrome 与 UKey 登录状态…';
+        renderBrowser();
+        try {
+          let browser = browserState.collectorStatus?.browser || {};
+          if (!['ready', 'collecting', 'paused', 'rate_limited'].includes(browser.state)) {
+            const started = await fetch('/api/collector/browser/start', { method: 'POST', cache: 'no-store' }).then(responseJson);
+            browser = started.browser || {};
+          }
+          if (action === 'start-backfill') {
+            if (!['ready', 'collecting', 'paused', 'rate_limited'].includes(browser.state)) {
+              browserState.actionMessage = '专用 Chrome 已打开，请在该窗口完成 UKey 登录；登录后再次点击“开始全量回填”。';
+            } else {
+              const result = await fetch('/api/collector/jobs/backfill', {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'content-type': 'application/json' },
+                body: '{}',
+              }).then(responseJson);
+              browserState.actionMessage = `全量历史回填已启动：${result.job?.id || '任务已创建'}。`;
+            }
+          } else {
+            browserState.actionMessage = browser.state === 'login_required'
+              ? '专用 Chrome 已打开，请在该窗口完成 UKey 登录。'
+              : '专用 Chrome 已连接。';
+          }
+          browserState.collectorStatus = await fetch('/api/collector/status', { cache: 'no-store' }).then(responseJson);
+        } catch (error) {
+          browserState.error = `采集器操作失败：${error.message}`;
+        } finally {
+          releasePendingAction(browserState, action);
+          renderBrowser();
+        }
+        return;
+      }
+      if (action === 'pause-backfill' || action === 'resume-backfill') {
+        const jobId = foundationAction.dataset.jobId;
+        if (!jobId || !claimPendingAction(browserState, action)) return;
+        try {
+          const verb = action === 'pause-backfill' ? 'pause' : 'resume';
+          await fetch(`/api/collector/jobs/${encodeURIComponent(jobId)}/${verb}`, { method: 'POST', cache: 'no-store' }).then(responseJson);
+          browserState.collectorStatus = await fetch('/api/collector/status', { cache: 'no-store' }).then(responseJson);
+          browserState.actionMessage = action === 'pause-backfill' ? '历史回填已暂停，检查点已保存。' : '历史回填已从检查点继续。';
+        } catch (error) {
+          browserState.error = `回填任务操作失败：${error.message}`;
+        } finally {
+          releasePendingAction(browserState, action);
+          renderBrowser();
+        }
+        return;
+      }
       if (action === 'open-explanation') {
         browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
           type: 'open_explanation',
@@ -3266,6 +3339,12 @@ function bindBrowserEvents() {
           ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
+    }
+    const historyMode = event.target.closest('[data-history-mode]');
+    if (historyMode) {
+      root.querySelectorAll('[data-history-mode]').forEach((button) => button.classList.toggle('is-active', button === historyMode));
+      browserState.actionMessage = `基础数据历史已切换为“${historyMode.textContent.trim()}”视图。`;
+      return;
     }
     const riskButton = event.target.closest('[data-risk-profile]');
     if (riskButton) {
@@ -3436,6 +3515,28 @@ function bindBrowserEvents() {
         id: event.target.dataset.sandboxControl,
         value: event.target.value,
       });
+      renderBrowser();
+      return;
+    }
+    if (event.target.matches('[data-foundation-date]')) {
+      await loadWorkbench(event.target.value);
+      browserState.activeView = 'data-sources';
+      return;
+    }
+    if (event.target.matches('[data-history-filter]')) {
+      const controls = root.querySelectorAll('[data-history-filter]');
+      const values = Object.fromEntries(Array.from(controls).map((control) => [control.dataset.historyFilter, control.value]));
+      const parameters = new URLSearchParams({ limit: '1000' });
+      if (values.from) parameters.set('from', values.from);
+      if (values.to) parameters.set('to', values.to);
+      if (values.field) parameters.set('fieldId', values.field);
+      if (values.source) parameters.set('sourceId', values.source);
+      try {
+        browserState.historyFacts = await fetch(`/api/history/facts?${parameters}`, { cache: 'no-store' }).then(responseJson);
+        browserState.actionMessage = `已加载 ${browserState.historyFacts.rows?.length || 0} 条基础数据历史。`;
+      } catch (error) {
+        browserState.error = `历史查询失败：${error.message}`;
+      }
       renderBrowser();
       return;
     }

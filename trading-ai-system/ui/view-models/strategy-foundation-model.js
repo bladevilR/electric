@@ -36,8 +36,14 @@ const normalizePoints = (rows = []) =>
 const seriesPoints = (source, keys = []) => {
   for (const key of keys) {
     const value = source?.[key];
-    if (Array.isArray(value)) return normalizePoints(value);
-    if (Array.isArray(value?.points)) return normalizePoints(value.points);
+    if (Array.isArray(value)) {
+      const points = normalizePoints(value);
+      if (points.length) return points;
+    }
+    if (Array.isArray(value?.points)) {
+      const points = normalizePoints(value.points);
+      if (points.length) return points;
+    }
   }
   return [];
 };
@@ -91,17 +97,49 @@ function nodeEvidence(stages = [], stageIds = []) {
 }
 
 function forecastTab({ id, label, unit, description, source, actualKeys, currentKeys, previousKeys }) {
+  const actual = seriesPoints(source, actualKeys);
+  const current = seriesPoints(source, currentKeys);
+  const previous = seriesPoints(source, previousKeys);
   return {
     id,
     label,
     unit,
     description,
     series: [
-      { id: 'actual', label: '实际值', role: 'actual', points: seriesPoints(source, actualKeys) },
-      { id: 'current', label: '本次预测', role: 'forecast', points: seriesPoints(source, currentKeys) },
-      { id: 'previous', label: '上一版预测', role: 'previous', points: seriesPoints(source, previousKeys) },
+      { id: 'actual', label: '实际值', role: 'actual', points: actual },
+      { id: 'current', label: '预测 P50', role: 'forecast', points: current },
+      { id: 'previous', label: '上一版预测', role: 'previous', points: previous },
     ],
   };
+}
+
+function fieldPoints(rows = [], fieldIds = [], targetDate = '') {
+  const allowed = new Set(fieldIds);
+  const latest = new Map();
+  for (const fact of Array.isArray(rows) ? rows : []) {
+    if (!allowed.has(fact.fieldId) || (targetDate && fact.businessDate !== targetDate)) continue;
+    const pointIndex = Number(fact.pointIndex);
+    const value = numberOrNull(fact.value);
+    if (!Number.isInteger(pointIndex) || value === null) continue;
+    const key = `${fact.fieldId}|${pointIndex}`;
+    const old = latest.get(key);
+    if (!old || Date.parse(fact.availableAt || 0) >= Date.parse(old.availableAt || 0)) latest.set(key, fact);
+  }
+  for (const fieldId of fieldIds) {
+    const points = [...latest.values()]
+      .filter((fact) => fact.fieldId === fieldId)
+      .map((fact) => ({ pointIndex: Number(fact.pointIndex), value: Number(fact.value) }))
+      .sort((left, right) => left.pointIndex - right.pointIndex);
+    if (points.length) return points;
+  }
+  return [];
+}
+
+function runFieldPoints(rows = [], field = 'p50') {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => ({ pointIndex: Number(row.pointIndex), value: numberOrNull(row[field] ?? (field === 'p50' ? row.pointForecast : null)) }))
+    .filter((row) => Number.isInteger(row.pointIndex) && row.value !== null)
+    .sort((left, right) => left.pointIndex - right.pointIndex);
 }
 
 const EXPLANATIONS = Object.freeze({
@@ -193,6 +231,9 @@ const EXPLANATIONS = Object.freeze({
 export function buildStrategyFoundationModel(input = {}) {
   const workbench = input.workbench || {};
   const ukeyStatus = input.ukeyStatus || {};
+  const collectorStatus = input.collectorStatus || {};
+  const canonicalFacts = input.historyFacts?.rows || [];
+  const canonicalCoverage = input.historyCoverage?.coverage || input.historyCoverage || {};
   const history = ukeyStatus.visibleHistory || {};
   const targetDate = String(input.targetDate || workbench.date || '');
   const currentCoverage = Math.min(
@@ -211,6 +252,7 @@ export function buildStrategyFoundationModel(input = {}) {
   );
   const isDemo = input.mode === 'demo';
   const collectorError =
+    collectorStatus.browser?.lastErrorMessage ||
     ukeyStatus.collector?.lastError ||
     ukeyStatus.browserWindow?.lastError ||
     ukeyStatus.loadError ||
@@ -218,6 +260,8 @@ export function buildStrategyFoundationModel(input = {}) {
   const collectorState = String(
     isDemo
       ? 'simulation'
+      : collectorStatus.browser?.state
+        ? collectorStatus.browser.state
       : ukeyStatus.loadError
         ? 'unavailable'
         : ukeyStatus.browserWindow?.available === false
@@ -226,13 +270,19 @@ export function buildStrategyFoundationModel(input = {}) {
           ? 'running_with_error'
           : ukeyStatus.collector?.state || 'stopped'
   );
+  const latestCollectionJob = (collectorStatus.jobs || [])[0] || null;
+  const completedChunks = Number(latestCollectionJob?.completedChunks || 0);
+  const totalChunks = Number(latestCollectionJob?.totalChunks || 0);
+  const backfillProgressPct = totalChunks
+    ? Math.round((completedChunks / totalChunks) * 100)
+    : Number(latestCollectionJob?.progressPct || 0);
   const forecastReport = input.forecastReport || {};
   const marketSeries = input.marketCockpit?.series || {};
   const accuracyReport = input.accuracyReport || {};
   const priceRuns = (input.forecastRuns?.runs || [])
     .filter(
       (run) =>
-        run?.targetField === 'realTimeAvgPrice' &&
+        ['realTimeAvgPrice', 'dayAheadUserPriceFinalYuanPerMwh'].includes(run?.targetField) &&
         (!run.forecastRunType || run.forecastRunType === 'live_issued')
     )
     .sort(
@@ -259,12 +309,14 @@ export function buildStrategyFoundationModel(input = {}) {
     baselineSkill: null,
     status: run.forecastRunType === 'point_in_time_replay' ? '时点回放' : '已发布',
   }));
-  const actualPriceRows =
-    rowsForTarget(forecastReport.actuals || [], 'realTimeAvgPrice').length
+  const actualPriceRows = fieldPoints(canonicalFacts, [
+    'dayAheadUserPriceFinalYuanPerMwh',
+    'realTimeAvgPriceFinalYuanPerMwh',
+  ], targetDate).length
+    ? fieldPoints(canonicalFacts, ['dayAheadUserPriceFinalYuanPerMwh', 'realTimeAvgPriceFinalYuanPerMwh'], targetDate)
+    : rowsForTarget(forecastReport.actuals || [], 'realTimeAvgPrice').length
       ? rowsForTarget(forecastReport.actuals || [], 'realTimeAvgPrice')
-      : marketSeries.realTimePriceFinalYuanPerMwh?.points ||
-        marketSeries.realTimePriceCurrentYuanPerMwh?.points ||
-        [];
+      : marketSeries.realTimePriceFinalYuanPerMwh?.points || marketSeries.realTimePriceCurrentYuanPerMwh?.points || [];
   const formalRows =
     workbench.declarationRecommendation?.rows ||
     workbench.recommendation?.rows ||
@@ -287,9 +339,13 @@ export function buildStrategyFoundationModel(input = {}) {
       label: '温度预测',
       unit: '°C',
       description: '查看温度及相关气象因素如何影响用电需求。',
-      source: marketSeries,
-      actualKeys: ['temperatureActualC'],
-      currentKeys: ['temperatureForecastC'],
+      source: {
+        ...marketSeries,
+        evidenceActual: fieldPoints(canonicalFacts, ['temperatureActualC'], targetDate),
+        evidenceForecast: fieldPoints(canonicalFacts, ['temperatureForecastC'], targetDate),
+      },
+      actualKeys: ['evidenceActual', 'temperatureActualC'],
+      currentKeys: ['evidenceForecast', 'temperatureForecastC'],
       previousKeys: ['temperaturePreviousForecastC'],
     }),
     forecastTab({
@@ -297,12 +353,28 @@ export function buildStrategyFoundationModel(input = {}) {
       label: '负荷预测',
       unit: 'MW',
       description: '比较实际负荷、当前负荷预测与上一版本预测。',
-      source: marketSeries,
-      actualKeys: ['actualAverageLoadMw'],
-      currentKeys: ['systemLoadForecastMw', 'netLoadForecastMw'],
+      source: {
+        ...marketSeries,
+        evidenceActual: fieldPoints(canonicalFacts, ['actualLoadMw', 'actualAverageLoadMw'], targetDate),
+        evidenceForecast: fieldPoints(canonicalFacts, ['loadForecastMw', 'systemLoadForecastMw'], targetDate),
+      },
+      actualKeys: ['evidenceActual', 'actualAverageLoadMw'],
+      currentKeys: ['evidenceForecast', 'systemLoadForecastMw', 'netLoadForecastMw'],
       previousKeys: ['previousSystemLoadForecastMw'],
     }),
   ];
+  const priceIntervalLower = runFieldPoints(latestPriceRun?.rows, 'p10');
+  const priceIntervalUpper = runFieldPoints(latestPriceRun?.rows, 'p90');
+  if (priceIntervalLower.length && priceIntervalUpper.length) {
+    tabs[0].series.push({
+      id: 'interval',
+      label: 'P10–P90 区间',
+      role: 'interval',
+      points: [],
+      lowerPoints: priceIntervalLower,
+      upperPoints: priceIntervalUpper,
+    });
+  }
 
   const accuracyForTarget = (targetId) => {
     const targetAccuracy = accuracyReport.byTarget?.[targetId] || {};
@@ -410,13 +482,65 @@ export function buildStrategyFoundationModel(input = {}) {
       simulation: { kind: 'simulation', label: '模拟方案' },
       collectorState,
       collectorError,
-      lastPageTitle: ukeyStatus.collector?.lastPageTitle || null,
-      lastPageUrl: ukeyStatus.collector?.lastPageUrl || null,
+      lastPageTitle: collectorStatus.browser?.lastPageTitle || ukeyStatus.collector?.lastPageTitle || null,
+      lastPageUrl: collectorStatus.browser?.lastPageUrl || ukeyStatus.collector?.lastPageUrl || null,
       lastSampleAt: ukeyStatus.collector?.lastSampleAt || null,
       strategyExecutable: !isDemo && currentCoverage === POINT_COUNT && dataReady,
       readinessStatus,
+      dedicatedChrome: {
+        state: collectorState,
+        connected: ['ready', 'collecting', 'paused', 'rate_limited'].includes(collectorState),
+      },
+      ukey: {
+        state: ['ready', 'collecting', 'paused', 'rate_limited'].includes(collectorState)
+          ? 'logged_in'
+          : ['login_required', 'login_expired'].includes(collectorState)
+            ? collectorState
+            : 'unknown',
+      },
+      backfill: {
+        id: latestCollectionJob?.id || null,
+        state: latestCollectionJob?.state || 'not_started',
+        progressPct: backfillProgressPct,
+        completedChunks,
+        totalChunks,
+      },
+      range: {
+        dateCount: Number(canonicalCoverage.dateCount || 0),
+        earliestDate: canonicalCoverage.earliestDate || null,
+        latestDate: canonicalCoverage.latestDate || null,
+      },
+      weather: collectorStatus.weather || { provider: null },
+      storagePath: collectorStatus.storage?.path || ukeyStatus.visibleHistory?.storagePath || null,
+      storageEngine: collectorStatus.storage?.engine || (ukeyStatus.visibleHistory?.storagePath ? 'JSON' : null),
     },
     forecastTabs: tabs,
+    forecast: {
+      tabs: tabs.map((tab) => {
+        const interval = tab.series.find((series) => series.role === 'interval');
+        return {
+          id: tab.id,
+          label: tab.label,
+          unit: tab.unit,
+          description: tab.description,
+          series: {
+            actual: tab.series.find((series) => series.role === 'actual')?.points || [],
+            p50: tab.series.find((series) => series.role === 'forecast')?.points || [],
+            previous: tab.series.find((series) => series.role === 'previous')?.points || [],
+            p10: interval?.lowerPoints || [],
+            p90: interval?.upperPoints || [],
+          },
+        };
+      }),
+    },
+    historyExplorer: {
+      rows: canonicalFacts,
+      range: {
+        earliestDate: canonicalCoverage.earliestDate || null,
+        latestDate: canonicalCoverage.latestDate || null,
+      },
+      storagePath: collectorStatus.storage?.path || null,
+    },
     accuracy: { ...accuracyByTab.price, byTab: accuracyByTab },
     failures: {
       forecast: forecastReport.loadError || null,

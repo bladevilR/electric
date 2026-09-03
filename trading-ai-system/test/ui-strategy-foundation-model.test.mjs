@@ -351,3 +351,52 @@ test('strategy trace is indexed into node-specific evidence', () => {
     warnings: [],
   });
 });
+
+test('SQLite evidence workbench separates actual, p50 and interval series and exposes backfill progress', () => {
+  const priceRows = Array.from({ length: 96 }, (_, index) => ({
+    pointIndex: index + 1,
+    pointForecast: 300 + index,
+    p10: 280 + index,
+    p50: 300 + index,
+    p90: 325 + index,
+  }));
+  const facts = Array.from({ length: 96 }, (_, index) => [
+    { fieldId: 'temperatureForecastC', businessDate: '2026-09-03', pointIndex: index + 1, value: 26 + index / 96 },
+    { fieldId: 'temperatureActualC', businessDate: '2026-09-03', pointIndex: index + 1, value: 25.5 + index / 96 },
+    { fieldId: 'loadForecastMw', businessDate: '2026-09-03', pointIndex: index + 1, value: 1000 + index },
+    { fieldId: 'actualLoadMw', businessDate: '2026-09-03', pointIndex: index + 1, value: 990 + index },
+  ]).flat();
+  const model = buildStrategyFoundationModel({
+    mode: 'real',
+    targetDate: '2026-09-03',
+    collectorStatus: {
+      browser: { state: 'ready' },
+      weather: { provider: 'Open-Meteo', forecastLeadHours: 24 },
+      jobs: [{ id: 'job-1', state: 'running', earliestDate: '2024-01-01', latestDate: '2026-09-02', completedChunks: 43, totalChunks: 50 }],
+      storage: { engine: 'SQLite', path: 'C:\\evidence.sqlite' },
+    },
+    historyCoverage: { coverage: { dateCount: 611, earliestDate: '2024-01-01', latestDate: '2026-09-02' } },
+    historyFacts: { rows: facts },
+    forecastRuns: { runs: [{
+      forecastRunId: 'live-evidence-1',
+      forecastRunType: 'live_issued',
+      targetField: 'dayAheadUserPriceFinalYuanPerMwh',
+      targetTradingDate: '2026-09-03',
+      modelId: 'interpretable_weather_load_ridge_v1',
+      modelVersion: '1.0.0',
+      decisionCutoffAt: '2026-09-02T10:00:00.000Z',
+      forecastGeneratedAt: '2026-09-02T10:05:00.000Z',
+      rows: priceRows,
+    }] },
+  });
+
+  assert.deepEqual(model.forecast.tabs.map((tab) => tab.id), ['price', 'temperature', 'load']);
+  assert.equal(model.forecast.tabs[0].series.p50.length, 96);
+  assert.equal(model.forecast.tabs[0].series.p10.length, 96);
+  assert.equal(model.forecast.tabs[0].series.p90.length, 96);
+  assert.equal(model.forecast.tabs[1].series.actual.length, 96);
+  assert.equal(model.forecast.tabs[1].series.p50.length, 96);
+  assert.equal(model.collection.backfill.progressPct, 86);
+  assert.equal(model.collection.weather.provider, 'Open-Meteo');
+  assert.equal(model.collection.storagePath, 'C:\\evidence.sqlite');
+});

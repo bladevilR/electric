@@ -287,3 +287,40 @@ test('real explanation drawer does not claim real node evidence when no trace re
   assert.doesNotMatch(html, /节点级真实证据/);
   assert.match(html, /source_evidence_missing/);
 });
+
+test('approved evidence workbench shows operational strip, strategy flow, history modes and simulation guard', () => {
+  const html = render({
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 } },
+      collectorStatus: {
+        browser: { state: 'ready' },
+        weather: { provider: 'Open-Meteo', forecastLeadHours: 24 },
+        jobs: [{ id: 'job-1', state: 'running', completedChunks: 43, totalChunks: 50 }],
+        storage: { engine: 'SQLite', path: 'C:\\evidence.sqlite' },
+      },
+      historyCoverage: { coverage: { dateCount: 611, earliestDate: '2024-01-01', latestDate: '2026-09-02' } },
+    },
+  });
+
+  for (const label of ['专用 Chrome', 'UKey', '历史覆盖', '价格预测', '温度预测', '负荷预测', '预测依据', '策略形成', '仅演示，不修改正式策略', '基础数据历史', '曲线', '明细', '采集证据']) {
+    assert.match(html, new RegExp(label));
+  }
+  assert.match(html, /Open-Meteo/);
+  assert.match(html, /86%/);
+  assert.match(html, /SQLite/);
+});
+
+test('price forecast renders a P10-P90 interval role when an issued run supplies quantiles', () => {
+  const rows = Array.from({ length: 96 }, (_, index) => ({ pointIndex: index + 1, pointForecast: 300 + index, p10: 280 + index, p50: 300 + index, p90: 325 + index }));
+  const html = render({
+    foundationInput: {
+      workbench: { metrics: { marketPricePointCount: 0 } },
+      forecastRuns: { runs: [{
+        forecastRunId: 'live-1', forecastRunType: 'live_issued', targetField: 'dayAheadUserPriceFinalYuanPerMwh',
+        modelVersion: '1.0.0', forecastGeneratedAt: '2026-09-02T10:05:00.000Z', decisionCutoffAt: '2026-09-02T10:00:00.000Z', rows,
+      }] },
+    },
+  });
+  assert.match(html, /data-series-role="interval"/);
+  assert.match(html, /P10–P90/);
+});
