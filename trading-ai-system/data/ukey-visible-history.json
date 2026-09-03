@@ -1,0 +1,802 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-29T07:55:02.693Z",
+  "source": "jspec_managed_browser_auto_sweep",
+  "rowCount": 79,
+  "dateCount": 1,
+  "dates": [
+    "2026-06-29"
+  ],
+  "rows": [
+    {
+      "date": "2026-06-29",
+      "pointIndex": 1,
+      "timePoint": "00:15",
+      "realTimeAvgPrice": 342.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 2,
+      "timePoint": "00:30",
+      "realTimeAvgPrice": 341.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 3,
+      "timePoint": "00:45",
+      "realTimeAvgPrice": 350,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 4,
+      "timePoint": "01:00",
+      "realTimeAvgPrice": 347.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 5,
+      "timePoint": "01:15",
+      "realTimeAvgPrice": 348.1,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 6,
+      "timePoint": "01:30",
+      "realTimeAvgPrice": 347,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 7,
+      "timePoint": "01:45",
+      "realTimeAvgPrice": 345.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 8,
+      "timePoint": "02:00",
+      "realTimeAvgPrice": 346.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 9,
+      "timePoint": "02:15",
+      "realTimeAvgPrice": 345.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 10,
+      "timePoint": "02:30",
+      "realTimeAvgPrice": 344.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 11,
+      "timePoint": "02:45",
+      "realTimeAvgPrice": 344.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 12,
+      "timePoint": "03:00",
+      "realTimeAvgPrice": 344.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 13,
+      "timePoint": "03:15",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 14,
+      "timePoint": "03:30",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 15,
+      "timePoint": "03:45",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 16,
+      "timePoint": "04:00",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 17,
+      "timePoint": "04:15",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 18,
+      "timePoint": "04:30",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 19,
+      "timePoint": "04:45",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 20,
+      "timePoint": "05:00",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 21,
+      "timePoint": "05:15",
+      "realTimeAvgPrice": 345,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 22,
+      "timePoint": "05:30",
+      "realTimeAvgPrice": 341.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 23,
+      "timePoint": "05:45",
+      "realTimeAvgPrice": 340,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 24,
+      "timePoint": "06:00",
+      "realTimeAvgPrice": 334.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 25,
+      "timePoint": "06:15",
+      "realTimeAvgPrice": 334,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 26,
+      "timePoint": "06:30",
+      "realTimeAvgPrice": 328.2,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 27,
+      "timePoint": "06:45",
+      "realTimeAvgPrice": 309.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 28,
+      "timePoint": "07:00",
+      "realTimeAvgPrice": 310.1,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 29,
+      "timePoint": "07:15",
+      "realTimeAvgPrice": 302.1,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 30,
+      "timePoint": "07:30",
+      "realTimeAvgPrice": 276.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 31,
+      "timePoint": "07:45",
+      "realTimeAvgPrice": 211.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 32,
+      "timePoint": "08:00",
+      "realTimeAvgPrice": 212.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 33,
+      "timePoint": "08:15",
+      "realTimeAvgPrice": 295.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 34,
+      "timePoint": "08:30",
+      "realTimeAvgPrice": 304.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 35,
+      "timePoint": "08:45",
+      "realTimeAvgPrice": 297,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 36,
+      "timePoint": "09:00",
+      "realTimeAvgPrice": 258.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 37,
+      "timePoint": "09:15",
+      "realTimeAvgPrice": 296.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 38,
+      "timePoint": "09:30",
+      "realTimeAvgPrice": 249.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 39,
+      "timePoint": "09:45",
+      "realTimeAvgPrice": 245.8,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 40,
+      "timePoint": "10:00",
+      "realTimeAvgPrice": 250.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 41,
+      "timePoint": "10:15",
+      "realTimeAvgPrice": 256.8,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 42,
+      "timePoint": "10:30",
+      "realTimeAvgPrice": 308.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 43,
+      "timePoint": "10:45",
+      "realTimeAvgPrice": 318,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 44,
+      "timePoint": "11:00",
+      "realTimeAvgPrice": 326.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 45,
+      "timePoint": "11:15",
+      "realTimeAvgPrice": 342.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 46,
+      "timePoint": "11:30",
+      "realTimeAvgPrice": 332.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 47,
+      "timePoint": "11:45",
+      "realTimeAvgPrice": 331.2,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 48,
+      "timePoint": "12:00",
+      "realTimeAvgPrice": 323.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 49,
+      "timePoint": "12:15",
+      "realTimeAvgPrice": 338,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 50,
+      "timePoint": "12:30",
+      "realTimeAvgPrice": 345.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 51,
+      "timePoint": "12:45",
+      "realTimeAvgPrice": 366,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 52,
+      "timePoint": "13:00",
+      "realTimeAvgPrice": 343.8,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 53,
+      "timePoint": "13:15",
+      "realTimeAvgPrice": 343,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 54,
+      "timePoint": "13:30",
+      "realTimeAvgPrice": 326.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 55,
+      "timePoint": "13:45",
+      "realTimeAvgPrice": 319.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 56,
+      "timePoint": "14:00",
+      "realTimeAvgPrice": 319.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 57,
+      "timePoint": "14:15",
+      "realTimeAvgPrice": 316.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 58,
+      "timePoint": "14:30",
+      "realTimeAvgPrice": 300.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 59,
+      "timePoint": "14:45",
+      "realTimeAvgPrice": 304.5,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 60,
+      "timePoint": "15:00",
+      "realTimeAvgPrice": 309.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 61,
+      "timePoint": "15:15",
+      "realTimeAvgPrice": 314,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 62,
+      "timePoint": "15:30",
+      "realTimeAvgPrice": 329.2,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 63,
+      "timePoint": "15:45",
+      "realTimeAvgPrice": 324.8,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 64,
+      "timePoint": "16:00",
+      "realTimeAvgPrice": 333.1,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 65,
+      "timePoint": "16:15",
+      "realTimeAvgPrice": 334.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 66,
+      "timePoint": "16:30",
+      "realTimeAvgPrice": 337,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 67,
+      "timePoint": "16:45",
+      "realTimeAvgPrice": 337.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 68,
+      "timePoint": "17:00",
+      "realTimeAvgPrice": 332.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 69,
+      "timePoint": "17:15",
+      "realTimeAvgPrice": 340.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 70,
+      "timePoint": "17:30",
+      "realTimeAvgPrice": 343.8,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 71,
+      "timePoint": "17:45",
+      "realTimeAvgPrice": 344.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 72,
+      "timePoint": "18:00",
+      "realTimeAvgPrice": 346.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 73,
+      "timePoint": "18:15",
+      "realTimeAvgPrice": 351.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 74,
+      "timePoint": "18:30",
+      "realTimeAvgPrice": 357.6,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 75,
+      "timePoint": "18:45",
+      "realTimeAvgPrice": 361.9,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 76,
+      "timePoint": "19:00",
+      "realTimeAvgPrice": 381.4,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 77,
+      "timePoint": "19:15",
+      "realTimeAvgPrice": 399.2,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 78,
+      "timePoint": "19:30",
+      "realTimeAvgPrice": 407.7,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    },
+    {
+      "date": "2026-06-29",
+      "pointIndex": 79,
+      "timePoint": "19:45",
+      "realTimeAvgPrice": 396.3,
+      "sourceTargets": [
+        "realtime_average_price",
+        "visible_page_snapshot"
+      ]
+    }
+  ]
+}
