@@ -49,11 +49,11 @@
 - Create: `test/trading-evidence-store.test.mjs`
 
 **Interfaces:**
-- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, upsertCollectionChunk, appendCapture, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics, hasImportMarker, recordImportMarker }`.
+- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, upsertCollectionChunk, listCollectionChunks, appendCapture, queryCaptures, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, queryFeatureSnapshots, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics, hasImportMarker, recordImportMarker }`.
 - Facts use `{ sourceId, fieldId, businessDate, pointIndex?, eventKey?, entityKey?, value, unit?, availableAt, capturedAt, sourceRevision }`.
 - Forecast runs use the existing `createForecastRun` contract and remain append-only.
 
-- [ ] **Step 1: Write the failing store tests**
+- [x] **Step 1: Write the failing store tests**
 
 ```js
 test('facts are idempotent and queryable by date and field', () => {
@@ -76,13 +76,13 @@ test('forecast runs cannot be overwritten', () => {
 });
 ```
 
-- [ ] **Step 2: Run the store tests and verify failure**
+- [x] **Step 2: Run the store tests and verify failure**
 
 Run: `node --test test/trading-evidence-store.test.mjs`
 
 Expected: FAIL because `lib/trading-evidence-store.mjs` does not exist.
 
-- [ ] **Step 3: Implement the schema and store facade**
+- [x] **Step 3: Implement the schema and store facade**
 
 Create schema version 1 in a transaction:
 
@@ -103,13 +103,13 @@ CREATE TABLE accuracy_metrics(id TEXT PRIMARY KEY, run_type TEXT NOT NULL, model
 
 Use prepared statements, `BEGIN IMMEDIATE` transactions, ISO date validation, 1–96 point validation, stable JSON serialization, SHA-256 IDs, and the existing sensitive-key rejection pattern.
 
-- [ ] **Step 4: Run focused and regression tests**
+- [x] **Step 4: Run focused and regression tests**
 
 Run: `node --test test/trading-evidence-store.test.mjs test/point-in-time-store.test.mjs test/forecast-ledger.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit the store**
+- [x] **Step 5: Commit the store**
 
 ```bash
 git add lib/trading-evidence-store.mjs test/trading-evidence-store.test.mjs
