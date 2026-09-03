@@ -49,7 +49,7 @@
 - Create: `test/trading-evidence-store.test.mjs`
 
 **Interfaces:**
-- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, upsertCollectionChunk, appendCapture, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics }`.
+- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, upsertCollectionChunk, appendCapture, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics, hasImportMarker, recordImportMarker }`.
 - Facts use `{ sourceId, fieldId, businessDate, pointIndex?, eventKey?, entityKey?, value, unit?, availableAt, capturedAt, sourceRevision }`.
 - Forecast runs use the existing `createForecastRun` contract and remain append-only.
 
