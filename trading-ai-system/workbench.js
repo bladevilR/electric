@@ -3123,6 +3123,22 @@ export function buildCollectorActionMessage(result = {}) {
     : '没有读到业务表格：请在打开的数据窗口完成 UKey 登录并停在业务页面，再点击一次。';
 }
 
+export function buildCollectorBrowserStartMessage(browser = {}) {
+  if (browser.state === 'login_required') {
+    return '专用 Chrome 已打开并置前；请在该窗口完成 UKey 登录。';
+  }
+  if (browser.state === 'login_expired') {
+    return '专用 Chrome 已打开并置前；UKey 登录已过期，请重新登录。';
+  }
+  if (browser.state === 'page_changed') {
+    return '专用 Chrome 已打开并置前；请在其中打开 JSPEC 业务数据页面。';
+  }
+  if (browser.state === 'error') {
+    return `专用 Chrome 打开失败：${browser.lastErrorMessage || '请检查 Chrome 安装和采集服务状态。'}`;
+  }
+  return '专用 Chrome 已置前并连接。';
+}
+
 async function runPrimaryAction(actionId) {
   browserState.error = '';
   browserState.actionMessage = '';
@@ -3265,9 +3281,7 @@ function bindBrowserEvents() {
               browserState.actionMessage = `全量历史回填已启动：${result.job?.id || '任务已创建'}。`;
             }
           } else {
-            browserState.actionMessage = browser.state === 'login_required'
-              ? '专用 Chrome 已打开，请在该窗口完成 UKey 登录。'
-              : '专用 Chrome 已连接。';
+            browserState.actionMessage = buildCollectorBrowserStartMessage(browser);
           }
           browserState.collectorStatus = await fetch('/api/collector/status', { cache: 'no-store' }).then(responseJson);
         } catch (error) {

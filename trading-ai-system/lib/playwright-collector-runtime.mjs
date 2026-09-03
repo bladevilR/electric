@@ -114,6 +114,26 @@ export function createPlaywrightCollectorRuntime(options = {}) {
     return managedPage;
   }
 
+  async function bringManagedWindowToFront() {
+    if (!managedPage || managedPage.isClosed()) throw new Error('collector_browser_not_started');
+    if (!headless && typeof context?.newCDPSession === 'function') {
+      let session;
+      try {
+        session = await context.newCDPSession(managedPage);
+        const { windowId } = await session.send('Browser.getWindowForTarget');
+        await session.send('Browser.setWindowBounds', {
+          windowId,
+          bounds: { windowState: 'normal' },
+        });
+      } catch {
+        // Page activation below remains the portable fallback when window bounds are unavailable.
+      } finally {
+        await session?.detach().catch(() => {});
+      }
+    }
+    await managedPage.bringToFront();
+  }
+
   async function healthCheck() {
     if (!context || !managedPage || managedPage.isClosed()) throw new Error('collector_browser_not_started');
     lastHealthCheckAt = nowFrom(clock);
@@ -147,6 +167,7 @@ export function createPlaywrightCollectorRuntime(options = {}) {
   async function start() {
     if (context) {
       if (!managedPage || managedPage.isClosed()) await selectManagedPage();
+      await bringManagedWindowToFront();
       return healthCheck();
     }
     if (!executablePath) {
@@ -164,6 +185,7 @@ export function createPlaywrightCollectorRuntime(options = {}) {
       });
       startedAt = nowFrom(clock);
       await selectManagedPage();
+      await bringManagedWindowToFront();
       return healthCheck();
     } catch (error) {
       context = null;

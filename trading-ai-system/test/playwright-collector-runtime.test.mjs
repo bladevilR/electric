@@ -86,14 +86,21 @@ test('persistent runtime recognizes login, readiness, and operational transition
   }
 });
 
-test('start reuses one context and stop leaves a stable stopped state', async () => {
+test('start reuses one context, brings its page forward, and stops cleanly', async () => {
   const context = await runtimeFixture();
   try {
     await context.runtime.start();
     const firstPage = await context.runtime.getPage();
+    const originalBringToFront = firstPage.bringToFront.bind(firstPage);
+    let bringToFrontCalls = 0;
+    firstPage.bringToFront = async () => {
+      bringToFrontCalls += 1;
+      return originalBringToFront();
+    };
     await context.runtime.start();
     const secondPage = await context.runtime.getPage();
     assert.equal(firstPage, secondPage);
+    assert.equal(bringToFrontCalls, 1);
 
     const stopped = await context.runtime.stop();
     assert.equal(stopped.state, 'stopped');

@@ -22,6 +22,18 @@ test('collector failure message exposes the concrete browser collection error', 
   );
 });
 
+test('dedicated browser start message does not call an unrecognized JSPEC page connected', () => {
+  assert.equal(typeof workbenchModule.buildCollectorBrowserStartMessage, 'function');
+  assert.equal(
+    workbenchModule.buildCollectorBrowserStartMessage({ state: 'page_changed' }),
+    '专用 Chrome 已打开并置前；请在其中打开 JSPEC 业务数据页面。'
+  );
+  assert.equal(
+    workbenchModule.buildCollectorBrowserStartMessage({ state: 'ready' }),
+    '专用 Chrome 已置前并连接。'
+  );
+});
+
 test('pending action gate rejects repeat dispatch until the first action is released', () => {
   const state = { pendingAction: '' };
   assert.equal(
