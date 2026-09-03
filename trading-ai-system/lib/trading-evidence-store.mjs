@@ -49,6 +49,17 @@ function assertDate(value, field) {
   return String(value);
 }
 
+function monthBounds(monthKey) {
+  const match = String(monthKey ?? '').match(/^(20\d{2})-(0[1-9]|1[0-2])$/);
+  if (!match) throw new Error('month_key_invalid');
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  return {
+    startDate: `${match[1]}-${match[2]}-01`,
+    endDate: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10),
+  };
+}
+
 function assertIso(value, field) {
   if (!Number.isFinite(Date.parse(value))) throw new Error(`${field}_invalid`);
   return String(value);
@@ -142,6 +153,8 @@ function initializeSchema(database) {
       job_id TEXT NOT NULL REFERENCES collection_jobs(id) ON DELETE CASCADE,
       source_id TEXT NOT NULL,
       month_key TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
       state TEXT NOT NULL,
       cursor_date TEXT,
       attempt_count INTEGER NOT NULL DEFAULT 0,
@@ -282,6 +295,8 @@ function chunkFromRow(row) {
     jobId: row.job_id,
     sourceId: row.source_id,
     monthKey: row.month_key,
+    startDate: row.start_date,
+    endDate: row.end_date,
     state: row.state,
     cursorDate: row.cursor_date,
     attemptCount: Number(row.attempt_count),
@@ -354,13 +369,44 @@ export function openTradingEvidenceStore(options = {}) {
     return database.prepare(`SELECT * FROM collection_jobs${where.sql} ORDER BY created_at DESC, id`).all(...where.values).map(jobFromRow);
   }
 
+  function updateCollectionJob(id, changes = {}) {
+    const jobId = requiredString(id, 'collection_job_id');
+    rejectSensitive(changes, 'collection_job_update');
+    if (!getCollectionJob(jobId)) throw new Error('collection_job_not_found');
+    const definitions = {
+      state: ['state', (value) => requiredString(value, 'collection_job_state')],
+      earliestDate: ['earliest_date', (value) => value ? assertDate(value, 'earliest_date') : null],
+      latestDate: ['latest_date', (value) => value ? assertDate(value, 'latest_date') : null],
+      totalChunks: ['total_chunks', Number],
+      completedChunks: ['completed_chunks', Number],
+      failedChunks: ['failed_chunks', Number],
+      lastErrorCode: ['last_error_code', optionalString],
+      lastErrorMessage: ['last_error_message', optionalString],
+    };
+    const assignments = [];
+    const values = [];
+    for (const [key, [column, normalize]] of Object.entries(definitions)) {
+      if (!Object.hasOwn(changes, key)) continue;
+      assignments.push(`${column}=?`);
+      values.push(normalize(changes[key]));
+    }
+    assignments.push('updated_at=?');
+    values.push(changes.updatedAt ? assertIso(changes.updatedAt, 'updated_at') : clock());
+    database.prepare(`UPDATE collection_jobs SET ${assignments.join(', ')} WHERE id=?`).run(...values, jobId);
+    return getCollectionJob(jobId);
+  }
+
   function upsertCollectionChunk(input = {}) {
     rejectSensitive(input, 'collection_chunk');
+    const monthKey = requiredString(input.monthKey, 'month_key');
+    const defaults = monthBounds(monthKey);
     const chunk = {
       id: requiredString(input.id, 'collection_chunk_id'),
       jobId: requiredString(input.jobId, 'collection_job_id'),
       sourceId: requiredString(input.sourceId, 'source_id'),
-      monthKey: requiredString(input.monthKey, 'month_key'),
+      monthKey,
+      startDate: assertDate(input.startDate || input.cursorDate || defaults.startDate, 'start_date'),
+      endDate: assertDate(input.endDate || defaults.endDate, 'end_date'),
       state: requiredString(input.state, 'collection_chunk_state'),
       cursorDate: input.cursorDate ? assertDate(input.cursorDate, 'cursor_date') : null,
       attemptCount: Number(input.attemptCount || 0),
@@ -369,14 +415,16 @@ export function openTradingEvidenceStore(options = {}) {
       lastErrorMessage: optionalString(input.lastErrorMessage),
     };
     database.prepare(`INSERT INTO collection_chunks(
-      id, job_id, source_id, month_key, state, cursor_date, attempt_count,
+      id, job_id, source_id, month_key, start_date, end_date, state, cursor_date, attempt_count,
       next_attempt_at, last_error_code, last_error_message
-    ) VALUES(${placeholders(10)})
+    ) VALUES(${placeholders(12)})
     ON CONFLICT(id) DO UPDATE SET
-      state=excluded.state, cursor_date=excluded.cursor_date, attempt_count=excluded.attempt_count,
+      start_date=excluded.start_date, end_date=excluded.end_date, state=excluded.state,
+      cursor_date=excluded.cursor_date, attempt_count=excluded.attempt_count,
       next_attempt_at=excluded.next_attempt_at, last_error_code=excluded.last_error_code,
       last_error_message=excluded.last_error_message`).run(
-      chunk.id, chunk.jobId, chunk.sourceId, chunk.monthKey, chunk.state, chunk.cursorDate,
+      chunk.id, chunk.jobId, chunk.sourceId, chunk.monthKey, chunk.startDate, chunk.endDate,
+      chunk.state, chunk.cursorDate,
       chunk.attemptCount, chunk.nextAttemptAt, chunk.lastErrorCode, chunk.lastErrorMessage
     );
     return chunk;
@@ -775,6 +823,7 @@ export function openTradingEvidenceStore(options = {}) {
     createCollectionJob,
     getCollectionJob,
     listCollectionJobs,
+    updateCollectionJob,
     upsertCollectionChunk,
     listCollectionChunks,
     appendCapture,

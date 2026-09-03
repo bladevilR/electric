@@ -104,6 +104,15 @@ test('collection jobs and chunks keep restart checkpoints', async () => {
       cursorDate: chunk.cursorDate,
       attemptCount: chunk.attemptCount,
     })), [{ id: 'job-1-price-2026-05', cursorDate: '2026-05-17', attemptCount: 1 }]);
+
+    const paused = store.updateCollectionJob('job-1', {
+      state: 'paused',
+      completedChunks: 1,
+      lastErrorCode: 'operator_paused',
+    });
+    assert.equal(paused.state, 'paused');
+    assert.equal(paused.completedChunks, 1);
+    assert.equal(paused.lastErrorCode, 'operator_paused');
   });
 });
 

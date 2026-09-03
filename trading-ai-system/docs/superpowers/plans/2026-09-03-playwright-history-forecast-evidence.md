@@ -32,6 +32,7 @@
 - Create `lib/jspec-adapters/price.mjs`: price source queries and normalization.
 - Create `lib/jspec-adapters/weather.mjs`: temperature forecast and actual queries.
 - Create `lib/jspec-adapters/load.mjs`: load forecast and actual queries.
+- Create `lib/weather-forecast-provider.mjs`: fixed-lead Open-Meteo temperature forecast and subsequent actual-weather adapter.
 - Create `lib/forecast-publisher.mjs`: readiness gates, immutable forecast publication, and outcome evaluation.
 - Modify `server.mjs`: initialize the evidence subsystem and expose stable APIs.
 - Modify `ui/view-models/strategy-foundation-model.js`: map collection, history, forecast, and evidence API responses.
@@ -49,7 +50,7 @@
 - Create: `test/trading-evidence-store.test.mjs`
 
 **Interfaces:**
-- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, upsertCollectionChunk, listCollectionChunks, appendCapture, queryCaptures, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, queryFeatureSnapshots, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics, hasImportMarker, recordImportMarker }`.
+- Produces: `openTradingEvidenceStore({ filePath, clock? })` returning `{ close, transaction, createCollectionJob, getCollectionJob, listCollectionJobs, updateCollectionJob, upsertCollectionChunk, listCollectionChunks, appendCapture, queryCaptures, appendFacts, queryFacts, getCoverage, appendFeatureSnapshot, queryFeatureSnapshots, appendForecastRun, queryForecastRuns, appendOutcomes, queryOutcomes, upsertAccuracyMetric, queryAccuracyMetrics, hasImportMarker, recordImportMarker }`.
 - Facts use `{ sourceId, fieldId, businessDate, pointIndex?, eventKey?, entityKey?, value, unit?, availableAt, capturedAt, sourceRevision }`.
 - Forecast runs use the existing `createForecastRun` contract and remain append-only.
 
@@ -241,8 +242,10 @@ git commit -m "feat(collector): add persistent Playwright Chrome runtime"
 - Create: `lib/jspec-adapters/price.mjs`
 - Create: `lib/jspec-adapters/weather.mjs`
 - Create: `lib/jspec-adapters/load.mjs`
+- Create: `lib/weather-forecast-provider.mjs`
 - Create: `lib/collection-job-runner.mjs`
 - Create: `test/jspec-page-adapters.test.mjs`
+- Create: `test/weather-forecast-provider.test.mjs`
 - Create: `test/collection-job-runner.test.mjs`
 - Create: `test/fixtures/jspec-pages/*.html`
 
@@ -251,7 +254,7 @@ git commit -m "feat(collector): add persistent Playwright Chrome runtime"
 - Produces: `createJspecAdapter(config)` with `detect`, `navigate`, `discoverBounds`, `setQuery`, `submit`, `waitForResult`, `extract`, `validate`, `nextPage`, and `fingerprint`.
 - Produces: `createCollectionJobRunner({ store, runtime, adapters, clock?, random?, sleep? })` with `createFullBackfill()`, `runNext()`, `pause(jobId)`, `resume(jobId)`, and `status(jobId)`.
 
-- [ ] **Step 1: Write adapter contract tests against local HTML fixtures**
+- [x] **Step 1: Write adapter contract tests against local HTML fixtures**
 
 ```js
 for (const adapter of [priceAdapter, weatherAdapter, loadAdapter]) {
@@ -264,7 +267,7 @@ for (const adapter of [priceAdapter, weatherAdapter, loadAdapter]) {
 
 Fixtures must cover a valid 96-point result, pagination, empty result, login redirect, rate-limit banner, and renamed required column.
 
-- [ ] **Step 2: Write scheduler tests**
+- [x] **Step 2: Write scheduler tests**
 
 ```js
 test('full backfill creates monthly chunks and resumes after last committed date', async () => {
@@ -276,30 +279,30 @@ test('full backfill creates monthly chunks and resumes after last committed date
 });
 ```
 
-- [ ] **Step 3: Verify failures**
+- [x] **Step 3: Verify failures**
 
 Run: `node --test test/jspec-page-adapters.test.mjs test/collection-job-runner.test.mjs`
 
 Expected: FAIL because adapters and runner do not exist.
 
-- [ ] **Step 4: Implement shared adapter behavior and three source adapters**
+- [x] **Step 4: Implement shared adapter behavior and three source adapters**
 
-Use role/label/text locators before CSS selectors, verify the visible date after submission, normalize units, require unique point indices, hash normalized column names for the structure fingerprint, and return typed errors: `login_expired`, `rate_limited`, `no_data`, `query_date_mismatch`, `required_column_missing`, `coverage_incomplete`, and `page_timeout`.
+Use role/label/text locators before CSS selectors, verify the visible date after submission, normalize units, require unique point indices, hash normalized column names for the structure fingerprint, and return typed errors: `login_expired`, `rate_limited`, `no_data`, `query_date_mismatch`, `required_column_missing`, `coverage_incomplete`, and `page_timeout`. Use Open-Meteo Previous Runs for fixed 24-hour-ahead historical temperature forecasts and Historical Weather for subsequent actuals; convert hourly values to 96 points with a recorded `hourly_linear_interpolation_v1` method.
 
-- [ ] **Step 5: Implement job planning and checkpointing**
+- [x] **Step 5: Implement job planning and checkpointing**
 
 Discover source bounds, split inclusive ranges by calendar month, run one browser action at a time, commit capture and facts in one SQLite transaction, then advance the chunk cursor. Use a 20-second default inter-query delay with deterministic jitter injection in tests and exponential rate-limit delays capped at 30 minutes.
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `node --test test/jspec-page-adapters.test.mjs test/collection-job-runner.test.mjs test/trading-evidence-store.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 7: Commit adapters and runner**
+- [x] **Step 7: Commit adapters and runner**
 
 ```bash
-git add lib/jspec-page-adapter.mjs lib/jspec-adapters lib/collection-job-runner.mjs test/jspec-page-adapters.test.mjs test/collection-job-runner.test.mjs test/fixtures/jspec-pages
+git add lib/jspec-page-adapter.mjs lib/jspec-adapters lib/weather-forecast-provider.mjs lib/collection-job-runner.mjs test/jspec-page-adapters.test.mjs test/weather-forecast-provider.test.mjs test/collection-job-runner.test.mjs test/fixtures/jspec-pages
 git commit -m "feat(collector): backfill JSPEC history with Playwright adapters"
 ```
 
