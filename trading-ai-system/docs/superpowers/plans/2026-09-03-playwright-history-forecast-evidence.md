@@ -129,7 +129,7 @@ git commit -m "feat(data): add canonical SQLite evidence store"
 - Consumes: `openTradingEvidenceStore` from Task 1.
 - Produces: `migrateLegacyEvidence({ store, visibleHistoryPath, pointInTimePath, forecastLedgerPath, outcomeLedgerPath }) -> { importedFacts, importedForecastRuns, importedOutcomes, skipped, sources }`.
 
-- [ ] **Step 1: Write failing migration tests**
+- [x] **Step 1: Write failing migration tests**
 
 ```js
 test('legacy migration imports each logical record once', async () => {
@@ -141,23 +141,23 @@ test('legacy migration imports each logical record once', async () => {
 });
 ```
 
-- [ ] **Step 2: Verify the tests fail**
+- [x] **Step 2: Verify the tests fail**
 
 Run: `node --test test/evidence-json-migration.test.mjs`
 
 Expected: FAIL because the migration module does not exist.
 
-- [ ] **Step 3: Implement migration adapters**
+- [x] **Step 3: Implement migration adapters**
 
 Map visible rows to a stable source revision derived from file SHA-256, import point-in-time facts without changing their timestamps, insert existing forecast runs through the append-only API, and import outcome revisions. Record each source file path and SHA-256 in `import_markers`; reruns skip a file only when the same path and hash already exist.
 
-- [ ] **Step 4: Verify focused tests**
+- [x] **Step 4: Verify focused tests**
 
 Run: `node --test test/evidence-json-migration.test.mjs test/trading-evidence-store.test.mjs test/visible-history.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit migration**
+- [x] **Step 5: Commit migration**
 
 ```bash
 git add lib/evidence-json-migration.mjs lib/trading-evidence-store.mjs test/evidence-json-migration.test.mjs
