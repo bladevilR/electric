@@ -12,6 +12,10 @@ import {
   detectSweepRateLimitWarning,
   parseVisibleBusinessSnapshot,
 } from '../lib/ukey-browser-collector.mjs';
+import * as ukeyBrowserCollectorModule from '../lib/ukey-browser-collector.mjs';
+import { chromium } from 'playwright';
+
+const chromeExecutable = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 test('buildManagedBrowserLaunch binds CDP to localhost and uses the managed JSPEC profile', () => {
   const launch = buildManagedBrowserLaunch({
@@ -61,6 +65,74 @@ test('collector source avoids credential and network interception APIs', async (
   assert.doesNotMatch(source, /sessionStorage/i);
   assert.doesNotMatch(source, /Network\.enable/i);
   assert.doesNotMatch(source, /Fetch\.enable/i);
+});
+
+test('visible-page capture traverses a same-origin iframe containing the JSPEC clearing table', async (context) => {
+  assert.equal(
+    typeof ukeyBrowserCollectorModule.VISIBLE_TABLE_EXPRESSION,
+    'string',
+    '采集表达式必须作为可执行契约导出，供真实浏览器回归测试使用'
+  );
+
+  const browser = await chromium.launch({ executablePath: chromeExecutable, headless: true });
+  context.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.setContent(`
+    <title>电力交易平台</title>
+    <main>门户首页</main>
+    <iframe id="business-frame"></iframe>
+  `);
+  await page.locator('#business-frame').evaluate((iframe) => {
+    iframe.contentDocument.body.innerHTML = `
+      <h1>用户日前出清</h1>
+      <label>日期：<input value="2026-08-26"></label>
+      <table>
+        <thead><tr>
+          <th>时间</th>
+          <th>出清电力</th>
+          <th>统一结算点电价临时结果</th>
+          <th>统一结算点电价最终结果</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>00:15</td><td>64.800</td><td>372.5</td><td>-</td></tr>
+          <tr><td>00:30</td><td>64.800</td><td>368.4</td><td>369.1</td></tr>
+        </tbody>
+      </table>
+    `;
+  });
+
+  const captured = await page.evaluate(ukeyBrowserCollectorModule.VISIBLE_TABLE_EXPRESSION);
+  const snapshot = parseVisibleBusinessSnapshot(captured);
+
+  assert.equal(captured.documentCount, 2);
+  assert.equal(captured.frameCount, 1);
+  assert.equal(captured.tables.length, 1);
+  assert.equal(snapshot.rowCount, 2);
+  assert.deepEqual(snapshot.rows.map((row) => row.dayAheadUserPrice), [372.5, 369.1]);
+});
+
+test('visible-page capture traverses an open shadow root containing a business table', async (context) => {
+  const browser = await chromium.launch({ executablePath: chromeExecutable, headless: true });
+  context.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.setContent('<title>电力交易平台</title><main>日期：2026-08-26</main><section id="business-app"></section>');
+  await page.locator('#business-app').evaluate((host) => {
+    host.attachShadow({ mode: 'open' }).innerHTML = `
+      <h1>实时市场加权均价（公开）</h1>
+      <table>
+        <thead><tr><th>时间</th><th>实时市场加权均价（元/MWh）</th></tr></thead>
+        <tbody><tr><td>00:15</td><td>342.3</td></tr></tbody>
+      </table>
+    `;
+  });
+
+  const captured = await page.evaluate(ukeyBrowserCollectorModule.VISIBLE_TABLE_EXPRESSION);
+  const snapshot = parseVisibleBusinessSnapshot(captured);
+
+  assert.equal(captured.shadowRootCount, 1);
+  assert.equal(captured.tables.length, 1);
+  assert.equal(snapshot.rowCount, 1);
+  assert.equal(snapshot.rows[0].realTimeAvgPrice, 342.3);
 });
 
 test('buildAutoSweepTargets creates a read-only JSPEC route sweep without menu clicking', () => {
@@ -456,6 +528,22 @@ test('parseVisibleBusinessSnapshot explains unsupported visible tables without r
   assert.match(snapshot.errors.join('\n'), /持仓量查询/);
   assert.match(snapshot.errors.join('\n'), /未知业务指标/);
   assert.doesNotMatch(snapshot.errors.join('\n'), /987654\.321/);
+});
+
+test('parseVisibleBusinessSnapshot explains an iframe scan with no readable tables in Chinese', () => {
+  const snapshot = parseVisibleBusinessSnapshot({
+    url: 'https://jspec.com.cn/#/dashboard',
+    title: '电力交易平台',
+    bodyText: '用户日前出清 日期：2026-08-26',
+    tables: [],
+    documentCount: 2,
+    frameCount: 2,
+    inaccessibleFrameCount: 1,
+  });
+
+  assert.equal(snapshot.rowCount, 0);
+  assert.match(snapshot.errors.join('\n'), /扫描了 2 个页面层、2 个内嵌页/);
+  assert.match(snapshot.errors.join('\n'), /1 个内嵌页受浏览器跨域限制/);
 });
 
 test('parseVisibleBusinessSnapshot truncates every credential-like suffix from diagnostic page labels', () => {

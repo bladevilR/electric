@@ -172,14 +172,50 @@ const PRICE_FIELDS = new Set([
   'dayAheadUserPrice',
 ]);
 
-const VISIBLE_TABLE_EXPRESSION = `(() => {
+export const VISIBLE_TABLE_EXPRESSION = `(() => {
   const clean = (value) => String(value == null ? '' : value).replace(/\\s+/g, ' ').trim();
   const isVisible = (element) => {
-    const style = window.getComputedStyle(element);
+    const view = element.ownerDocument && element.ownerDocument.defaultView;
+    if (!view) return false;
+    const style = view.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
   };
-  const tables = Array.from(document.querySelectorAll('table'))
+  const documents = [];
+  const roots = [];
+  const visitedDocuments = new Set();
+  const visitedRoots = new Set();
+  let frameCount = 0;
+  let inaccessibleFrameCount = 0;
+  let shadowRootCount = 0;
+  const visitRoot = (root) => {
+    if (!root || visitedRoots.has(root)) return;
+    visitedRoots.add(root);
+    roots.push(root);
+    Array.from(root.querySelectorAll('*')).forEach((element) => {
+      if (!element.shadowRoot) return;
+      shadowRootCount += 1;
+      visitRoot(element.shadowRoot);
+    });
+    Array.from(root.querySelectorAll('iframe, frame')).forEach((frame) => {
+      if (!isVisible(frame)) return;
+      frameCount += 1;
+      try {
+        if (frame.contentDocument) visitDocument(frame.contentDocument);
+        else inaccessibleFrameCount += 1;
+      } catch {
+        inaccessibleFrameCount += 1;
+      }
+    });
+  };
+  const visitDocument = (currentDocument) => {
+    if (!currentDocument || visitedDocuments.has(currentDocument)) return;
+    visitedDocuments.add(currentDocument);
+    documents.push(currentDocument);
+    visitRoot(currentDocument);
+  };
+  visitDocument(document);
+  const tables = roots.flatMap((root) => Array.from(root.querySelectorAll('table')))
     .filter(isVisible)
     .map((table) => {
       const headerCells = Array.from(table.querySelectorAll('thead th'));
@@ -192,19 +228,33 @@ const VISIBLE_TABLE_EXPRESSION = `(() => {
       const dataRows = headers.length && rows.length && rows[0].join('|') === headers.join('|') ? rows.slice(1) : rows;
       return { headers, rows: dataRows };
     });
-  const activeLabels = Array.from(document.querySelectorAll(
-    '[aria-current="page"], [aria-selected="true"], .el-menu-item.is-active, .ant-menu-item-selected, .router-link-active'
-  ))
+  const activeLabels = roots.flatMap((root) => Array.from(root.querySelectorAll(
+    '[aria-current="page"], [aria-selected="true"], .el-menu-item.is-active, .ant-menu-item-selected, .router-link-active, .is-active'
+  )))
     .filter(isVisible)
     .map((element) => clean(element.innerText || element.textContent))
     .filter(Boolean)
     .slice(0, 12);
+  const visibleDateValues = roots.flatMap((root) =>
+    Array.from(root.querySelectorAll('input'))
+      .filter(isVisible)
+      .map((input) => clean(input.value))
+      .filter((value) => /^\\d{4}[-/.年]\\d{1,2}[-/.月]\\d{1,2}日?$/.test(value))
+  );
   return {
     url: window.location.href,
     title: document.title,
-    bodyText: clean(document.body ? document.body.innerText : '').slice(0, 4000),
+    bodyText: clean([
+      ...documents.map((currentDocument) => currentDocument.body ? currentDocument.body.innerText : ''),
+      ...roots.filter((root) => root.nodeType === 11).map((root) => root.textContent || ''),
+      ...visibleDateValues,
+    ].join(' ')).slice(0, 12000),
     activeLabels,
     tables,
+    documentCount: documents.length,
+    frameCount,
+    inaccessibleFrameCount,
+    shadowRootCount,
     capturedAt: new Date().toISOString()
   };
 })()`;
@@ -852,7 +902,17 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
     }
   });
 
-  if (tables.length && !rows.length && !errors.length) {
+  if (!tables.length && !errors.length) {
+    const documentCount = Math.max(1, Number(pageSnapshot.documentCount || 1));
+    const frameCount = Math.max(0, Number(pageSnapshot.frameCount || 0));
+    const inaccessibleFrameCount = Math.max(0, Number(pageSnapshot.inaccessibleFrameCount || 0));
+    const crossOriginDetail = inaccessibleFrameCount
+      ? `；其中 ${inaccessibleFrameCount} 个内嵌页受浏览器跨域限制，无法直接读取`
+      : '';
+    errors.push(
+      `扫描了 ${documentCount} 个页面层、${frameCount} 个内嵌页，未发现可读取的业务表格${crossOriginDetail}。请确认业务表格已完整显示后重试。`
+    );
+  } else if (tables.length && !rows.length && !errors.length) {
     const visibleHeaders = uniqueStrings(
       tables.flatMap((table) => (Array.isArray(table.headers) ? table.headers : []))
     )
@@ -860,7 +920,7 @@ export function parseVisibleBusinessSnapshot(pageSnapshot = {}, options = {}) {
       .map((header) => redactDiagnosticText(header).slice(0, 80));
     const pageName = redactDiagnosticText(pageSnapshot.title).slice(0, 120) || 'unknown page';
     errors.push(
-      `No supported business rows were detected on ${pageName}; visible headers: ${
+      `已发现表格，但未识别出支持的业务数据行；页面：${pageName}；可见表头：${
         visibleHeaders.join(' | ') || 'none'
       }.`
     );
