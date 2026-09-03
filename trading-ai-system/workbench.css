@@ -24,6 +24,18 @@
   font-family: "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
 }
 
+/* Six-view provenance cockpit */
+.cockpit-experience{min-width:0;margin:0 0 24px;padding:16px;border:1px solid rgba(148,163,184,.25);border-radius:18px;background:rgba(15,23,42,.72)}
+.cockpit-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:18px;overflow-x:auto;padding-bottom:4px}
+.cockpit-nav button{min-width:120px;text-align:left;border:1px solid rgba(148,163,184,.25);border-radius:12px;padding:10px;background:#101b32;color:#dbeafe}
+.cockpit-nav button[aria-current="page"]{border-color:#38bdf8;background:#123454}.cockpit-nav small{display:block;color:#94a3b8;margin-top:4px}
+.cockpit-view{min-width:0}.cockpit-view>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.mode-identity{padding:5px 10px;border-radius:999px;background:#18304d;color:#bae6fd}
+.context-bar,.warning{padding:10px;border-radius:10px;background:#1e293b}.cockpit-cards,.source-groups,.role-grid,.constraint-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:10px;margin:12px 0}
+.cockpit-cards button,.source-groups article,.role-grid article,.constraint-grid article{min-width:0;padding:14px;border:1px solid rgba(148,163,184,.22);border-radius:12px;background:#101b32;color:inherit;text-align:left}.cockpit-cards span,.cockpit-cards small{display:block;margin-top:7px}
+.local-scroll{max-width:100%;overflow:auto}.local-scroll table{min-width:920px;border-collapse:collapse}.local-scroll th,.local-scroll td{padding:8px;border:1px solid rgba(148,163,184,.2);text-align:left}.timeseries svg{display:block;min-width:640px;width:100%;height:auto}.chart-legend{display:flex;gap:14px;flex-wrap:wrap}.strategy-chain{display:grid;gap:8px;padding-left:24px}.strategy-chain li{padding:10px;background:#101b32;border-radius:8px}.strategy-chain span,.strategy-chain small{display:block}.status-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#334155}.cockpit-evidence{position:fixed;right:0;top:0;width:min(440px,100vw);height:100vh;overflow:auto;z-index:100;padding:24px;background:#0f172a}
+@media(max-width:1024px){.cockpit-nav{grid-template-columns:repeat(3,minmax(140px,1fr))}}
+@media(max-width:600px){.cockpit-experience{padding:10px}.cockpit-nav{display:flex}.cockpit-nav button{flex:0 0 150px}.cockpit-view>header{align-items:flex-start}.local-scroll th:first-child,.local-scroll td:first-child{position:static}}
+
 * {
   box-sizing: border-box;
 }

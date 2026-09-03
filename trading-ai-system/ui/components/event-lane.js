@@ -1,0 +1,1 @@
+export function renderEventLane(events=[]){return `<section class="event-lane" aria-label="市场事件"><h3>市场事件</h3>${events.length?events.map(e=>`<button data-evidence-ref="${e.evidenceRef||''}">${e.title||e.type} · ${e.startTime||''}</button>`).join(''):'<p>当前截止时点没有已确认事件。</p>'}</section>`;}

@@ -1,0 +1,1 @@
+let state={},listeners=new Set();export function createAppState(initial={}){state={...initial};return state;}export function subscribeAppState(listener){listeners.add(listener);return()=>listeners.delete(listener);}export function updateAppState(patch){state={...state,...patch};for(const listener of listeners)listener(state);return state;}

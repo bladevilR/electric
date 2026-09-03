@@ -1,0 +1,2 @@
+import test from 'node:test'; import assert from 'node:assert/strict'; import {apiGet} from '../ui/api-client.js';
+test('real API rejects mock-only payload and encodes query safely',async()=>{let seen;const fetchImpl=async(url)=>{seen=String(url);return{ok:true,json:async()=>({mode:'demo',sourceStatus:'mock_only'})}};await assert.rejects(apiGet('/api/market/cockpit',{date:'2026-08-24',asOf:'2026-08-23T10:00:00+08:00',mode:'real'},{baseUrl:'http://localhost',fetchImpl}),/mock_data_in_real_mode/);assert.match(seen,/asOf=2026-08-23T10%3A00%3A00%2B08%3A00/);});

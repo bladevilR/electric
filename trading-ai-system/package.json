@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "competition:setup": "node tools/competition-tools.mjs setup",
     "competition:doctor": "node tools/competition-tools.mjs doctor",

@@ -1,0 +1,1 @@
+export function renderReliabilityChart(points=[]){return `<figure role="img" aria-label="预测区间可靠性"><figcaption>80% 区间覆盖与可靠性</figcaption><svg viewBox="0 0 320 180"><line x1="20" y1="160" x2="300" y2="20" stroke="currentColor"/><polyline fill="none" stroke="#3b82f6" points="${points.map(p=>`${20+p.expected*280},${160-p.observed*140}`).join(' ')}"/></svg></figure>`;}

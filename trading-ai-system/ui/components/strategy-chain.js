@@ -1,0 +1,1 @@
+export function renderStrategyChain(trace={}){return `<ol class="strategy-chain" aria-label="七阶段策略逻辑链">${(trace.stages||[]).map(s=>`<li><strong>${s.title||s.id}</strong><span>${s.status||'unavailable'}</span>${s.missingFields?.length?`<small>缺失：${s.missingFields.join('、')}</small>`:''}</li>`).join('')}</ol>`;}
