@@ -191,6 +191,14 @@ if (-not $env:TRADING_POINT_IN_TIME_STORE_PATH) {
   $env:TRADING_POINT_IN_TIME_STORE_PATH = Join-Path $pointInTimeDataRoot "point-in-time-facts.json"
 }
 
+$ledgerDataRoot = Split-Path -Parent $env:TRADING_POINT_IN_TIME_STORE_PATH
+if (-not $env:TRADING_FORECAST_LEDGER_PATH) {
+  $env:TRADING_FORECAST_LEDGER_PATH = Join-Path $ledgerDataRoot "forecast-ledger.json"
+}
+if (-not $env:TRADING_OUTCOME_LEDGER_PATH) {
+  $env:TRADING_OUTCOME_LEDGER_PATH = Join-Path $ledgerDataRoot "outcome-ledger.json"
+}
+
 $portableNode = Join-Path $root "runtime\node\node.exe"
 $node = ""
 if ($NodePath) {
