@@ -175,3 +175,21 @@ test('login expiry pauses the job and rate limiting checkpoints a delayed retry'
     await rateContext.close();
   }
 });
+
+test('a no-data trading date is recorded as rejected evidence and does not stall full backfill', async () => {
+  const context = await fixture([
+    adapter({ id: 'price', sourceId: 'JSPEC-PRICE', earliestDate: '2026-07-04', latestDate: '2026-07-04', errorCode: 'no_data' }),
+  ]);
+  try {
+    const job = await context.runner.createFullBackfill({ id: 'job-no-data' });
+    const status = await context.runner.runNext(job.id);
+    assert.equal(status.state, 'completed');
+    const captures = context.store.queryCaptures({ businessDate: '2026-07-04' });
+    assert.equal(captures.length, 1);
+    assert.equal(captures[0].accepted, false);
+    assert.equal(captures[0].evidence.reasonCode, 'no_data');
+    assert.equal(context.store.queryFacts({ businessDate: '2026-07-04' }).length, 0);
+  } finally {
+    await context.close();
+  }
+});

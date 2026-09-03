@@ -232,7 +232,36 @@ export function createCollectionJobRunner(options = {}) {
       const code = error?.code || 'collection_failed';
       const message = error?.message || String(error);
       const attemptCount = Number(chunk.attemptCount || 0) + 1;
-      if (code === 'rate_limited') {
+      if (code === 'no_data') {
+        const followingDate = nextDate(businessDate);
+        const isComplete = dateMs(followingDate) > dateMs(chunk.endDate);
+        const pageUrl = typeof page?.url === 'function' ? page.url() : `collector-source:${chunk.sourceId}`;
+        store.transaction(() => {
+          store.appendCapture({
+            id: `${jobId}:${chunk.sourceId}:${businessDate}:no-data`,
+            sourceId: chunk.sourceId,
+            businessDate,
+            pageUrl,
+            capturedAt: now,
+            rowCount: 0,
+            accepted: false,
+            contentSha256: sha256(`${chunk.sourceId}|${businessDate}|no_data`),
+            evidence: { adapterId: adapter.id, queryDate: businessDate, reasonCode: 'no_data' },
+          });
+          store.upsertCollectionChunk({
+            ...chunk,
+            state: isComplete ? 'completed' : 'running',
+            cursorDate: isComplete ? chunk.endDate : followingDate,
+            attemptCount: 0,
+            nextAttemptAt: null,
+            lastErrorCode: null,
+            lastErrorMessage: null,
+          });
+        });
+        refreshProgress(jobId);
+        runtime.transition('ready');
+        return status(jobId);
+      } else if (code === 'rate_limited') {
         const delayMs = Math.min(60000 * (2 ** (attemptCount - 1)), 1800000);
         store.upsertCollectionChunk({
           ...chunk,

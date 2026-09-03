@@ -375,7 +375,7 @@ git commit -m "feat(forecast): publish and evaluate immutable live forecasts"
 - Consumes: store, migration, runtime, runner, and publisher from Tasks 1–5.
 - Produces: collector, history, forecast publication, and accuracy endpoints defined in the design spec.
 
-- [ ] **Step 1: Write failing API contract tests**
+- [x] **Step 1: Write failing API contract tests**
 
 ```js
 test('collector status omits credentials and exposes stable state', async () => {
@@ -391,13 +391,13 @@ test('history facts supports indexed filters and pagination', async () => {
 });
 ```
 
-- [ ] **Step 2: Verify failure**
+- [x] **Step 2: Verify failure**
 
 Run: `node --test test/evidence-api-contract.test.mjs`
 
 Expected: FAIL with HTTP 404 for the new endpoints.
 
-- [ ] **Step 3: Initialize the subsystem and add endpoints**
+- [x] **Step 3: Initialize the subsystem and add endpoints**
 
 Add:
 
@@ -418,13 +418,13 @@ GET  /api/forecast/accuracy
 
 Validate all dates, limits, run types and label versions; map typed domain errors to stable 400/409/422/503 status codes; record audit events without raw Playwright errors or credentials.
 
-- [ ] **Step 4: Run API and regression tests**
+- [x] **Step 4: Run API and regression tests**
 
 Run: `node --test test/evidence-api-contract.test.mjs test/server-contract.test.mjs`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit APIs**
+- [x] **Step 5: Commit APIs**
 
 ```bash
 git add server.mjs test/evidence-api-contract.test.mjs
