@@ -7,6 +7,7 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { appendFact, emptyStore, writePointInTimeStoreAtomic } from '../lib/point-in-time-store.mjs';
 
 const systemRoot = fileURLToPath(new URL('..', import.meta.url));
 const localCaptureStandardPath = path.resolve(
@@ -101,6 +102,42 @@ test('forecast API stays available when the optional settlement reference runtim
 
     assert.equal(response.status, 200);
     assert.ok(['insufficient_history', 'baseline_ready'].includes(report.status));
+  } finally {
+    await server.close();
+  }
+});
+
+test('catalog and point-in-time APIs expose cutoff-safe read-only context', async () => {
+  const server = await startServer();
+  try {
+    let store = appendFact(emptyStore(), {
+      sourceId: 'JSPEC-P0-3', fieldId: 'dayAheadUserPriceTemporaryYuanPerMwh', businessDate: '2026-08-24',
+      pointIndex: 1, value: 318.5, availableAt: '2026-08-23T10:00:00+08:00', capturedAt: '2026-08-23T10:01:00+08:00', sourceRevision: 'r1'
+    });
+    store = appendFact(store, {
+      sourceId: 'JSPEC-P0-3', fieldId: 'dayAheadUserPriceTemporaryYuanPerMwh', businessDate: '2026-08-24',
+      pointIndex: 1, value: 999, availableAt: '2026-08-23T13:00:00+08:00', capturedAt: '2026-08-23T13:01:00+08:00', sourceRevision: 'r2'
+    });
+    await writePointInTimeStoreAtomic(server.pointInTimeStorePath, store);
+
+    const [sourcesResponse, fieldsResponse, contextResponse] = await Promise.all([
+      fetch(`${server.baseUrl}/api/data-sources`),
+      fetch(`${server.baseUrl}/api/field-catalog`),
+      fetch(`${server.baseUrl}/api/point-in-time/context?date=2026-08-24&asOf=${encodeURIComponent('2026-08-23T12:00:00+08:00')}&fields=dayAheadUserPriceTemporaryYuanPerMwh`),
+    ]);
+    const sources = await sourcesResponse.json();
+    const fields = await fieldsResponse.json();
+    const context = await contextResponse.json();
+    assert.equal(sourcesResponse.headers.get('cache-control'), 'no-store');
+    assert.ok(sources.sources.some((source) => source.sourceId === 'JSPEC-P0-3'));
+    assert.ok(fields.fields.some((field) => field.fieldId === 'dayAheadUserClearedPowerMw'));
+    assert.doesNotMatch(JSON.stringify(fields), /"(?:cookie|token|authorization|pin|private[_ -]?key|password)"\s*:/i);
+    assert.equal(context.rows[0].fields.dayAheadUserPriceTemporaryYuanPerMwh, 318.5);
+    assert.deepEqual(context.rows[0].selectedFactIds, [store.facts[0].factId]);
+
+    const future = await fetch(`${server.baseUrl}/api/point-in-time/context?date=2026-08-24&asOf=2999-01-01T00:00:00Z`);
+    assert.equal(future.status, 400);
+    assert.equal((await future.json()).error.code, 'as_of_in_future');
   } finally {
     await server.close();
   }

@@ -46,6 +46,7 @@ export function buildProductionReadiness(options = {}) {
   const coverage = summary.p0SourceCoverage || {};
   const selectedDateSummary = options.selectedDateSummary || {};
   const businessInputSummary = options.businessInputSummary || {};
+  const governance = options.governance || {};
   const hasSelectedDateContext = Boolean(selectedDateSummary.date);
 
   const sourceEmptyItems = itemsByStatus(items, 'source_empty');
@@ -71,6 +72,36 @@ export function buildProductionReadiness(options = {}) {
     Number(selectedDateSummary.settlementPointCount || 0) > 0;
 
   const controls = [
+    control(
+      'field_catalog_loaded',
+      '规范字段目录',
+      governance.fieldCatalogLoaded ? 'ready' : 'blocked',
+      '预测和回放必须使用版本化规范字段目录。'
+    ),
+    control(
+      'source_registry_loaded',
+      '数据源目录',
+      governance.sourceRegistryLoaded ? 'ready' : 'blocked',
+      '每项真实输入必须绑定已登记的数据源和可得性状态。'
+    ),
+    control(
+      'p0_semantics_confirmed',
+      'P0 字段语义确认',
+      governance.p0SemanticsConfirmed ? 'ready' : 'warning',
+      '未完成现场确认的 P0 字段不能被标为真实生产就绪。'
+    ),
+    control(
+      'point_in_time_store_writable',
+      '时点事实仓',
+      governance.pointInTimeStoreWritable ? 'ready' : 'warning',
+      '预测输入修订需要写入只追加的时点事实仓。'
+    ),
+    control(
+      'feature_snapshot_leakage_guard_enabled',
+      '特征快照防泄漏门禁',
+      governance.featureSnapshotLeakageGuardEnabled ? 'ready' : 'blocked',
+      '只有 availableAt 不晚于决策截止时点的数据可以进入特征快照。'
+    ),
     control(
       'standard_dataset',
       'JSPEC 标准数据集',

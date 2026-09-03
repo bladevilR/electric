@@ -100,3 +100,22 @@ test('buildProductionReadiness does not leak secret environment values', () => {
   assert.equal(readiness.controls.find((item) => item.id === 'ca_ukey').status, 'ready');
   assert.equal(readiness.capabilities.autoSubmit, false);
 });
+
+test('buildProductionReadiness exposes point-in-time governance gates', () => {
+  const readiness = buildProductionReadiness({
+    governance: {
+      fieldCatalogLoaded: true,
+      sourceRegistryLoaded: true,
+      p0SemanticsConfirmed: false,
+      pointInTimeStoreWritable: true,
+      featureSnapshotLeakageGuardEnabled: true,
+    },
+  });
+  const statuses = Object.fromEntries(readiness.controls.map((item) => [item.id, item.status]));
+  assert.equal(statuses.field_catalog_loaded, 'ready');
+  assert.equal(statuses.source_registry_loaded, 'ready');
+  assert.equal(statuses.p0_semantics_confirmed, 'warning');
+  assert.equal(statuses.point_in_time_store_writable, 'ready');
+  assert.equal(statuses.feature_snapshot_leakage_guard_enabled, 'ready');
+  assert.equal(readiness.capabilities.autoSubmit, false);
+});
