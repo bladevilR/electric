@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["forecastIssuedAt","targetDate","rows"],"properties":{"forecastIssuedAt":{"type":"string","format":"date-time"},"targetDate":{"type":"string","format":"date"},"rows":{"type":"array"}}}
