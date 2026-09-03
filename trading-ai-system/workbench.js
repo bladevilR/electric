@@ -2737,7 +2737,7 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       )}
       <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
         ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
-        <section class="cockpit-experience" aria-label="六步市场决策工作流">
+        <section class="cockpit-experience${activeCockpitView === 'data-sources' ? '' : ' is-workflow'}" aria-label="六步市场决策工作流">
           ${renderNavigation({ activeView: activeCockpitView })}
           ${cockpitViews[activeCockpitView](cockpitState)}
         </section>

@@ -739,6 +739,16 @@ test('dashboard exposes only functional navigation actions', () => {
   assert.doesNotMatch(html, /href="#"/);
 });
 
+test('secondary cockpit pages opt into the light workflow surface', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    activeView: 'price-forecast',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /class="cockpit-experience is-workflow"/);
+});
+
 test('price forecast stage shows five-day readiness without inventing predictions', () => {
   const html = renderWorkbenchMarkup(blockedPayload(), {
     mode: 'operation',
