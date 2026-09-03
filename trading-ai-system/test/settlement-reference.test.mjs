@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildSettlementReference } from '../lib/settlement-reference.mjs';
+import { buildSettlementReference, linkSettlementReference } from '../lib/settlement-reference.mjs';
 
 const systemRoot = fileURLToPath(new URL('..', import.meta.url));
 const projectRoot = path.resolve(systemRoot, '..');
+
+test('settlement rows link to immutable outcome metadata',()=>{const rows=linkSettlementReference({featureRows:[{date:'2026-08-24',pointIndex:1,settlementPrice:320}]},{sourceFileName:'settle.xlsx',sourceFileSha256:'abc',sourceSheetName:'sheet',parserVersion:'1',parsedAt:'2026-08-25T00:00:00Z',settlementRevision:'r1'});assert.equal(rows[0].actualLabelVersion,'settlement_final');assert.equal(rows[0].sourceFileName,'settle.xlsx');});
 
 test('buildSettlementReference inventories local Excel and manual export references', async (context) => {
   const reference = await buildSettlementReference({ projectRoot });

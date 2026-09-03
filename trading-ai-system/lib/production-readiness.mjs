@@ -106,6 +106,11 @@ export function buildProductionReadiness(options = {}) {
           : 'warning',
       '只有 availableAt 不晚于决策截止时点的数据可以进入特征快照。'
     ),
+    control('forecast_ledger_writable','预测账本',governance.forecastLedgerWritable===true?'ready':'warning','真实发布与历史时点重放预测必须只追加保存。'),
+    control('outcome_ledger_writable','结果账本',governance.outcomeLedgerWritable===true?'ready':'warning','临时、最终和结算结果必须按修订保存。'),
+    control('final_outcome_coverage','最终结果覆盖',governance.finalOutcomeCoverage===true?'ready':'warning','最终结果缺失时不得生成最终准确度。'),
+    control('point_in_time_backtest_enabled','时点回测',governance.pointInTimeBacktestEnabled===true?'ready':'warning','只有截止时间确认后才启用生产重放。'),
+    control('economic_replay_evidence_complete','经济复盘证据',governance.economicReplayEvidenceComplete===true?'ready':'warning','结算与费率证据不全时经济指标保持为空。'),
     control(
       'standard_dataset',
       'JSPEC 标准数据集',

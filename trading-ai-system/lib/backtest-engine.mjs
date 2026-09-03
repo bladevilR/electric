@@ -50,6 +50,25 @@ export function computeRegressionMetrics(actuals = [], forecasts = []) {
   };
 }
 
+export function validateBacktestSplit(split = {}) {
+  const groups=['trainingDates','validationDates','holdoutDates','liveDates'].map(key=>split[key]||[]);
+  const all=groups.flat();
+  const errors=new Set(all.length===new Set(all).size?[]:['split_dates_overlap']);
+  return {ok:errors.size===0,errors:[...errors]};
+}
+
+export async function runPointInTimeBacktest({dates=[],buildSnapshot,forecast,outcomes=[],config={}}={}) {
+  if(!config.decisionCutoffAt&&!config.resolveDecisionCutoffAt)return{status:'decision_cutoff_unconfirmed',runType:'point_in_time_replay',runs:[],usedFactIds:[]};
+  const runs=[];const usedFactIds=[];
+  for(const date of [...dates].sort()){
+    const decisionCutoffAt=config.resolveDecisionCutoffAt?config.resolveDecisionCutoffAt(date):config.decisionCutoffAt;
+    const snapshot=await buildSnapshot({targetDate:date,decisionCutoffAt});
+    usedFactIds.push(...(snapshot.selectedFactIds||snapshot.factIds||snapshot.rows?.flatMap(row=>row.selectedFactIds||[])||[]));
+    runs.push({targetTradingDate:date,decisionCutoffAt,trainingDates:[...dates].filter(item=>item<date),rows:await forecast({date,snapshot}),outcomes:outcomes.filter(item=>item.businessDate===date)});
+  }
+  return{status:'ready',runType:'point_in_time_replay',runs,usedFactIds:[...new Set(usedFactIds)]};
+}
+
 function compareModel(rows, evaluationDates, modelId, forecastFn, targetField) {
   const actuals = [];
   const forecasts = [];
@@ -248,11 +267,11 @@ export function computeStrategyBacktest(featureStore = {}, modelReport = {}, opt
   }
 
   return {
-    status: 'ready',
+    status: 'savings_unavailable',
     baseline: 'no_action',
-    estimatedSavings: 0,
+    estimatedSavings: null,
     modelStatus: modelReport.status || 'unknown',
-    warnings,
+    warnings: [...warnings, 'settlement_formula_version_missing'],
   };
 }
 

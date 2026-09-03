@@ -8,6 +8,8 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { appendFact, emptyStore, writePointInTimeStoreAtomic } from '../lib/point-in-time-store.mjs';
+import { createForecastRun, appendForecastRun, writeForecastLedgerAtomic } from '../lib/forecast-ledger.mjs';
+import { appendOutcomeRevision, writeOutcomeLedgerAtomic } from '../lib/outcome-ledger.mjs';
 
 const systemRoot = fileURLToPath(new URL('..', import.meta.url));
 const localCaptureStandardPath = path.resolve(
@@ -32,6 +34,8 @@ async function startServer(options = {}) {
   const visibleSnapshotPath = path.join(temp, 'ukey-visible-snapshot.json');
   const visibleHistoryPath = path.join(temp, 'ukey-visible-history.json');
   const pointInTimeStorePath = path.join(temp, 'point-in-time-facts.json');
+  const forecastLedgerPath = path.join(temp, 'forecast-ledger.json');
+  const outcomeLedgerPath = path.join(temp, 'outcome-ledger.json');
   const args = [
     'server.mjs',
     '--port',
@@ -44,6 +48,8 @@ async function startServer(options = {}) {
     visibleHistoryPath,
     '--point-in-time-store',
     pointInTimeStorePath,
+    '--forecast-ledger', forecastLedgerPath,
+    '--outcome-ledger', outcomeLedgerPath,
   ];
   if (options.standard) args.push('--standard', options.standard);
   if (options.python) args.push('--python', options.python);
@@ -82,6 +88,8 @@ async function startServer(options = {}) {
     baseUrl: `http://${options.clientHost || '127.0.0.1'}:${port}`,
     visibleHistoryPath,
     pointInTimeStorePath,
+    forecastLedgerPath,
+    outcomeLedgerPath,
     async close() {
       server.kill();
       await once(server, 'exit').catch(() => {});
@@ -141,6 +149,19 @@ test('catalog and point-in-time APIs expose cutoff-safe read-only context', asyn
   } finally {
     await server.close();
   }
+});
+
+test('forecast accuracy API isolates live and replay ledgers', async () => {
+  const server = await startServer();
+  try {
+    const run = createForecastRun({forecastRunId:'live-1',forecastRunType:'live_issued',targetField:'price',targetTradingDate:'2026-08-24',forecastGeneratedAt:'2026-08-23T09:00:00+08:00',decisionCutoffAt:'2026-08-23T10:00:00+08:00',featureSnapshotId:'fs-1',featureVersion:'v1',modelId:'median',modelVersion:'1',codeCommitSha:'abc1234',trainingStartDate:'2026-08-01',trainingEndDate:'2026-08-22',backtestSplitLabel:'live',inputCompletenessPct:100,rows:[{pointIndex:1,pointForecast:10}]});
+    await writeForecastLedgerAtomic(server.forecastLedgerPath, appendForecastRun({version:1,runs:[]},run));
+    const outcome={targetField:'price',businessDate:'2026-08-24',pointIndex:1,actualValue:12,actualLabelVersion:'final',sourceId:'JSPEC-P0-3',sourceRevision:'r1',publishedAt:'2026-08-25T09:00:00+08:00',actualBackfilledAt:'2026-08-25T09:01:00+08:00'};
+    await writeOutcomeLedgerAtomic(server.outcomeLedgerPath,appendOutcomeRevision({version:1,outcomes:[]},outcome));
+    const response=await fetch(`${server.baseUrl}/api/forecast/accuracy?runType=live_issued&actualLabelVersion=final`);const body=await response.json();
+    assert.equal(response.status,200);assert.deepEqual(body.runTypes,['live_issued']);assert.equal(body.metrics.mae,2);
+    assert.equal((await fetch(`${server.baseUrl}/api/forecast/accuracy?runType=bad`)).status,400);
+  } finally { await server.close(); }
 });
 
 function visibleSnapshot(date, price) {
@@ -713,4 +734,9 @@ test('documentation connects onsite evidence to canonical point-in-time fields',
   assert.match(documentation, /临时价、最终价、有效价/);
   assert.match(documentation, /availableAt <= decisionCutoffAt/);
   assert.match(documentation, /只读页面可见数据/);
+  assert.match(documentation, /真实发布预测/);
+  assert.match(documentation, /历史时点重放/);
+  assert.match(documentation, /最终结算复盘/);
+  assert.match(documentation, /forecast-ledger\.json/);
+  assert.match(documentation, /outcome-ledger\.json/);
 });

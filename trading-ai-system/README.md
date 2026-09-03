@@ -100,3 +100,7 @@ present by Si hang
 `availableAt <= decisionCutoffAt`，无日期的时变数据不会复制到历史日期。
 
 只读接口：`/api/data-sources`、`/api/field-catalog` 和 `/api/point-in-time/context`。
+
+准确度分为真实发布预测、历史时点重放、最终结算复盘三种视图，三者不得混合。用新模型重新运行
+旧数据不等于当时真实发布的预测。用户账本保存在 LocalAppData 的 `forecast-ledger.json`、
+`outcome-ledger.json` 和 `point-in-time-facts.json`，不得放入公开交付包。

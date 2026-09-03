@@ -52,6 +52,9 @@ import { loadDataSourceRegistry } from './lib/data-source-registry.mjs';
 import { loadFieldCatalog } from './lib/field-catalog.mjs';
 import { readPointInTimeStore } from './lib/point-in-time-store.mjs';
 import { buildFeatureSnapshot } from './lib/feature-snapshot.mjs';
+import { findForecastRuns, readForecastLedger } from './lib/forecast-ledger.mjs';
+import { readOutcomeLedger } from './lib/outcome-ledger.mjs';
+import { buildAccuracyReport } from './lib/forecast-evaluation.mjs';
 import {
   createCompetitionMemoryStore,
   competitionRequestRoute,
@@ -102,6 +105,11 @@ const pointInTimeStorePath = path.resolve(
     process.env.TRADING_POINT_IN_TIME_STORE_PATH || defaultPointInTimeStorePath
   )
 );
+const ledgerDataRoot = process.platform === 'win32' && process.env.LOCALAPPDATA
+  ? path.resolve(process.env.LOCALAPPDATA, 'ElectricTradingAI/data')
+  : path.resolve(rootDir, 'data');
+const forecastLedgerPath = path.resolve(getArgValue('--forecast-ledger', process.env.TRADING_FORECAST_LEDGER_PATH || path.join(ledgerDataRoot, 'forecast-ledger.json')));
+const outcomeLedgerPath = path.resolve(getArgValue('--outcome-ledger', process.env.TRADING_OUTCOME_LEDGER_PATH || path.join(ledgerDataRoot, 'outcome-ledger.json')));
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
 let settlementReferenceCache = null;
@@ -471,6 +479,11 @@ async function loadProductionReadiness(date = '') {
       p0SemanticsConfirmed: false,
       pointInTimeStoreWritable: Boolean(pointInTimeStorePath),
       featureSnapshotLeakageGuardEnabled: true,
+      forecastLedgerWritable: Boolean(forecastLedgerPath),
+      outcomeLedgerWritable: Boolean(outcomeLedgerPath),
+      finalOutcomeCoverage: false,
+      pointInTimeBacktestEnabled: false,
+      economicReplayEvidenceComplete: false,
     },
   });
 }
@@ -586,6 +599,41 @@ async function loadUkeyStatus(dataset = null) {
 }
 
 async function handleApi(request, response, url) {
+  if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
+    const runType = url.searchParams.get('runType') || '';
+    if (runType && !['live_issued', 'point_in_time_replay'].includes(runType)) { sendJson(response, { error: { code: 'forecast_run_type_invalid' } }, 400); return; }
+    const ledger = await readForecastLedger(forecastLedgerPath);
+    const runs = findForecastRuns(ledger, { forecastRunType: runType || undefined, targetTradingDate: url.searchParams.get('date') || undefined, modelId: url.searchParams.get('modelId') || undefined });
+    const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+    const offset = Math.max(0, Number(Buffer.from(url.searchParams.get('cursor') || 'MA==', 'base64').toString('utf8')) || 0);
+    sendJson(response, { runs: runs.slice(offset, offset + limit), nextCursor: offset + limit < runs.length ? Buffer.from(String(offset + limit)).toString('base64') : null }); return;
+  }
+  if (request.method === 'GET' && url.pathname.startsWith('/api/forecast/run/')) {
+    const id = decodeURIComponent(url.pathname.slice('/api/forecast/run/'.length));
+    const run = (await readForecastLedger(forecastLedgerPath)).runs.find((item) => item.forecastRunId === id);
+    if (!run) { sendJson(response, { error: { code: 'forecast_run_not_found' } }, 404); return; }
+    sendJson(response, run); return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/forecast/accuracy') {
+    const runType = url.searchParams.get('runType') || 'live_issued';
+    const actualLabelVersion = url.searchParams.get('actualLabelVersion') || 'final';
+    if (!['live_issued', 'point_in_time_replay'].includes(runType)) { sendJson(response, { error: { code: 'forecast_run_type_invalid' } }, 400); return; }
+    if (!['temporary', 'current', 'final', 'settlement_initial', 'settlement_final', 'settlement_adjusted'].includes(actualLabelVersion)) { sendJson(response, { error: { code: 'outcome_label_invalid' } }, 400); return; }
+    const from = url.searchParams.get('from') || '', to = url.searchParams.get('to') || '';
+    if (from && to && from > to) { sendJson(response, { error: { code: 'date_range_invalid' } }, 400); return; }
+    const [forecastLedger, outcomeLedger] = await Promise.all([readForecastLedger(forecastLedgerPath), readOutcomeLedger(outcomeLedgerPath)]);
+    const runs = forecastLedger.runs.filter((run) => run.forecastRunType === runType && (!from || run.targetTradingDate >= from) && (!to || run.targetTradingDate <= to) && (!url.searchParams.get('modelId') || run.modelId === url.searchParams.get('modelId')));
+    const report = buildAccuracyReport({ runs, outcomes: outcomeLedger.outcomes, config: { version: '1', runType, actualLabelVersion, dimensions: url.searchParams.get('regime') ? [url.searchParams.get('regime')] : [] } });
+    sendJson(response, { ...report, filter: { from: from || null, to: to || null, runType, modelId: url.searchParams.get('modelId'), actualLabelVersion }, runTypes: [runType] }); return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/forecast/outcome-coverage') {
+    const ledger = await readOutcomeLedger(outcomeLedgerPath);
+    const from = url.searchParams.get('from') || '', to = url.searchParams.get('to') || '', targetField = url.searchParams.get('targetField') || '';
+    const outcomes = ledger.outcomes.filter((item) => (!from || item.businessDate >= from) && (!to || item.businessDate <= to) && (!targetField || item.targetField === targetField));
+    const byLabelVersion = {};
+    for (const outcome of outcomes) byLabelVersion[outcome.actualLabelVersion] = (byLabelVersion[outcome.actualLabelVersion] || 0) + 1;
+    sendJson(response, { filter: { from: from || null, to: to || null, targetField: targetField || null }, total: outcomes.length, byLabelVersion }); return;
+  }
   if (request.method === 'GET' && url.pathname === '/api/data-sources') {
     sendJson(response, await loadDataSourceRegistry(dataSourceRegistryPath));
     return;
