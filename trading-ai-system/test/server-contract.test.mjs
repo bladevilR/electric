@@ -740,3 +740,22 @@ test('documentation connects onsite evidence to canonical point-in-time fields',
   assert.match(documentation, /forecast-ledger\.json/);
   assert.match(documentation, /outcome-ledger\.json/);
 });
+
+test('market context APIs stay truthful when optional sources are absent', async () => {
+  const server = await startServer();
+  try {
+    const query = 'date=2026-08-24&asOf=2026-08-23T10%3A00%3A00%2B08%3A00';
+    const context = await (await fetch(`${server.baseUrl}/api/market/context?${query}`)).json();
+    assert.equal(context.mode, 'real');
+    assert.equal(context.summary.availableCapacityMw, null);
+    assert.ok(context.missingFields.includes('availableCapacityMw'));
+    const weather = await (await fetch(`${server.baseUrl}/api/weather/coverage?${query}`)).json();
+    assert.equal(weather.pointCount, 0);
+    const supply = await (await fetch(`${server.baseUrl}/api/supply-network/coverage?${query}`)).json();
+    assert.equal(supply.fieldCount, 0);
+    const candidates = await (await fetch(`${server.baseUrl}/api/forecast/candidates?${query}&target=dayAheadPrice`)).json();
+    assert.equal(candidates.fallback.status, 'candidate_unavailable');
+    const ablation = await (await fetch(`${server.baseUrl}/api/model/ablation?modelId=x&evaluationRunId=y`)).json();
+    assert.equal(ablation.requiresHumanApproval, true);
+  } finally { await server.close(); }
+});

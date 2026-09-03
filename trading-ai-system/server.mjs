@@ -55,6 +55,7 @@ import { buildFeatureSnapshot } from './lib/feature-snapshot.mjs';
 import { findForecastRuns, readForecastLedger } from './lib/forecast-ledger.mjs';
 import { readOutcomeLedger } from './lib/outcome-ledger.mjs';
 import { buildAccuracyReport } from './lib/forecast-evaluation.mjs';
+import { deriveMarketContext } from './lib/market-context.mjs';
 import {
   createCompetitionMemoryStore,
   competitionRequestRoute,
@@ -599,6 +600,26 @@ async function loadUkeyStatus(dataset = null) {
 }
 
 async function handleApi(request, response, url) {
+  if (request.method === 'GET' && ['/api/market/context','/api/weather/coverage','/api/supply-network/coverage'].includes(url.pathname)) {
+    const date = url.searchParams.get('date') || '', asOf = url.searchParams.get('asOf') || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(asOf))) { sendJson(response, { error: { code: 'date_or_as_of_invalid' } }, 400); return; }
+    const store = await readPointInTimeStore(pointInTimeStorePath), eligible = store.facts.filter((fact) => fact.businessDate === date && Date.parse(fact.availableAt) <= Date.parse(asOf));
+    const latest = new Map(); for (const fact of eligible) { const key = `${fact.pointIndex ?? fact.entityKey}|${fact.fieldId}`, old = latest.get(key); if (!old || Date.parse(fact.availableAt) >= Date.parse(old.availableAt)) latest.set(key, fact); }
+    const weatherFields = new Set(['temperatureC','dewPointC','relativeHumidityPct','windU10Mps','windV10Mps','precipitationAmountMm','totalCloudCoverPct','surfaceSolarRadiationJm2']);
+    const supplyFields = new Set(['availableCapacityMw','unplannedOutageCapacityMw','interchangeScheduledImportMw','sectionFlowMw','sectionForwardLimitMw','sectionReverseLimitMw']);
+    if (url.pathname.endsWith('/coverage')) { const fields = url.pathname.includes('weather') ? weatherFields : supplyFields, matching = [...latest.values()].filter((fact) => fields.has(fact.fieldId)); sendJson(response, { mode: 'real', date, asOf, sourceType: url.pathname.includes('weather') ? 'weather' : 'supply_network', pointCount: new Set(matching.map((fact) => fact.pointIndex).filter(Boolean)).size, fieldCount: new Set(matching.map((fact) => fact.fieldId)).size, facts: matching.map((fact) => ({ factId: fact.factId, fieldId: fact.fieldId, pointIndex: fact.pointIndex, sourceId: fact.sourceId, availableAt: fact.availableAt, sourceRevision: fact.sourceRevision })) }); return; }
+    const rows = [...Map.groupBy([...latest.values()], (fact) => fact.pointIndex ?? fact.entityKey)].map(([key, facts]) => ({ ...(Number.isInteger(key) ? { pointIndex: key } : { entityKey: key }), fields: Object.fromEntries(facts.map((fact) => [fact.fieldId, fact.value])), selectedFactIds: facts.map((fact) => fact.factId), provenance: Object.fromEntries(facts.map((fact) => [fact.fieldId, { factId: fact.factId, sourceId: fact.sourceId, availableAt: fact.availableAt, sourceRevision: fact.sourceRevision }])) }));
+    const context = deriveMarketContext(rows, { interchangeConvention: 'positive_import' }), required = ['systemLoadForecastMw','windForecastMw','solarForecastMw','interchangeScheduledImportMw','availableCapacityMw'], missingFields = required.filter((field) => ![...latest.values()].some((fact) => fact.fieldId === field));
+    const summary = Object.fromEntries(required.map((field) => [field, context.find((row) => row.fields?.[field] !== undefined)?.fields[field] ?? null])); sendJson(response, { mode: 'real', date, asOf, summary, missingFields, rows: context }); return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/forecast/candidates') {
+    const date = url.searchParams.get('date') || '', asOf = url.searchParams.get('asOf') || '', target = url.searchParams.get('target') || '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(asOf))) { sendJson(response, { error: { code: 'date_or_as_of_invalid' } }, 400); return; }
+    const runs = (await readForecastLedger(forecastLedgerPath)).runs.filter((run) => run.targetTradingDate === date && (!target || run.targetField === target) && Date.parse(run.issuedAt || run.createdAt) <= Date.parse(asOf)); sendJson(response, { mode: 'real', date, asOf, target: target || null, candidates: runs, fallback: runs.length ? null : { status: 'candidate_unavailable', fallbackAllowed: true, fallbackModelId: 'strongest_validated_seasonal_baseline', warnings: ['python_model_unavailable'] } }); return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/model/ablation') {
+    sendJson(response, { modelId: url.searchParams.get('modelId') || null, evaluationRunId: url.searchParams.get('evaluationRunId') || null, status: 'not_evaluated', variants: [], automaticPromotion: false, requiresHumanApproval: true }); return;
+  }
   if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
     const runType = url.searchParams.get('runType') || '';
     if (runType && !['live_issued', 'point_in_time_replay'].includes(runType)) { sendJson(response, { error: { code: 'forecast_run_type_invalid' } }, 400); return; }
