@@ -106,6 +106,11 @@ export function forecastRollingSameSlot(rows = [], targetDate = '', targetField 
     .filter(Boolean);
 }
 
+function shiftDate(date, days) { const value = new Date(`${date}T00:00:00Z`); value.setUTCDate(value.getUTCDate() + days); return value.toISOString().slice(0, 10); }
+export function forecastPreviousDaySameSlot(rows=[],targetDate='',targetField='realTimeAvgPrice'){const wanted=shiftDate(targetDate,-1);return targetPointIndices(rows,targetDate).map(pointIndex=>{const row=rows.find(item=>item.date===wanted&&Number(item.pointIndex)===pointIndex&&numeric(item[targetField])!==null);return row?forecastRecord({modelId:'naive_previous_day_same_slot',target:targetField,targetDate,pointIndex,values:[row[targetField]],evidenceRows:1}):null;}).filter(Boolean);}
+export function forecastPreviousWeekSameSlot(rows=[],targetDate='',targetField='realTimeAvgPrice'){const wanted=shiftDate(targetDate,-7);return targetPointIndices(rows,targetDate).map(pointIndex=>{const row=rows.find(item=>item.date===wanted&&Number(item.pointIndex)===pointIndex&&numeric(item[targetField])!==null);return row?forecastRecord({modelId:'naive_previous_week_same_slot',target:targetField,targetDate,pointIndex,values:[row[targetField]],evidenceRows:1}):null;}).filter(Boolean);}
+export function forecastWeekdayClassMedian(rows=[],targetDate='',targetField='realTimeAvgPrice'){const weekday=new Date(`${targetDate}T00:00:00Z`).getUTCDay(),history=historicalRows(rows,targetDate,targetField).filter(row=>new Date(`${row.date}T00:00:00Z`).getUTCDay()===weekday);return targetPointIndices(rows,targetDate).map(pointIndex=>{const values=history.filter(row=>Number(row.pointIndex)===pointIndex).map(row=>row[targetField]);return forecastRecord({modelId:'seasonal_same_slot_median_weekday_class',target:targetField,targetDate,pointIndex,values,evidenceRows:values.length});}).filter(Boolean);}
+
 export function summarizeForecastReadiness(featureStore = {}, targetDate = '') {
   const rows = Array.isArray(featureStore.rows) ? featureStore.rows : [];
   const date = targetDate || uniqueSorted(rows.map((row) => row.date)).at(-1) || '';
@@ -169,11 +174,18 @@ export function buildForecastModelReport(featureStore = {}, options = {}) {
       label: 'Rolling same-slot median baseline',
       enabled: readiness.status === 'baseline_ready',
     },
+    ...[
+      ['naive_previous_day_same_slot','Previous-day same-slot baseline'],
+      ['naive_previous_week_same_slot','Previous-week same-slot baseline'],
+      ['seasonal_same_slot_median_weekday_class','Weekday-class same-slot median'],
+      ['rolling_same_slot_median_7','Rolling 7-day same-slot median'],
+      ['rolling_same_slot_median_28','Rolling 28-day same-slot median'],
+    ].map(([id,label])=>({id,label,enabled:readiness.status==='baseline_ready'})),
   ];
 
   const forecasts =
     readiness.status === 'baseline_ready'
-      ? TARGET_FIELDS.flatMap((target) => forecastRollingSameSlot(rows, targetDate, target, 7))
+      ? TARGET_FIELDS.flatMap((target) => forecastRollingSameSlot(rows, targetDate, target, 28).map(row=>({...row,modelId:'rolling_same_slot_median_28'})))
       : [];
 
   return {
@@ -181,6 +193,7 @@ export function buildForecastModelReport(featureStore = {}, options = {}) {
     status: readiness.status,
     targetDate,
     models,
+    strongestBaselineId: readiness.status === 'baseline_ready' ? 'rolling_same_slot_median_28' : null,
     forecasts,
     readiness,
   };

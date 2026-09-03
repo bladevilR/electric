@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { resolvePythonPath } from './integration-build.mjs';
+export { linkSettlementReference } from './outcome-ledger.mjs';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultProjectRoot = path.resolve(moduleDir, '../..');

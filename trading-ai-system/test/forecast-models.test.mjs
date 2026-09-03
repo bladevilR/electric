@@ -5,6 +5,8 @@ import {
   buildForecastModelReport,
   forecastNaiveSameSlot,
   forecastRollingSameSlot,
+  forecastPreviousDaySameSlot,
+  forecastPreviousWeekSameSlot,
   summarizeForecastReadiness,
 } from '../lib/forecast-models.mjs';
 
@@ -24,6 +26,8 @@ test('summarizeForecastReadiness reports insufficient history before modeling', 
   assert.equal(readiness.historicalDateCount, 2);
   assert.ok(readiness.missingReasons.includes('historical_dates_below_5'));
 });
+
+test('model report exposes five strong seasonal baselines and selects the strongest available',()=>{const rows=[];for(let day=1;day<=8;day++)rows.push({date:`2026-06-${String(20+day).padStart(2,'0')}`,pointIndex:1,realTimeAvgPrice:day,priceSpread:day,highPriceRiskLabel:0});const target='2026-06-28';assert.equal(forecastPreviousDaySameSlot(rows,target)[0].modelId,'naive_previous_day_same_slot');assert.equal(forecastPreviousWeekSameSlot(rows,target)[0].modelId,'naive_previous_week_same_slot');const report=buildForecastModelReport(featureStore(rows),{targetDate:target});for(const id of ['naive_previous_day_same_slot','naive_previous_week_same_slot','seasonal_same_slot_median_weekday_class','rolling_same_slot_median_7','rolling_same_slot_median_28'])assert.ok(report.models.some(model=>model.id===id));assert.equal(report.strongestBaselineId,'rolling_same_slot_median_28');});
 
 test('summarizeForecastReadiness counts only historical dates with usable realtime prices', () => {
   const readiness = summarizeForecastReadiness(
