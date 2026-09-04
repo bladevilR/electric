@@ -1,130 +1,38 @@
-const esc = (value) =>
-  String(value ?? '—').replace(
-    /[&<>"']/g,
-    (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
-        character
-      ]
-  );
+import {escapeText as esc, EXPLANATION_COPY, plainText, reasonLabel, methodLabel, dateTime} from '../presentation-language.js';
 
-export function renderExplanationButton(id, label, triggerKey = '', expanded = false) {
-  return `<button type="button" class="foundation-info-button" data-foundation-action="open-explanation" data-explanation-id="${esc(
-    id
-  )}"${triggerKey ? ` data-foundation-trigger="${esc(triggerKey)}"` : ''} aria-label="${esc(
-    label
-  )}：查看公式与依据" aria-controls="foundationEvidenceDrawer" aria-expanded="${expanded}"><span aria-hidden="true">查看公式</span></button>`;
+export function renderExplanationButton(id,label,triggerKey='',expanded=false) {
+  return `<button type="button" class="foundation-info-button" data-foundation-action="open-explanation" data-explanation-id="${esc(id)}"${triggerKey?` data-foundation-trigger="${esc(triggerKey)}"`:''} aria-label="${esc(label)}：查看说明" aria-controls="foundationEvidenceDrawer" aria-expanded="${expanded}"><span aria-hidden="true">查看说明</span></button>`;
+}
+const copyFor = explanation => ({...explanation,...EXPLANATION_COPY[explanation.id]});
+export function renderFoundationTooltip(explanation={}) {
+  if(!explanation.id) return '';
+  const e=copyFor(explanation);
+  return `<aside class="foundation-tooltip" role="note" aria-label="${esc(e.title)}"><strong>${esc(e.title)}</strong><p>${esc(plainText(e.principle))}</p><p>${esc(plainText(e.formula))}</p><small>${esc(plainText(e.caveat))}</small></aside>`;
 }
 
-export function renderFoundationTooltip(explanation = {}) {
-  if (!explanation.id) return '';
-  return `
-    <aside class="foundation-tooltip" role="note" aria-label="${esc(explanation.title)}">
-      <strong>${esc(explanation.title)}</strong>
-      <p>${esc(explanation.principle)}</p>
-      <code>${esc(explanation.formula)}</code>
-      <small>${esc(explanation.caveat)}</small>
-    </aside>
-  `;
+export function renderFoundationEvidenceDrawer(explanation={},evidence={}) {
+  if(!explanation.id) return '';
+  const e=copyFor(explanation),stage=evidence.stageEvidence;
+  const warnings=(stage?.warnings||[]).map(x=>reasonLabel(x,plainText(x,'必要数据或限制尚未齐全。')));
+  const blocked=(stage?.stageStatus||[]).some(s=>/blocked|unavailable|missing|未|缺/.test(s));
+  return `<aside class="foundation-evidence-drawer" id="foundationEvidenceDrawer" role="dialog" aria-modal="false" aria-labelledby="foundationEvidenceTitle" tabindex="-1">
+    <header><h2 id="foundationEvidenceTitle">${esc(e.title)}</h2><button type="button" data-foundation-action="close-explanation" aria-label="关闭依据说明">关闭</button></header>
+    <section><h3>这是做什么的</h3><p>${esc(plainText(e.principle))}</p></section>
+    <section><h3>怎样计算或判断</h3><p class="foundation-formula">${esc(plainText(e.formula,'计算方法还需要进一步说明。'))}</p><p>${esc(plainText(e.caveat))}</p></section>
+    <section><h3>本次使用情况</h3>${stage ? `<p>${blocked || !stage.conclusionIds?.length ? '尚未形成可采用的结论。' : '已保留这一步的计算记录，仍需结合业务限制与人工复核。'}</p><p>${stage.inputRefs?.length ? '已保留使用数据的来源记录。' : '使用数据尚未齐全。'}</p>${warnings.length?`<p>需要注意：${[...new Set(warnings)].map(esc).join('；')}</p>`:''}` : `<dl><div><dt>预测方法</dt><dd>${esc(methodLabel(evidence.modelVersion))}</dd></div><div><dt>使用数据截至</dt><dd>${dateTime(evidence.dataCutoff)}</dd></div></dl>`}</section>
+    <footer><button type="button" class="foundation-secondary-button" data-foundation-action="open-provenance" data-foundation-trigger="provenance-rail">查看数据来源</button><button type="button" class="foundation-primary-button" data-foundation-action="close-explanation">关闭</button></footer>
+  </aside>`;
 }
 
-function evidenceValue(value) {
-  if (Array.isArray(value)) return value.length ? esc(value.join('；')) : '尚无可用证据';
-  return value ? esc(value) : '尚无可用证据';
-}
-
-export function renderFoundationEvidenceDrawer(explanation = {}, evidence = {}) {
-  if (!explanation.id) return '';
-  const stage = evidence.stageEvidence || null;
-  return `
-    <aside class="foundation-evidence-drawer" id="foundationEvidenceDrawer" role="dialog" aria-modal="false" aria-labelledby="foundationEvidenceTitle" tabindex="-1">
-      <header>
-        <div>
-          <small>CONTEXTUAL EVIDENCE</small>
-          <h2 id="foundationEvidenceTitle">${esc(explanation.title)}</h2>
-        </div>
-        <button type="button" data-foundation-action="close-explanation" aria-label="关闭依据说明">关闭</button>
-      </header>
-      <section><h3>原理</h3><p>${esc(explanation.principle)}</p></section>
-      <section><h3>核心公式</h3><code class="foundation-formula">${esc(
-        explanation.formula
-      )}</code><p>${esc(explanation.caveat)}</p></section>
-      ${
-        explanation.variables?.length
-          ? `<section><h3>变量与单位</h3><dl class="foundation-variable-list">${explanation.variables
-              .map(
-                (variable) =>
-                  `<div><dt>${esc(variable.name)}</dt><dd>${esc(variable.meaning)} · ${esc(
-                    variable.unit
-                  )}</dd></div>`
-              )
-              .join('')}</dl></section>`
-          : ''
-      }
-      ${
-        stage
-          ? `<section>
-              <h3>${esc(evidence.stageEvidenceLabel || '节点级真实证据')}</h3>
-              <dl class="foundation-evidence-list">
-                <div><dt>节点状态</dt><dd>${evidenceValue(stage.stageStatus)}</dd></div>
-                <div><dt>结论 ID</dt><dd>${evidenceValue(stage.conclusionIds)}</dd></div>
-                <div><dt>输入事实</dt><dd>${evidenceValue(stage.inputRefs)}</dd></div>
-                <div><dt>特征快照</dt><dd>${evidenceValue(stage.featureSnapshotIds)}</dd></div>
-                <div><dt>预测运行</dt><dd>${evidenceValue(stage.forecastRunIds)}</dd></div>
-                <div><dt>模型版本</dt><dd>${evidenceValue(stage.modelVersions)}</dd></div>
-                <div><dt>约束引用</dt><dd>${evidenceValue(stage.constraintRefs)}</dd></div>
-                <div><dt>缺失与警告</dt><dd>${evidenceValue(stage.warnings)}</dd></div>
-              </dl>
-            </section>`
-          : `<section>
-              <h3>本次使用</h3>
-              <dl class="foundation-evidence-list">
-                <div><dt>数据截止</dt><dd>${evidenceValue(evidence.dataCutoff)}</dd></div>
-                <div><dt>模型版本</dt><dd>${evidenceValue(evidence.modelVersion)}</dd></div>
-                <div><dt>约束版本</dt><dd>${evidenceValue(evidence.constraintVersion)}</dd></div>
-                <div><dt>入选事实</dt><dd>${evidenceValue(evidence.selectedFacts)}</dd></div>
-              </dl>
-            </section>`
-      }
-      <footer>
-        <button type="button" class="foundation-secondary-button" data-foundation-action="open-provenance" data-foundation-trigger="provenance-rail">查看完整推导</button>
-        <button type="button" class="foundation-primary-button" data-foundation-action="close-explanation">关闭</button>
-      </footer>
-    </aside>
-  `;
-}
-
-export function renderFoundationProvenance(open = false, collection = {}) {
-  if (!open) {
-    return `<button type="button" class="foundation-provenance-trigger" data-foundation-action="open-provenance" data-foundation-trigger="provenance-rail" aria-expanded="false" aria-controls="foundationProvenance">数据血缘</button>`;
-  }
-  const stages = [
-    ['JSPEC 页面', '实时价格与申报页面'],
-    ['气象数据', '温度、湿度、风速、云量'],
-    ['历史负荷', '同点位实际负荷与预测'],
-    ['持仓与限额', '可交易边界与风险参数'],
-    ['预测与特征', '时点快照、三类预测'],
-    ['策略推演', '优化器与风险约束'],
-    ['结果与复核', '解释、审批与回溯'],
-  ];
-  return `
-    <aside class="foundation-provenance" id="foundationProvenance" role="dialog" aria-modal="false" aria-label="数据血缘" tabindex="-1">
-      <header><strong>数据血缘</strong><button type="button" data-foundation-action="close-provenance">收起</button></header>
-      <section class="foundation-storage-evidence">
-        <h3>采集数据存放</h3>
-        <dl>
-          <div><dt>当前快照</dt><dd><code>${evidenceValue(
-            collection.current?.storagePath
-          )}</code></dd></div>
-          <div><dt>累计历史</dt><dd><code>${evidenceValue(
-            collection.history?.storagePath
-          )}</code></dd></div>
-          <div><dt>最近页面</dt><dd>${evidenceValue(collection.lastPageTitle)}</dd></div>
-          <div><dt>最近采集</dt><dd>${evidenceValue(collection.lastSampleAt)}</dd></div>
-        </dl>
-      </section>
-      <ol>${stages
-        .map(([title, detail]) => `<li><strong>${title}</strong><small>${detail}</small></li>`)
-        .join('')}</ol>
-    </aside>
-  `;
+export function renderFoundationProvenance(open=false,collection={}) {
+  if(!open) return '';
+  const r=collection.range || {};
+  return `<aside class="foundation-provenance" id="foundationProvenance" role="dialog" aria-modal="false" aria-label="数据来源" tabindex="-1"><header><strong>数据来源</strong><button type="button" data-foundation-action="close-provenance">收起</button></header>
+    <p>这里说明数据从哪里来、用来做什么。是否能用于所选日期，请以对应曲线和历史查询为准。</p>
+    <ol><li><strong>电价 · 交易平台</strong><small>读取你有权限查看的市场电价，用来判断购电成本。缺失日期不会用其他日期冒充。</small></li>
+    <li><strong>天气 · 天气预报与历史天气</strong><small>温度可使用天气预报；历史实况用于核对预报偏差。预测中是否实际采用天气因素，会在方法说明中标明。</small></li>
+    <li><strong>实际用电 · 平台或用电报表</strong><small>导入报表和在线采集分别保留来源。历史查询中的“来源说明”可查看报表名称、数据日期及取得时间。</small></li>
+    <li><strong>购电计划与业务限制</strong><small>用于判断还需购买多少，以及申报不能超过哪些限额。未核实前不会视为可执行方案。</small></li></ol>
+    <section class="foundation-storage-evidence"><h3>怎样找到已有数据</h3><p>在首页“查询历史数据”中选择日期与数据项目，再切换曲线、明细或来源说明。</p>${r.earliestDate&&r.latestDate?`<p>已有记录分布在 ${esc(r.earliestDate)} 至 ${esc(r.latestDate)}；其中存在缺失日期，并非每种数据都覆盖整个区间。</p>`:''}</section>
+  </aside>`;
 }

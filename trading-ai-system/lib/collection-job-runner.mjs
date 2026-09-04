@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-const PAUSE_CODES = new Set(['login_expired', 'required_column_missing', 'query_date_mismatch', 'page_changed', 'date_control_missing', 'service_unavailable']);
+const PAUSE_CODES = new Set(['login_expired', 'collector_in_use', 'access_denied', 'query_response_failed', 'required_column_missing', 'query_date_mismatch', 'page_changed', 'date_control_missing', 'service_unavailable']);
 
 function sha256(value) {
   return createHash('sha256').update(String(value)).digest('hex');
@@ -330,11 +330,13 @@ export function createCollectionJobRunner(options = {}) {
         return status(jobId);
       } else if (code === 'rate_limited') {
         const delayMs = Math.min(60000 * (2 ** (attemptCount - 1)), 1800000);
+        const requestedRetryAt = Date.parse(error?.details?.retryAt);
+        const retryAt = Math.max(Date.parse(clock()) + delayMs, Number.isFinite(requestedRetryAt) ? requestedRetryAt : 0);
         store.upsertCollectionChunk({
           ...chunk,
           state: 'rate_limited',
           attemptCount,
-          nextAttemptAt: new Date(Date.parse(clock()) + delayMs).toISOString(),
+          nextAttemptAt: new Date(retryAt).toISOString(),
           lastErrorCode: code,
           lastErrorMessage: message,
         });

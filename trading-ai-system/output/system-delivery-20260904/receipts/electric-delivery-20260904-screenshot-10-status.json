@@ -1,0 +1,13 @@
+﻿{
+    "arguments":  [
+
+                  ],
+    "errorCode":  null,
+    "errorMsg":  null,
+    "result":  {
+                   "openConversationId":  "cidH59k6WiLZMPWdAT7ioVKKscQrGUtB+7ZGKM8+ET6zj0=",
+                   "openMessageId":  "msgzFBRQhCLrXkNGATzFApbwg==",
+                   "sendStatus":  "SUCCESS"
+               },
+    "success":  true
+}

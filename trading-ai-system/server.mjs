@@ -72,6 +72,7 @@ import {
 import { openTradingEvidenceStore } from './lib/trading-evidence-store.mjs';
 import { migrateLegacyEvidence } from './lib/evidence-json-migration.mjs';
 import { createPlaywrightCollectorRuntime } from './lib/playwright-collector-runtime.mjs';
+import { assertCollectorOwnerAvailable } from './lib/collector-owner-guard.mjs';
 import { createCollectionJobRunner } from './lib/collection-job-runner.mjs';
 import { createCollectionJobScheduler } from './lib/collection-job-scheduler.mjs';
 import { createPriceAdapter } from './lib/jspec-adapters/price.mjs';
@@ -80,6 +81,7 @@ import { createOpenMeteoTemperatureAdapter } from './lib/weather-forecast-provid
 import { createForecastPublisher } from './lib/forecast-publisher.mjs';
 import { importLocalLoadHistory } from './lib/local-load-history.mjs';
 import { buildLoadForecastReport } from './lib/load-forecast-report.mjs';
+import {readForecastReview} from './lib/forecast-review.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -127,6 +129,7 @@ const outcomeLedgerPath = path.resolve(getArgValue('--outcome-ledger', process.e
 const evidenceStorePath = path.resolve(getArgValue('--evidence-store', process.env.TRADING_EVIDENCE_STORE_PATH || path.join(ledgerDataRoot, 'trading-evidence.sqlite')));
 const localLoadHistoryPath = path.resolve(getArgValue('--local-load-history', process.env.TRADING_LOCAL_LOAD_HISTORY_PATH || path.join(path.dirname(evidenceStorePath), 'local-load-history.json')));
 const collectorProfilePath = path.resolve(getArgValue('--collector-profile', process.env.TRADING_COLLECTOR_PROFILE_PATH || path.join(ledgerDataRoot, 'jspec-playwright-profile')));
+const collectorOwnerStatePath = path.resolve(getArgValue('--collector-owner-state', process.env.TRADING_COLLECTOR_OWNER_STATE || path.join(path.dirname(evidenceStorePath),'collector-owner.json')));
 const expectedPointCount = Number(getArgValue('--expected-point-count', process.env.TRADING_EXPECTED_POINT_COUNT || 96));
 const collectorLaunchUrl = getArgValue('--collector-launch-url', process.env.TRADING_COLLECTOR_LAUNCH_URL || '');
 const collectorExecutablePath = getArgValue('--collector-executable', process.env.TRADING_COLLECTOR_EXECUTABLE_PATH || '');
@@ -143,6 +146,12 @@ const evidenceStore = openTradingEvidenceStore({ filePath: evidenceStorePath });
 const collectorRuntime = createPlaywrightCollectorRuntime({
   rootDir,
   profileDir: collectorProfilePath,
+  beforeStart: async () => {
+    let owner;
+    try { owner=JSON.parse(await readFile(collectorOwnerStatePath,'utf8')); }
+    catch(error) { if(error.code==='ENOENT') return; throw error; }
+    assertCollectorOwnerAvailable(owner,{profileDir:collectorProfilePath});
+  },
   env: process.env,
   ...(collectorLaunchUrl ? { launchUrl: collectorLaunchUrl } : {}),
   ...(collectorExecutablePath ? { executablePath: collectorExecutablePath } : {}),
@@ -690,7 +699,7 @@ function evidenceErrorCode(error) {
 
 function evidenceErrorStatus(code) {
   if (code.includes('not_found')) return 404;
-  if (code.includes('already_exists') || code.includes('conflict') || ['collection_job_active','collector_stopping'].includes(code)) return 409;
+  if (code.includes('already_exists') || code.includes('conflict') || ['collection_job_active','collector_stopping','collector_in_use'].includes(code)) return 409;
   if (code.includes('blocked') || code.includes('incomplete') || code.includes('not_ready')) return 422;
   if (['login_required', 'login_expired', 'collector_browser_not_started', 'collector_not_ready', 'page_changed', 'rate_limited'].includes(code)) return 503;
   if (code.includes('invalid') || code.includes('required') || code.includes('paused')) return 400;
@@ -743,8 +752,32 @@ function publicCollectorStatus() {
   };
 }
 
+async function supplementalCollectorStatus() {
+  let owner;
+  try { owner=JSON.parse(await readFile(collectorOwnerStatePath,'utf8')); }
+  catch { return null; }
+  try { assertCollectorOwnerAvailable(owner,{profileDir:collectorProfilePath});return null; }
+  catch(error) {
+    if(!['collector_in_use','rate_limited'].includes(error.code))return null;
+    return {phase:owner.phase,source:owner.source,currentDate:owner.currentDate,collectedDays:owner.collectedDays,
+      nextAttemptAt:owner.nextAttemptAt||null,reasonCode:owner.error?.reasonCode||null,updatedAt:owner.updatedAt};
+  }
+}
+
 async function handleApi(request, response, url) {
   if (url.pathname.startsWith('/api/history/') || url.pathname.startsWith('/api/forecast/')) await evidenceMigrationPromise;
+  if (request.method === 'GET' && url.pathname === '/api/forecast/review') {
+    try {
+      sendJson(response,readForecastReview(evidenceStore,{
+        month:url.searchParams.get('month'),targetDate:url.searchParams.get('date')||undefined,
+        type:url.searchParams.get('type')||'price',
+      }));
+    } catch(error) {
+      const code=evidenceErrorCode(error);
+      sendJson(response,{ok:false,error:{code,message:code.includes('invalid')?'请选择有效的月份、日期和预测类型。':'所选日期暂时读取失败，请重试。'}},evidenceErrorStatus(code));
+    }
+    return;
+  }
   if (request.method === 'GET' && url.pathname === '/api/forecast/load') {
     try {
       const targetDate = assertEvidenceDate(url.searchParams.get('date'), 'target_date');
@@ -762,7 +795,7 @@ async function handleApi(request, response, url) {
   }
   if (request.method === 'GET' && url.pathname === '/api/collector/status') {
     await evidenceMigrationPromise;
-    sendJson(response, publicCollectorStatus());
+    sendJson(response, {...publicCollectorStatus(),supplemental:await supplementalCollectorStatus()});
     return;
   }
 

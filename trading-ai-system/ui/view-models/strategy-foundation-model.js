@@ -499,6 +499,7 @@ export function buildStrategyFoundationModel(input = {}) {
         null,
     },
     collection: {
+      supplemental: collectorStatus.supplemental || null,
       current: {
         kind: isDemo ? 'current_simulation' : 'current_real',
         label: isDemo ? '今日模拟数据' : '今日真实数据',

@@ -210,7 +210,7 @@ test(
         await page.goto(`${server.baseUrl}/?demo=submission&v=forecast-scroll-test`, {
           waitUntil: 'networkidle',
         });
-        await page.getByRole('button', { name: '价格预测' }).click();
+        await page.getByRole('button', { name: '价格预测', exact: true }).click();
         await page.waitForSelector('.forecast-table-region');
         const metrics = await page.locator('.forecast-table-region').evaluate((element) => ({
           clientWidth: element.clientWidth,

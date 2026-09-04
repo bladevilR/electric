@@ -1,0 +1,95 @@
+{
+  "manifest": [
+    {
+      "name": "01-数据与预测-价格月度总览.png",
+      "url": "http://127.0.0.1:5310/?view=data-sources&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:10.796Z"
+    },
+    {
+      "name": "02-价格预测与实际-每日96点.png",
+      "url": "http://127.0.0.1:5310/?view=data-sources&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:11.007Z"
+    },
+    {
+      "name": "03-温度预测与实际.png",
+      "url": "http://127.0.0.1:5310/?view=data-sources&date=2026-02-03&dimension=temperature&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:13.418Z"
+    },
+    {
+      "name": "04-负荷预测与实际.png",
+      "url": "http://127.0.0.1:5310/?view=data-sources&date=2026-02-03&dimension=load&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:15.844Z"
+    },
+    {
+      "name": "05-市场概览.png",
+      "url": "http://127.0.0.1:5310/?view=market-cockpit&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:18.077Z"
+    },
+    {
+      "name": "06-价格预测.png",
+      "url": "http://127.0.0.1:5310/?view=price-forecast&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:20.288Z"
+    },
+    {
+      "name": "07-申报策略.png",
+      "url": "http://127.0.0.1:5310/?view=declaration-strategy&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:22.523Z"
+    },
+    {
+      "name": "08-历史复盘.png",
+      "url": "http://127.0.0.1:5310/?view=history-review&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:24.680Z"
+    },
+    {
+      "name": "09-预测方法.png",
+      "url": "http://127.0.0.1:5310/?view=model-governance&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:26.887Z"
+    },
+    {
+      "name": "10-一分钟上手.png",
+      "url": "http://127.0.0.1:5310/%E4%B8%80%E5%88%86%E9%92%9F%E4%B8%8A%E6%89%8B.html",
+      "title": "一分钟上手 - 电力交易策略助手",
+      "capturedAt": "2026-09-04T11:06:27.679Z"
+    },
+    {
+      "name": "11-依据与审计说明.png",
+      "url": "http://127.0.0.1:5310/?view=data-sources&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:29.974Z"
+    },
+    {
+      "name": "12-申报优化工作台.png",
+      "url": "http://127.0.0.1:5310/?view=market-cockpit&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:33.042Z"
+    },
+    {
+      "name": "13-价格预测工作台.png",
+      "url": "http://127.0.0.1:5310/?view=market-cockpit&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:35.881Z"
+    },
+    {
+      "name": "14-策略进化工作台.png",
+      "url": "http://127.0.0.1:5310/?view=market-cockpit&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:38.929Z"
+    },
+    {
+      "name": "15-复盘回顾工作台.png",
+      "url": "http://127.0.0.1:5310/?view=market-cockpit&date=2026-02-03&dimension=price&v=delivery-20260904",
+      "title": "电力交易智能决策平台",
+      "capturedAt": "2026-09-04T11:06:41.938Z"
+    }
+  ],
+  "errors": []
+}

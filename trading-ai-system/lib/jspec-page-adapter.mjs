@@ -4,6 +4,8 @@ const LOGIN_PATTERN = /(?:#\/outNet|\/outNet|\/login|\/signin)|UKey\s*登录|外
 const RATE_LIMIT_PATTERN = /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
 const EMPTY_PATTERN = /暂无数据|无数据|查询结果为空|没有符合条件的数据/i;
 const SERVICE_UNAVAILABLE_PATTERN = /服务正在维护|系统维护中|服务暂不可用|service unavailable/i;
+const AUTH_FAILURE_PATTERN = /登录.{0,12}(?:失效|过期|超时)|(?:重新|未|尚未)登录|会话.{0,12}(?:失效|过期)|unauthorized|not\s+logged\s+in|(?:token|session).{0,12}(?:expired|invalid)/i;
+const ACCESS_DENIED_PATTERN = /无.{0,6}(?:访问|操作)?权限|禁止访问|forbidden|access denied/i;
 const DATE_INPUT_SELECTOR = [
   'input[type="date"]',
   'input[placeholder*="日期"]',
@@ -168,6 +170,7 @@ export function createJspecAdapter(config = {}) {
   const timePatterns = config.timePatterns || [/时点|时间点|时间|时段|交易时段|period|time/i];
   const datePatterns = config.datePatterns || [/交易日期|业务日期|预报日期|日期|date/i];
   const verifiedQueryPages = new WeakSet();
+  const failedQueryPages = new WeakMap();
 
   async function detect(page) {
     const text = `${page.url()}\n${await bodyText(page)}`;
@@ -205,6 +208,9 @@ export function createJspecAdapter(config = {}) {
   }
 
   async function submit(page) {
+    verifiedQueryPages.delete(page);
+    failedQueryPages.set(page, new CollectorAdapterError('query_response_failed', '当前查询尚未成功，不能读取旧表格。'));
+    try {
     const button = page.getByRole('button', { name: /查\s*询|搜\s*索|检\s*索/ }).first();
     if (!await button.count()) fail('query_button_missing', 'No query button was found.');
     const responsePattern = config.responseUrlPattern;
@@ -213,26 +219,60 @@ export function createJspecAdapter(config = {}) {
         if (responsePattern instanceof RegExp) return new RegExp(responsePattern.source, responsePattern.flags.replace('g', '')).test(response.url());
         return response.url().includes(String(responsePattern));
       }, { timeout: Number(config.resultTimeoutMs || 15000) })
+        .then(response => ({ response }), error => ({ error }))
       : null;
     await button.click();
     if (responsePromise) {
       let response;
       try {
-        response = await responsePromise;
+        const result = await responsePromise;
+        if (result.error) throw result.error;
+        response = result.response;
         await response.finished().catch(() => {});
       } catch {
         fail('query_response_timeout', 'The JSPEC query response did not arrive before the timeout.');
+      }
+      if (response.status() === 401) fail('login_expired', '登录已失效，请重新登录后继续采集。');
+      if (response.status() === 403) fail('access_denied', '平台拒绝访问，当前数据未采集。');
+      if (response.status() === 429) {
+        const retryAfter = await response.headerValue('retry-after').catch(() => null);
+        const deadline = /^\d+$/.test(retryAfter || '') ? Date.now() + Number(retryAfter) * 1000 : Date.parse(retryAfter);
+        fail('rate_limited', '平台要求降低访问频率，采集已退避。', {
+          ...(Number.isFinite(deadline) ? { retryAt: new Date(deadline).toISOString() } : {}),
+        });
       }
       if (!response.ok()) fail('query_response_failed', `JSPEC query returned HTTP ${response.status()}.`);
       const responseText = await response.text().catch(() => '');
       if (RATE_LIMIT_PATTERN.test(responseText)) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
       if (SERVICE_UNAVAILABLE_PATTERN.test(responseText)) fail('service_unavailable', '平台接口返回：服务正在维护中，请稍后再试。当前日期未采集成功，不等于没有数据。');
+      let payload;
+      try { payload = JSON.parse(responseText); } catch { fail('query_response_failed', '平台查询未返回可确认的业务结果，未读取旧表格。'); }
+      const businessCode = payload?.code ?? payload?.status;
+      if (String(businessCode) === '401' || AUTH_FAILURE_PATTERN.test(responseText) || LOGIN_PATTERN.test(responseText)) {
+        fail('login_expired', '登录已失效，请重新登录后继续采集。');
+      }
+      if (String(businessCode) === '403' || ACCESS_DENIED_PATTERN.test(responseText)) fail('access_denied', '平台拒绝访问，当前数据未采集。');
+      const successfulCode = businessCode != null && ['0', '200'].includes(String(businessCode));
+      if (payload?.success === false || payload?.ok === false
+        || (businessCode != null && !successfulCode)
+        || !(successfulCode || payload?.success === true || payload?.ok === true)) {
+        fail('query_response_failed', '平台未确认查询成功，未读取旧表格。');
+      }
+      const responseRows = Array.isArray(payload?.data) ? payload.data
+        : [payload?.data?.list?.list, payload?.data?.list, payload?.data?.records, payload?.data?.rows].find(Array.isArray);
+      if (responseRows?.length === 0) fail('no_data', '本次查询成功，但平台明确返回空结果。');
       verifiedQueryPages.add(page);
       await page.waitForTimeout(Math.max(0, Number(config.postSubmitSettleMs || 0)));
+    }
+    failedQueryPages.delete(page);
+    } catch (error) {
+      failedQueryPages.set(page, error);
+      throw error;
     }
   }
 
   async function waitForResult(page) {
+    if (failedQueryPages.has(page)) throw failedQueryPages.get(page);
     const responseVerified = verifiedQueryPages.has(page);
     verifiedQueryPages.delete(page);
     const state = await detect(page);
@@ -251,6 +291,7 @@ export function createJspecAdapter(config = {}) {
   }
 
   async function extract(page, options = {}) {
+    if (failedQueryPages.has(page)) throw failedQueryPages.get(page);
     const capturedAt = options.capturedAt || new Date().toISOString();
     const raw = await page.evaluate(() => {
       const visible = (element) => {

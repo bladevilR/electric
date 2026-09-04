@@ -9,6 +9,14 @@ import { chromium } from 'playwright';
 import { buildManagedBrowserLaunch } from '../lib/ukey-browser-collector.mjs';
 import { createPlaywrightCollectorRuntime } from '../lib/playwright-collector-runtime.mjs';
 
+test('an external owner guard blocks a second browser before launch', async()=>{
+  let launches=0;
+  const runtime=createPlaywrightCollectorRuntime({beforeStart:async()=>{throw Object.assign(new Error('正在采集'),{code:'collector_in_use'});},
+    playwright:{chromium:{launchPersistentContext:async()=>{launches++;throw new Error('Must not launch');}}}});
+  await assert.rejects(runtime.start(),error=>error.code==='collector_in_use');
+  assert.equal(launches,0);
+});
+
 async function createFixtureServer() {
   const server = createServer((request, response) => {
     response.setHeader('content-type', 'text/html; charset=utf-8');

@@ -1,0 +1,16 @@
+{
+  "workerPid": 27172,
+  "profileDir": "C:/Users/R/AppData/Local/ElectricTradingAI/data/jspec-playwright-profile",
+  "phase": "collecting",
+  "source": "日前电价",
+  "fromDate": "2025-06-01",
+  "toDate": "2026-07-02",
+  "startedAt": "2026-09-04T10:24:07.367Z",
+  "updatedAt": "2026-09-04T11:48:47.405Z",
+  "currentDate": "2026-03-15",
+  "collectedDays": 109,
+  "skippedCoveredDays": 1,
+  "emptyDates": [],
+  "error": null,
+  "nextAttemptAt": null
+}

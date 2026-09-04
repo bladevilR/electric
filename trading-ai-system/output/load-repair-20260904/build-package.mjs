@@ -1,0 +1,25 @@
+import {execFileSync} from 'node:child_process';
+import {mkdir,copyFile,cp,writeFile,readFile} from 'node:fs/promises';
+import {DatabaseSync} from 'node:sqlite';
+import {createHash} from 'node:crypto';
+import path from 'node:path';
+const root=process.cwd(),base=path.join(root,'output/load-repair-20260904'),stage=path.join(base,'package-staging','trading-ai-system');
+await mkdir(stage,{recursive:true});
+const files=[...new Set(execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(Boolean))].filter(name=>!/^\.playwright-cli\/|^\.codegraph\/|^output\/|^logs\/|^\.browser\/|^node_modules\/|^\.env(?!\..*example$)/.test(name));
+for(const file of files){const target=path.join(stage,file);await mkdir(path.dirname(target),{recursive:true});await copyFile(path.join(root,file),target);}
+await cp(path.join(root,'node_modules'),path.join(stage,'node_modules'),{recursive:true});
+await mkdir(path.join(stage,'runtime/node'),{recursive:true});
+await copyFile(process.execPath,path.join(stage,'runtime/node/node.exe'));
+const data=path.join(stage,'data/runtime-snapshot');await mkdir(data,{recursive:true});
+const db=new DatabaseSync('C:/Users/R/AppData/Local/ElectricTradingAI/data/trading-evidence.sqlite');
+db.exec(`VACUUM INTO '${path.join(data,'trading-evidence.sqlite').replaceAll("'","''")}'`);db.close();
+await copyFile('C:/Users/R/AppData/Local/ElectricTradingAI/data/local-load-history.json',path.join(data,'local-load-history.json'));
+await mkdir(path.join(stage,'screenshots'),{recursive:true});
+for(const name of ['01-real-load-backtest.png','02-real-load-history.png','03-history-curve.png','04-load-source-evidence.png','05-latest-actual-load.png','06-load-mobile.png','07-load-workbench-viewport.png','online-load-query.png','verification.json'])await copyFile(path.join(base,name),path.join(stage,'screenshots',name));
+const head=execFileSync('git',['rev-parse','--short','HEAD'],{encoding:'utf8'}).trim();
+await writeFile(path.join(stage,'启动真实数据系统.bat'),`@echo off\r\nsetlocal\r\nchcp 65001 >nul\r\ncd /d "%~dp0"\r\nset "PORT=5301"\r\nset "TRADING_EVIDENCE_STORE_PATH=%~dp0data\\runtime-snapshot\\trading-evidence.sqlite"\r\nset "TRADING_LOCAL_LOAD_HISTORY_PATH=%~dp0data\\runtime-snapshot\\local-load-history.json"\r\nset "TRADING_VISIBLE_HISTORY_PATH=%~dp0data\\runtime-snapshot\\ukey-visible-history.json"\r\nset "TRADING_POINT_IN_TIME_STORE_PATH=%~dp0data\\runtime-snapshot\\point-in-time-facts.json"\r\nset "TRADING_FORECAST_LEDGER_PATH=%~dp0data\\runtime-snapshot\\forecast-ledger.json"\r\nset "TRADING_OUTCOME_LEDGER_PATH=%~dp0data\\runtime-snapshot\\outcome-ledger.json"\r\nset "TRADING_CODE_COMMIT_SHA=${head}"\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start-system.ps1" -Port %PORT% -Standard "%~dp0data\\standard-96.sample.json" -OpenUrl "http://127.0.0.1:%PORT%/?view=data-sources&v=real-load-20260904" -NoPause\r\nendlocal\r\n`);
+await copyFile(path.join(root,'docs/real-load-repair-20260904.md'),path.join(stage,'本次修复与未完成事项.md'));
+await writeFile(path.join(stage,'交付说明.md'),'# 真实负荷修正版（待在线负荷接口恢复）\n\n双击「启动真实数据系统.bat」。内置 Windows Node 与 Playwright 依赖，仍需已安装的 Chrome。\n\n包含 214 天真实历史负荷、一致性 SQLite 快照及真实运行截图。历史查询、96 点回测比对已验收；最新在线负荷接口返回维护中，尚未验收通过，不是“所有实时数据已闭环”的最终交付版。详情见「本次修复与未完成事项.md」。\n\n包中没有账号密码、浏览器会话、UKey 或 Windows 凭据。\n');
+const manifest={createdAt:new Date().toISOString(),codeCommit:head,status:'historical-load-verified-online-load-service-maintenance',actualDays:214,actualPoints:20544,sqliteSha256:createHash('sha256').update(await readFile(path.join(data,'trading-evidence.sqlite'))).digest('hex'),sourceFiles:files.length};
+await writeFile(path.join(stage,'package-manifest.json'),JSON.stringify(manifest,null,2));
+console.log(JSON.stringify({stage,...manifest},null,2));

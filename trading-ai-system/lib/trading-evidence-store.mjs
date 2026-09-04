@@ -502,8 +502,13 @@ export function openTradingEvidenceStore(options = {}) {
   }
 
   function collectionRetryAt(now) {
-    return database.prepare("SELECT MAX(next_attempt_at) AS deadline FROM collection_chunks WHERE state='rate_limited' AND next_attempt_at > ?")
-      .get(assertIso(now, 'now')).deadline || null;
+    const asOf = assertIso(now, 'now');
+    const chunkDeadline = database.prepare("SELECT MAX(next_attempt_at) AS deadline FROM collection_chunks WHERE state='rate_limited' AND next_attempt_at > ?")
+      .get(asOf).deadline;
+    const captureDeadline = database.prepare(`SELECT MAX(json_extract(evidence_json,'$.retryAt')) AS deadline FROM raw_captures
+      WHERE accepted=0 AND json_extract(evidence_json,'$.reasonCode')='rate_limited'
+      AND json_extract(evidence_json,'$.retryAt') > ?`).get(asOf).deadline;
+    return [chunkDeadline,captureDeadline].filter(d=>d&&Number.isFinite(Date.parse(d))).sort().at(-1) || null;
   }
 
   function normalizeFact(fact = {}) {

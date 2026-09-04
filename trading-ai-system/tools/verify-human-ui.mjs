@@ -1,0 +1,100 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+
+// Read-only verification against a running local server. All POST requests are
+// intercepted: testing a connection button must never launch a real collector.
+const base=process.env.WORKBENCH_URL || 'http://127.0.0.1:5301';
+const browser=await chromium.launch({channel:'chrome',headless:true});
+let checks=0;
+const check=(value,message)=>{assert.ok(value,message);checks++;};
+const forbidden=/数据血缘|SQLite|SHA-256|[A-Z]:\\|actualAverageLoadMw|rolling_same_slot_median|JSPEC-LOAD|[a-f0-9]{64}|browserContext|sourceRevision/;
+try {
+  const page=await browser.newPage({viewport:{width:1600,height:1050}}),errors=[],writes=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',async route=>{
+    if(route.request().method()==='POST') {writes.push(route.request().url()); await route.fulfill({status:200,contentType:'application/json',body:'{}'});}
+    else await route.continue();
+  });
+  await page.goto(`${base}/?view=data-sources&v=human-ui-verification`,{waitUntil:'networkidle'});
+  await page.locator('[data-result-preview]').waitFor();
+  check(await page.locator('[data-result-preview] polyline[data-series-role="actual"]').count()===1,'Historical actual curve must render');
+  check(await page.locator('[data-result-preview] polyline[data-series-role="forecast"]').count()===1,'Historical forecast curve must render');
+  check(/2026-02-28/.test(await page.locator('[data-result-preview]').innerText()),'Verified historical date must be visible');
+  check(/5\.37/.test(await page.locator('[data-result-preview]').innerText()),'Verified error must be visible');
+  check(!forbidden.test(await page.locator('body').innerText()),'Main screen leaks internal values');
+  check(!(await page.locator('[data-collection-details]').evaluate(el=>el.open)),'Collection details must start closed');
+  await page.locator('[data-collection-details] > summary').click();
+  await page.waitForResponse(r=>r.url().endsWith('/api/collector/status'));
+  check(await page.locator('[data-collection-details]').evaluate(el=>el.open),'Polling must preserve disclosure state');
+  await page.locator('[data-collection-details] > summary').click();
+  await page.locator('[data-foundation-trigger="storage-location"]').click();
+  check(!forbidden.test(await page.locator('#foundationProvenance').innerText()),'Source drawer leaks engineering details');
+  check(/交易平台/.test(await page.locator('#foundationProvenance').innerText()),'Source drawer must explain origin');
+  await page.keyboard.press('Escape');
+  check(await page.locator('[data-foundation-trigger="storage-location"]').evaluate(el=>el===document.activeElement),'Closing source drawer restores focus');
+  await page.screenshot({path:'output/human-ui-audit-20260904/04-home-verified.png'});
+  await page.locator('[data-result-preview] [data-foundation-action="open-load-backtest"]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-foundation-date]')?.value==='2026-02-28' && document.querySelector('[data-forecast-tab="load"]')?.getAttribute('aria-selected')==='true');
+  await page.locator('#foundationForecastPanel [data-series-role="actual"]').first().waitFor();
+  check(/事后回测/.test(await page.locator('#foundationForecastPanel').innerText()),'Must distinguish replay from live prediction');
+  await page.locator('[data-history-filter="field"]').selectOption('actualAverageLoadMw');
+  await page.waitForFunction(()=>document.querySelector('.foundation-history-table tbody')?.querySelectorAll('tr').length===96);
+  check(/24:00/.test(await page.locator('.foundation-history-table').innerText()),'Last interval must be available');
+  check(!forbidden.test(await page.locator('.foundation-history-table').innerText()),'History must use business labels');
+  await page.locator('[data-history-mode="evidence"]').click();
+  await page.locator('.foundation-history-evidence article').first().waitFor();
+  check(/÷ 250/.test(await page.locator('.foundation-history-evidence').innerText()),'Real load source must explain conversion');
+  check(!forbidden.test(await page.locator('.foundation-history-evidence').innerText()),'Evidence must not expose paths or hashes');
+  await page.locator('[data-history-mode="chart"]').click();
+  check(await page.locator('.foundation-history-charts svg').count()>0,'History chart mode must work');
+  await page.locator('[data-foundation-trigger="derivation-risk"]').click();
+  check(/申报功率/.test(await page.locator('#foundationEvidenceDrawer').innerText()),'Risk explanation must explain the business rule');
+  check(!forbidden.test(await page.locator('#foundationEvidenceDrawer').innerText()),'Explanation must not expose identifiers');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>scrollTo(0,0));
+  await page.screenshot({path:'output/human-ui-audit-20260904/05-load-review-verified.png'});
+  await page.locator('[data-foundation-date]').fill('2026-09-02');
+  await page.locator('[data-foundation-date]').dispatchEvent('change');
+  await page.waitForResponse(r=>r.url().includes('/api/forecast/load?date=2026-09-02'));
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab',{name:'温度预测',exact:true}).click();
+  check((await page.locator('#foundationForecastPanel polyline[data-series-role="forecast"]').getAttribute('points')).split(' ').length===96,'Historical weather forecast covers the selected day');
+  check((await page.locator('#foundationForecastPanel polyline[data-series-role="actual"]').getAttribute('points')).split(' ').length===96,'Historical weather actuals can be compared on the same day');
+  await page.locator('[data-foundation-date]').fill('2026-09-04');
+  await page.locator('[data-foundation-date]').dispatchEvent('change');
+  await page.waitForResponse(r=>r.url().includes('/api/forecast/load?date=2026-09-04'));
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('tab',{name:'价格预测',exact:true}).click();
+  check((await page.locator('#foundationForecastPanel polyline[data-series-role="forecast"]').getAttribute('points')).split(' ').length===96,'Published price forecast covers 96 time slots');
+  check(await page.locator('#foundationForecastPanel [data-series-role="interval"]').count()>0,'Price uncertainty range is retained');
+  check(await page.locator('#foundationForecastPanel polyline[data-series-role="actual"]').count()===0,'Unpublished current actual prices are not invented');
+  check(writes.length===0,'Read-only user journeys must not write data');
+  for(const width of [390,320]) {
+    await page.setViewportSize({width,height:844});
+    await page.goto(`${base}/?view=data-sources&v=human-ui-mobile`,{waitUntil:'networkidle'});
+    await page.locator('[data-result-preview]').waitFor();
+    check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`No horizontal overflow at ${width}px`);
+    if(width===390) await page.screenshot({path:'output/human-ui-audit-20260904/06-mobile-verified.png'});
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto(`${base}/?demo=submission&view=data-sources`,{waitUntil:'networkidle'});
+  await page.locator('[data-collection-details] > summary').click();
+  await page.locator('[data-foundation-action="start-browser"]').click();
+  await page.waitForLoadState('networkidle');
+  check(writes.length===0,'Demo connection controls must never contact the collector');
+  await page.locator('#foundationForecastPanel .timeseries details > summary').click();
+  await page.locator('.foundation-sandbox > summary').click();
+  const slider=page.locator('[data-sandbox-control="priceWeight"]');
+  await slider.evaluate(el=>{el.value='0.9';el.dispatchEvent(new Event('change',{bubbles:true}));});
+  check(await page.locator('.foundation-sandbox').evaluate(el=>el.open),'Adjusting a slider must keep the sandbox open');
+  check(!(await page.locator('.foundation-sandbox .timeseries details').evaluate(el=>el.open)),'Opening forecast details must not open a different chart after redraw');
+  check(/90%/.test(await page.locator('[data-sandbox-control="priceWeight"] + output').innerText()),'Slider change updates the visible importance');
+  await page.locator('[data-risk-profile="active"]').click();
+  check(await page.locator('.foundation-sandbox').evaluate(el=>el.open),'Risk choice must keep the sandbox open');
+  check(await page.locator('[data-risk-profile="active"]').getAttribute('aria-pressed')==='true','Risk selection is retained');
+  await page.getByRole('tab',{name:'价格预测',exact:true}).focus();
+  await page.keyboard.press('ArrowRight');
+  check(await page.getByRole('tab',{name:'温度预测',exact:true}).getAttribute('aria-selected')==='true','Arrow key switches forecast tab');
+  assert.deepEqual(errors,[]);
+  console.log(`PASS: ${checks} read-only browser checks; no collector writes; no browser errors.`);
+} finally {await browser.close();}

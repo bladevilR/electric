@@ -181,6 +181,56 @@ test('load adapter sets both start and end date controls for a one-day query', a
   });
 });
 
+test('HTTP-200 business errors cannot authorize extraction of a stale price table', async () => {
+  await withPage(async page => {
+    let payload;
+    await page.route('https://fixture.test/**', route => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify(payload),
+    }));
+    for (const [body, code] of [
+      [{ code: 401, message: '登录已过期' }, 'login_expired'],
+      [{ code: '401', msg: 'Unauthorized' }, 'login_expired'],
+      [{ code: 403, message: '无访问权限' }, 'access_denied'],
+      [{ success: false, message: '查询失败' }, 'query_response_failed'],
+      [{ code: 500, message: '系统错误' }, 'query_response_failed'],
+      [{ unexpected: 'unrecognized response' }, 'query_response_failed'],
+      [{ status: 0, data: [] }, 'no_data'],
+    ]) {
+      payload = body;
+      await page.setContent(`<input type="date" value="2026-08-09">
+        <button onclick="fetch('https://fixture.test/queryDd2jyRqClearing')">查询</button>
+        <table><thead><tr><th>时间</th><th>日前价格</th></tr></thead>
+        <tbody><tr><td>00:15</td><td>326.6</td></tr></tbody></table>`);
+      const adapter = createPriceAdapter({ responseUrlPattern: /queryDd2jyRqClearing/ });
+      await assert.rejects(adapter.submit(page), error => error.code === code);
+      await assert.rejects(adapter.extract(page), error => error.code === code);
+      payload = { status: 0, message: '成功', data: [{ price: 326.6 }] };
+      await adapter.submit(page);
+      await adapter.waitForResult(page);
+      assert.equal((await adapter.extract(page)).facts[0].value, 326.6);
+    }
+  });
+});
+
+test('a blocked query click does not leave an unhandled response timeout', async () => {
+  await withPage(async page => {
+    page.setDefaultTimeout(150);
+    await page.setContent('<button>查询</button><div style="position:fixed;inset:0;z-index:100"></div>');
+    const adapter = createPriceAdapter({ responseUrlPattern: /queryDd2jyRqClearing/, resultTimeoutMs: 30 });
+    await assert.rejects(adapter.submit(page));
+  });
+});
+
+test('HTTP 429 preserves the platform retry deadline instead of treating throttling as a generic failure', async () => {
+  await withPage(async page => {
+    await page.route('https://fixture.test/**', route => route.fulfill({status:429,headers:{'Retry-After':'3600'},body:'Too Many Requests'}));
+    await page.setContent(`<button onclick="fetch('https://fixture.test/queryDd2jyRqClearing')">查询</button>`);
+    const adapter = createPriceAdapter({responseUrlPattern:/queryDd2jyRqClearing/});
+    const before = Date.now();
+    await assert.rejects(adapter.submit(page), error => error.code === 'rate_limited' && Date.parse(error.details.retryAt) >= before + 3600000);
+  });
+});
+
 test('price, weather, and load adapters query dates and extract typed facts', async () => {
   await withPage(async (page) => {
     const cases = [

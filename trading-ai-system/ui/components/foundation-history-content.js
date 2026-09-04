@@ -1,25 +1,36 @@
 import { renderSvgTimeseries } from './svg-timeseries.js';
-const esc = value => String(value ?? '—').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+import {escapeText as esc,sourceLabel,fieldLabel,unitLabel,dateTime,slotTime,reportName,reasonLabel} from '../presentation-language.js';
 
-export function renderHistoryContent(history = {}) {
-  const rows = history.rows || [];
-  if (history.mode === 'evidence') {
-    const captures = history.captures || [];
-    return `<div class="foundation-history-evidence local-scroll" style="max-height:400px;overflow:auto">${captures.length ? captures.map(capture => `<article><h3>${esc(capture.businessDate)} · ${esc(capture.sourceId)}</h3><dl><dt>来源文件 / 页面</dt><dd>${esc(capture.evidence?.sourceFile || capture.pageUrl)}</dd><dt>工作表</dt><dd>${esc(capture.evidence?.sourceSheet)}</dd><dt>换算依据</dt><dd>${esc(capture.evidence?.conversion || '使用源页面字段单位，未进行电量 / 功率换算')}</dd><dt>采集时间（非历史发布时间）</dt><dd>${esc(capture.capturedAt)}</dd><dt>证据 SHA-256</dt><dd style="overflow-wrap:anywhere">${esc(capture.contentSha256)}</dd><dt>采集结果</dt><dd>${capture.accepted ? '校验通过' : '未通过'} · ${Number(capture.rowCount || 0)} 条${capture.evidence?.reasonCode ? `<p>${esc(capture.evidence.reasonCode)} · ${esc(capture.evidence.reason)}</p>` : ''}</dd></dl></article>`).join('') : '<p role="status">当前筛选条件没有采集证据。</p>'}</div>`;
+function conversionText(conversion) {
+  if (/MW\s*=\s*kWh\s*\/\s*1000\s*\/\s*0\.25/i.test(conversion || '')) return '每 15 分钟的电量（千瓦时）÷ 250，得到该时段的平均用电功率（兆瓦）。';
+  if (/MW\s*=\s*MWh\s*\/\s*0\.25/.test(conversion || '')) return '每 15 分钟的电量（兆瓦时）÷ 0.25，得到该时段的平均用电功率（兆瓦）。';
+  return conversion ? '单位换算方式需结合原始报表核实。' : '按来源给出的单位展示。';
+}
+
+export function renderHistoryContent(history={}) {
+  const rows=history.rows || [];
+  if(history.mode==='evidence') {
+    const captures=history.captures || [];
+    return `<div class="foundation-history-evidence local-scroll">${captures.length?captures.map(c=>`<article><h3>${esc(c.businessDate)} · ${esc(sourceLabel(c.sourceId))}</h3><dl>
+      <dt>来源报表或平台</dt><dd>${esc(c.evidence?.sourceFile ? reportName(c.evidence.sourceFile) : sourceLabel(c.sourceId))}</dd>
+      ${c.evidence?.sourceSheet?`<dt>报表工作表</dt><dd>${esc(c.evidence.sourceSheet)}</dd>`:''}
+      <dt>单位怎样换算</dt><dd>${conversionText(c.evidence?.conversion)}</dd>
+      <dt>取得时间</dt><dd>${dateTime(c.capturedAt)}；这不是历史数据当时的发布时间。</dd>
+      <dt>核对结果</dt><dd>${c.accepted?'已通过核对':'尚未通过核对'} · ${Number(c.rowCount || 0)} 条记录${c.evidence?.reasonCode?`<p>${esc(reasonLabel(c.evidence.reasonCode,'这份记录仍需进一步核对。'))}</p>`:''}</dd></dl></article>`).join(''):'<p role="status">当前筛选条件没有来源记录，请换一个有数据的日期。</p>'}</div>`;
   }
-  if (!rows.length) return '<div class="foundation-history-empty" role="status"><strong>尚无可查询的基础数据历史</strong><p>当前日期 / 字段 / 来源没有记录。可切换日期，或启动专用 Chrome 回填。</p></div>';
-  const query = history.query || {};
-  const pagination = `<p>本页 ${rows.length} 条 · 偏移 ${Number(query.offset || 0)}${history.nextOffset != null ? ` <button type="button" data-foundation-action="history-next" data-offset="${Number(history.nextOffset)}">下一页</button>` : ''}</p>`;
-  if (history.mode === 'chart') {
-    const groups = new Map();
-    for (const row of rows) {
-      if (row.value == null || !Number.isFinite(Number(row.value))) continue;
-      const key = JSON.stringify([row.businessDate, row.fieldId, row.sourceId, row.unit]);
-      if (!groups.has(key)) groups.set(key, { row, points: new Map() });
-      const previous = groups.get(key).points.get(row.pointIndex);
-      if (!previous || row.availableAt >= previous.availableAt) groups.get(key).points.set(row.pointIndex, row);
+  if(!rows.length) return '<div class="foundation-history-empty" role="status"><strong>所选日期没有这项数据</strong><p>可以换一个日期或数据项目，已有历史不会受到平台维护影响。</p></div>';
+  const start=Number(history.query?.offset || 0)+1;
+  const pagination=`<p>显示第 ${start}–${start+rows.length-1} 条记录${history.nextOffset!=null?` <button type="button" data-foundation-action="history-next" data-offset="${Number(history.nextOffset)}">下一页</button>`:''}</p>`;
+  if(history.mode==='chart') {
+    const groups=new Map();
+    for(const row of rows) {
+      if(row.value==null || !Number.isFinite(Number(row.value))) continue;
+      const key=JSON.stringify([row.businessDate,row.fieldId,row.sourceId,row.unit]);
+      if(!groups.has(key)) groups.set(key,{row,points:new Map()});
+      const old=groups.get(key).points.get(row.pointIndex);
+      if(!old || row.availableAt>=old.availableAt) groups.get(key).points.set(row.pointIndex,row);
     }
-    return pagination + `<p>按日期、字段和来源分图；同点采用本页最新采集版本。最多显示 8 组，请缩小筛选范围查看其余曲线。</p><div class="foundation-history-charts local-scroll" style="max-height:450px;overflow:auto">${[...groups.values()].slice(0,8).map(({row,points}) => renderSvgTimeseries({title:`历史曲线 · ${row.businessDate}`,unit:row.unit,series:[{label:`${row.fieldId} · ${row.sourceId}`,points:[...points.values()].sort((a,b)=>a.pointIndex-b.pointIndex)}]})).join('')}</div>`;
+    return pagination+`<p>按日期、数据项目与来源分别展示；同一时段取本页最新记录。最多显示 8 组，可缩小日期范围查看更多。</p><div class="foundation-history-charts local-scroll">${[...groups.values()].slice(0,8).map(({row,points})=>renderSvgTimeseries({title:`历史曲线 · ${row.businessDate}`,unit:row.unit,series:[{label:`${fieldLabel(row.fieldId)} · ${sourceLabel(row.sourceId)}`,points:[...points.values()].sort((a,b)=>a.pointIndex-b.pointIndex)}]})).join('')}</div>`;
   }
-  return pagination + `<div class="local-scroll foundation-history-table" style="max-height:360px;overflow:auto"><table><thead><tr><th>业务日期</th><th>点位</th><th>字段</th><th>值 / 单位</th><th>来源</th><th>可用时间</th><th>版本</th></tr></thead><tbody>${rows.map(row => `<tr><td>${esc(row.businessDate)}</td><td>${esc(row.pointIndex)}</td><td>${esc(row.fieldId)}</td><td>${esc(row.value)} ${esc(row.unit)}</td><td>${esc(row.sourceId)}</td><td>${esc(row.availableAt)}</td><td>${esc(row.sourceRevision)}</td></tr>`).join('')}</tbody></table></div>`;
+  return pagination+`<div class="local-scroll foundation-history-table"><table><thead><tr><th>日期</th><th>时段结束</th><th>数据项目</th><th>数值</th><th>来源</th><th>取得时间</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.businessDate)}</td><td>${slotTime(r.pointIndex)}</td><td>${esc(fieldLabel(r.fieldId))}</td><td>${esc(r.value)} ${esc(unitLabel(r.unit))}</td><td>${esc(sourceLabel(r.sourceId))}</td><td>${dateTime(r.availableAt)}</td></tr>`).join('')}</tbody></table></div>`;
 }

@@ -95,8 +95,22 @@ export function createForecastPublisher(options = {}) {
   const expectedPointCount = Number(options.expectedPointCount || 96);
   const injectedModelBuilder = options.buildModelReport;
 
+  function readAllFacts(query) {
+    // Keep page boundaries stable if a collector writes historical dates concurrently.
+    return store.transaction(() => {
+      const facts = [];
+      const pageSize = 10000;
+      for (let offset = 0; ; offset += pageSize) {
+        const page = store.queryFacts({ ...query, limit: pageSize, offset });
+        facts.push(...page);
+        if (page.length < pageSize) return facts;
+      }
+    });
+  }
+
   function snapshotInputs(targetDate, cutoffAt = clock()) {
-    const facts = latestFacts(store.queryFacts({ to: targetDate, asOf: cutoffAt, limit: 100000 }));
+    const facts = latestFacts(store.transaction(() => [PRICE_FIELD, ...DRIVER_FIELDS]
+      .flatMap(fieldId => readAllFacts({ fieldId, to: targetDate, asOf: cutoffAt }))));
     return { facts, rows: factsToRows(facts), cutoffAt };
   }
 
@@ -202,11 +216,10 @@ export function createForecastPublisher(options = {}) {
   }
 
   function backfillOutcomes(query = {}) {
-    const facts = latestFacts(store.queryFacts({
+    const facts = latestFacts(readAllFacts({
       fieldId: query.targetField || PRICE_FIELD,
       from: query.from,
       to: query.to,
-      limit: 100000,
     }));
     const actualLabelVersion = query.actualLabelVersion || 'final';
     return store.appendOutcomes(facts.map((fact) => ({

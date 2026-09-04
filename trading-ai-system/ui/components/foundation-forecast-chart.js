@@ -1,4 +1,5 @@
 import { renderSvgTimeseries } from './svg-timeseries.js';
+import {plainText,unitLabel} from '../presentation-language.js';
 
 const esc = (value) =>
   String(value ?? '').replace(
@@ -12,8 +13,9 @@ const esc = (value) =>
 const usableSeries = (series = []) =>
   series.map((item) => ({
     ...item,
-    points: (item.points || []).filter((point) => Number.isFinite(Number(point.value))),
-  }));
+    label: plainText(item.label, '预测结果'),
+    points: (item.points || []).filter((point) => point.value != null && Number.isFinite(Number(point.value))),
+  })).filter(item => item.points.length || item.lowerPoints?.length);
 
 export function renderFoundationForecastChart(tab = {}) {
   const series = usableSeries(tab.series || []);
@@ -23,11 +25,11 @@ export function renderFoundationForecastChart(tab = {}) {
       <figure class="foundation-chart foundation-chart-empty" role="group" aria-labelledby="foundationChartTitle">
         <figcaption id="foundationChartTitle">
           <strong>${esc(tab.label || '预测')}曲线</strong>
-          <span>单位：${esc(tab.unit || '—')}</span>
+          <span>单位：${esc(unitLabel(tab.unit))}</span>
         </figcaption>
         <div class="foundation-empty-plot" role="status">
-          <strong>当前页签尚无可用预测曲线</strong>
-          <p>需要同一目标日、同一口径的实际值和预测版本后才能比较。</p>
+          <strong>所选日期还没有这项预测</strong>
+          <p>可先查看已有历史复盘，或换一个有记录的日期。</p>
         </div>
         <p class="foundation-chart-note">空白表示缺失，不会用零值或历史曲线冒充当前预测。</p>
       </figure>
@@ -38,7 +40,7 @@ export function renderFoundationForecastChart(tab = {}) {
     title: `${tab.label}曲线`,
     unit: tab.unit,
     series,
-  })}<p class="foundation-chart-note">${esc(tab.id === 'load' ? tab.description : '实线区分实际值与本次预测，虚线表示上一版预测；实际结果仅用于发布后的回溯。')}</p></div>`;
+  })}<p class="foundation-chart-note">${esc(tab.id === 'load' ? plainText(tab.description,'比较同一日期的预测与实际用电，查看每 15 分钟的偏差。') : '实线区分实际值与本次预测，虚线表示上一版预测；实际结果仅用于发布后的回溯。')}</p></div>`;
 }
 
 export function renderAccuracyHistory(history = [], unit = '') {
@@ -55,9 +57,9 @@ export function renderAccuracyHistory(history = [], unit = '') {
     return `<div class="foundation-accuracy-empty" role="status"><strong>尚无可回溯的准确度序列</strong><p>预测发布后，需要等待实际结果入库并完成同点位配对。</p></div>`;
   }
   return renderSvgTimeseries({
-    title: '近 30 个交易日滚动 MAE',
+    title: '历史平均误差变化',
     unit,
-    series: [{ label: '滚动 MAE', points }],
+    series: [{ label: '平均误差', points }],
     detailsLabel: '查看历史误差明细',
     indexLabel: '交易日',
   });

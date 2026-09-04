@@ -8,6 +8,13 @@ import { openTradingEvidenceStore } from '../lib/trading-evidence-store.mjs';
 
 const fixedNow = '2026-09-03T10:00:00.000Z';
 
+test('a supplemental collector cooldown also blocks regular jobs', async()=>withStore(store=>{
+  store.appendCapture({sourceId:'PRICE',businessDate:'2026-07-01',pageUrl:'https://example.test',capturedAt:fixedNow,rowCount:0,accepted:false,contentSha256:'a'.repeat(64),
+    evidence:{reasonCode:'rate_limited',retryAt:'2026-09-03T11:00:00.000Z'}});
+  assert.equal(store.collectionRetryAt(fixedNow),'2026-09-03T11:00:00.000Z');
+  assert.equal(store.collectionRetryAt('2026-09-03T12:00:00.000Z'),null);
+}));
+
 async function withStore(run) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'trading-evidence-store-'));
   const filePath = path.join(directory, 'evidence.sqlite');

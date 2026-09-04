@@ -168,6 +168,7 @@ export function createPlaywrightCollectorRuntime(options = {}) {
   }
 
   async function start() {
+    await options.beforeStart?.();
     if (context) {
       if (!managedPage || managedPage.isClosed()) await selectManagedPage();
       await bringManagedWindowToFront();

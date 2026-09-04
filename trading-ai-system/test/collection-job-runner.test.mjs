@@ -220,6 +220,25 @@ test('a no-data trading date is recorded as rejected evidence and does not stall
   }
 });
 
+test('platform Retry-After survives checkpoints and resume without early requests', async () => {
+  const source = adapter({id:'price',sourceId:'JSPEC-PRICE',earliestDate:'2026-07-01',latestDate:'2026-07-01'});
+  let calls = 0;
+  source.submit = async () => {
+    calls += 1;
+    throw Object.assign(new Error('平台限流'), {code:'rate_limited',details:{retryAt:'2026-09-03T11:00:00.000Z'}});
+  };
+  const context = await fixture([source]);
+  try {
+    const job = await context.runner.createFullBackfill({id:'retry-after'});
+    await assert.rejects(context.runner.runNext(job.id), error => error.code === 'rate_limited');
+    assert.equal(context.runner.status(job.id).nextAttemptAt, '2026-09-03T11:00:00.000Z');
+    context.runner.pause(job.id);
+    context.runner.resume(job.id);
+    await context.runner.runNext(job.id);
+    assert.equal(calls, 1);
+  } finally { await context.close(); }
+});
+
 test('service maintenance preserves the date checkpoint and records failed evidence without claiming no data',async()=>{
   const context=await fixture([adapter({id:'load',sourceId:'JSPEC-LOAD',earliestDate:'2026-07-04',latestDate:'2026-07-04',errorCode:'service_unavailable'})]);
   try {

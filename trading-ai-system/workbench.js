@@ -8,6 +8,8 @@ import { renderNavigation } from './ui/navigation.js';
 import { renderDataSourcesView, renderCollectionTruthStrip } from './ui/views/data-sources-view.js';
 import { buildStrategyFoundationModel } from './ui/view-models/strategy-foundation-model.js';
 import { createCollectorStatusPoller } from './ui/collector-status-poller.js';
+import {createReviewController} from './ui/review-controller.js';
+import { plainText } from './ui/presentation-language.js';
 import { renderMarketCockpitView } from './ui/views/market-cockpit-view.js';
 import { renderPriceForecastView } from './ui/views/price-forecast-view.js';
 import { renderDeclarationStrategyView } from './ui/views/declaration-strategy-view.js';
@@ -2698,7 +2700,8 @@ export function renderWorkbenchMarkup(payload, options = {}) {
     ...options,
     ...foundationUi,
     mode: payload.demoMode ? 'demo' : 'real',
-    targetDate: payload.date,
+    targetDate: options.activeView==='data-sources' && options.reviewState?.selection?.date || payload.date,
+    reviewState: payload.demoMode ? null : options.reviewState,
     dataSources: options.dataSources || {},
     fieldCatalog: options.fieldCatalog || {},
     marketCockpit: options.marketCockpit || {},
@@ -2720,9 +2723,10 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       marketCockpit: options.marketCockpit || {},
       strategyTrace: options.strategyTrace || {},
       collectorStatus: options.collectorStatus || {},
-      historyFacts: options.historyFacts || {},
+      historyFacts: options.reviewState?.report?.historyFacts || options.historyFacts || {},
       historyCoverage: options.historyCoverage || {},
       loadForecastReport: options.loadForecastReport || {},
+      reviewPreview: options.reviewPreview || {},
       historyMode: options.historyMode || 'detail',
       historyCaptures: options.historyCaptures || {},
     },
@@ -2792,7 +2796,42 @@ const browserState = {
   loadForecastReport: {},
   historyMode: 'detail',
   historyCaptures: {},
+  reviewState: null,
 };
+
+const reviewController=createReviewController({
+  fetchReport:async({month,date,type})=>{
+    const params=new URLSearchParams({month,date,type});
+    const [report,historyFacts]=await Promise.all([
+      fetch(`/api/forecast/review?${params}`,{cache:'no-store'}).then(responseJson),
+      fetch(`/api/history/facts?date=${date}&limit=1000`,{cache:'no-store'}).then(responseJson).catch(()=>({query:{businessDate:date},rows:[]})),
+    ]);
+    return {...report,historyFacts};
+  },
+  onState:state=>{
+    browserState.reviewState=state;
+    browserState.foundationUi=reduceFoundationUiState(browserState.foundationUi,{type:'select_tab',id:state.selection.type});
+    if(state.report?.historyFacts) browserState.historyFacts=state.report.historyFacts;
+    if(typeof window!=='undefined') {
+      const url=new URL(window.location.href);
+      url.searchParams.set('date',state.selection.date);
+      url.searchParams.set('dimension',state.selection.type);
+      window.history.replaceState(null,'',url);
+    }
+    renderBrowser();
+  },
+});
+
+async function selectReview({date,type}={}) {
+  return reviewController.select({date:date||browserState.reviewState?.selection?.date||browserState.payload?.date,type:type||browserState.reviewState?.selection?.type||'price'});
+}
+
+function reviewMonthDate(month) {
+  if(!/^\d{4}-\d{2}$/.test(month)||Number(month.slice(-2))<1||Number(month.slice(-2))>12)return null;
+  const last=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(-2)),0)).getUTCDate();
+  const day=Math.min(last,Number((browserState.reviewState?.selection?.date||browserState.payload?.date||'').slice(-2))||1);
+  return `${month}-${String(day).padStart(2,'0')}`;
+}
 
 export function claimPendingAction(state, actionId) {
   if (!state || state.pendingAction) return false;
@@ -2870,10 +2909,14 @@ function updateCollectionStrip() {
   if(!strip || !browserState.payload) return;
   const model=buildStrategyFoundationModel({...browserState,workbench:browserState.payload,targetDate:browserState.payload.date,mode:browserState.payload.demoMode?'demo':'real'});
   const focusAction=strip.contains(document.activeElement) ? document.activeElement?.dataset.foundationAction : null;
+  const detailsOpen=strip.querySelector('[data-collection-details]')?.open;
+  const summaryFocused=document.activeElement===strip.querySelector('summary');
   const template=document.createElement('template');
   template.innerHTML=renderCollectionTruthStrip(model).trim();
   const replacement=template.content.firstElementChild;
   strip.replaceWith(replacement);
+  if (detailsOpen) replacement.querySelector('[data-collection-details]').open=true;
+  if (summaryFocused) replacement.querySelector('summary')?.focus({preventScroll:true});
   if(browserState.pendingAction) replacement.querySelectorAll('button').forEach(button=>{button.disabled=true;});
   if(focusAction) [...replacement.querySelectorAll('[data-foundation-action]')].find(button=>button.dataset.foundationAction===focusAction)?.focus({preventScroll:true});
 }
@@ -2899,6 +2942,8 @@ function syncCollectionPolling() {
 function renderBrowser() {
   const root = rootElement();
   if (!root) return;
+  const openDisclosures = [...root.querySelectorAll('[data-foundation-root] details[open]')].map(el=>el.id || el.getAttribute('data-disclosure') || el.querySelector('summary')?.textContent.trim()).filter(Boolean);
+  const focusedControl = root.contains(document.activeElement) ? document.activeElement?.dataset.sandboxControl : null;
   if (browserState.loading && !browserState.payload) {
     root.innerHTML = loadingMarkup();
     return;
@@ -2918,11 +2963,16 @@ function renderBrowser() {
     ${
       browserState.actionMessage || browserState.error
         ? `<div class="toast ${browserState.error ? 'is-error' : ''}" role="${browserState.error ? 'alert' : 'status'}">
-            ${escapeHtml(browserState.error || browserState.actionMessage)}
+            ${escapeHtml(plainText(browserState.error || browserState.actionMessage, '操作暂未完成，请检查数据连接后重试。'))}
           </div>`
         : ''
     }
   `;
+  root.querySelectorAll('[data-foundation-root] details').forEach(el=>{
+    const key=el.id || el.getAttribute('data-disclosure') || el.querySelector('summary')?.textContent.trim();
+    if(openDisclosures.includes(key)) el.open=true;
+  });
+  if(focusedControl) root.querySelector(`[data-sandbox-control="${focusedControl}"]`)?.focus({preventScroll:true});
   if (browserState.pendingAction) {
     root.setAttribute('aria-busy', 'true');
     root
@@ -3057,6 +3107,10 @@ async function loadWorkbench(date = '') {
     const query = date ? `?date=${encodeURIComponent(date)}` : '';
     browserState.payload = await fetch(`/api/workbench${query}`, { cache: 'no-store' }).then(responseJson);
     browserState.activeStage = browserState.payload.currentStage;
+    if(!browserState.reviewState) {
+      const params=new URLSearchParams(window.location.search);
+      void selectReview({date:params.get('date')||browserState.payload.date,type:params.get('dimension')||'price'});
+    }
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
     // Keep the browser snapshot just behind the server clock so sub-second host skew
@@ -3077,11 +3131,6 @@ async function loadWorkbench(date = '') {
       fetch('/api/history/coverage',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,coverage:{}})),
       fetch(`/api/forecast/load?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(error=>({loadError:error.message})),
     ]);
-    if (!browserState.historyFacts?.rows?.length && browserState.historyCoverage?.coverage?.latestDate) {
-      browserState.historyFacts = await fetch(`/api/history/facts?date=${encodeURIComponent(browserState.historyCoverage.coverage.latestDate)}&limit=1000`, { cache: 'no-store' })
-        .then(responseJson)
-        .catch((error) => ({ loadError: error.message, rows: [] }));
-    }
     browserState.historyCaptures = {captures:[]};
     if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
@@ -3298,14 +3347,45 @@ async function runPrimaryAction(actionId) {
 function bindBrowserEvents() {
   const root = rootElement();
   if (!root) return;
+  root.addEventListener('keydown', event => {
+    const reviewDay=event.target.closest('svg [data-review-date]');
+    if(reviewDay && ['Enter',' '].includes(event.key)) {event.preventDefault();reviewDay.dispatchEvent(new MouseEvent('click',{bubbles:true}));return;}
+    const tab=event.target.closest('[data-forecast-tab]');
+    if(!tab || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs=[...root.querySelectorAll('[data-forecast-tab]')],index=tabs.indexOf(tab);
+    const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+    tabs[next].click();
+  });
   root.addEventListener('click', async (event) => {
+    const reviewDay=event.target.closest('[data-review-date]');
+    if(reviewDay) {
+      await selectReview({date:reviewDay.dataset.reviewDate});
+      root.querySelector('[data-review-detail]')?.scrollIntoView({block:'start',behavior:'instant'});
+      return;
+    }
+    const reviewStep=event.target.closest('[data-review-month-step],[data-review-day-step]');
+    if(reviewStep) {
+      const date=browserState.reviewState?.selection?.date||browserState.payload.date;
+      const value=new Date(`${date}T00:00:00Z`);
+      if(reviewStep.dataset.reviewMonthStep) {
+        value.setUTCDate(1);value.setUTCMonth(value.getUTCMonth()+Number(reviewStep.dataset.reviewMonthStep));
+        await selectReview({date:reviewMonthDate(value.toISOString().slice(0,7))});
+      } else {
+        value.setUTCDate(value.getUTCDate()+Number(reviewStep.dataset.reviewDayStep));
+        await selectReview({date:value.toISOString().slice(0,10)});
+      }
+      return;
+    }
+    if(event.target.closest('[data-review-retry]')) {await selectReview();return;}
     const forecastTab = event.target.closest('[data-forecast-tab]');
     if (forecastTab) {
       browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
         type: 'select_tab',
         id: forecastTab.dataset.forecastTab,
       });
-      renderBrowser();
+      if(!browserState.payload?.demoMode) void selectReview({type:forecastTab.dataset.forecastTab});
+      else renderBrowser();
       requestAnimationFrame(() => {
         rootElement()
           ?.querySelector(`[data-forecast-tab="${browserState.foundationUi.activeForecastTab}"]`)
@@ -3316,6 +3396,11 @@ function bindBrowserEvents() {
     const foundationAction = event.target.closest('[data-foundation-action]');
     if (foundationAction) {
       const action = foundationAction.dataset.foundationAction;
+      if (browserState.payload?.demoMode && ['start-browser','start-backfill','pause-backfill','resume-backfill'].includes(action)) {
+        browserState.actionMessage='演示环境不会连接真实交易平台，也不会更新真实数据。';
+        renderBrowser();
+        return;
+      }
       const triggerSelector = foundationAction.dataset.foundationTrigger
         ? `[data-foundation-trigger="${foundationAction.dataset.foundationTrigger}"]`
         : foundationAction.dataset.explanationId
@@ -3343,7 +3428,7 @@ function bindBrowserEvents() {
                 body: '{}',
               }).then(responseJson);
               browserState.actionMessage = result.job?.state === 'paused' ? '已有回填任务已暂停，断点保留；点击“继续回填”恢复。'
-                : result.reused ? '已有回填任务正在执行，未重复创建。' : `全量历史回填已启动：${result.job?.id || '任务已创建'}。`;
+                : result.reused ? '已有数据更新正在进行，不会重复启动。' : '历史数据更新已开始。';
             }
           } else {
             browserState.actionMessage = buildCollectorBrowserStartMessage(browser);
@@ -3414,6 +3499,8 @@ function bindBrowserEvents() {
         return;
       }
       if (action === 'focus-versions') {
+        const versions = rootElement()?.querySelector('#foundationVersionPanel');
+        if (versions) versions.open = true;
         rootElement()?.querySelector('#foundationVersionPanel')?.focus();
         rootElement()
           ?.querySelector('#foundationVersionPanel')
@@ -3421,7 +3508,8 @@ function bindBrowserEvents() {
         return;
       }
       if (action === 'open-load-backtest') {
-        await loadWorkbench(foundationAction.dataset.date);
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {type:'select_tab',id:'load'});
+        await selectReview({date:foundationAction.dataset.date,type:'load'});
         browserState.activeView = 'data-sources';
         renderBrowser();
         return;
@@ -3606,6 +3694,11 @@ function bindBrowserEvents() {
     }
   });
   root.addEventListener('change', async (event) => {
+    if(event.target.matches('[data-review-month],[data-review-month-jump]')) {
+      const date=reviewMonthDate(event.target.value);
+      if(date) await selectReview({date});
+      return;
+    }
     if (event.target.matches('[data-sandbox-control]')) {
       browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
         type: 'set_control',
@@ -3616,8 +3709,9 @@ function bindBrowserEvents() {
       return;
     }
     if (event.target.matches('[data-foundation-date]')) {
-      await loadWorkbench(event.target.value);
       browserState.activeView = 'data-sources';
+      if(browserState.payload?.demoMode) await loadWorkbench(event.target.value);
+      else await selectReview({date:event.target.value});
       return;
     }
     if (event.target.matches('[data-history-filter]')) {
@@ -3630,6 +3724,7 @@ function bindBrowserEvents() {
       if (values.source) parameters.set('sourceId', values.source);
       try {
         browserState.historyFacts = await fetch(`/api/history/facts?${parameters}`, { cache: 'no-store' }).then(responseJson);
+        if(browserState.reviewState?.report) browserState.reviewState.report.historyFacts=browserState.historyFacts;
         if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
         browserState.actionMessage = `已加载 ${browserState.historyFacts.rows?.length || 0} 条基础数据历史。`;
       } catch (error) {

@@ -85,6 +85,30 @@ test('publisher blocks fewer than five complete price dates and labels 5-29 as b
   });
 });
 
+test('publisher reads recent prices beyond 100000 historical facts without admitting future revisions', async () => {
+  await withPublisher(({ store, publisher }) => {
+    for (let batch = 0; batch < 10; batch += 1) {
+      store.appendFacts(Array.from({ length: 10000 }, (_, index) => ({
+        sourceId: 'HISTORICAL-WEATHER', fieldId: 'temperatureForecastC',
+        businessDate: new Date(Date.UTC(2020, 0, 1 + Math.floor((batch * 10000 + index) / 96))).toISOString().slice(0, 10),
+        pointIndex: 1 + (batch * 10000 + index) % 96, value: 20,
+        availableAt: '2025-06-01T00:00:00.000Z', capturedAt: '2025-06-01T00:00:00.000Z', sourceRevision: 'v1',
+      })));
+    }
+    seedDates(store, 1, 5, { includeDrivers: false });
+    store.appendFacts([{
+      sourceId: 'JSPEC-PRICE', fieldId: 'dayAheadUserPriceFinalYuanPerMwh',
+      businessDate: dateAt(5), pointIndex: 1, value: 99999,
+      availableAt: '2026-09-02T12:00:00.000Z', capturedAt: '2026-09-02T12:00:00.000Z', sourceRevision: 'late-v2',
+    }]);
+    assert.equal(publisher.readiness(targetDate).historicalCompleteDateCount, 5);
+    const run = publisher.publishLiveForecast(targetDate);
+    assert.equal(run.readiness.status, 'baseline_only');
+    assert.equal(run.rows.length, 2);
+    assert.ok(run.rows.every(row => row.p90 < 99999));
+  });
+});
+
 test('publication freezes as-of inputs, exposes driver contributions, and is immutable', async () => {
   await withPublisher(({ store, publisher }) => {
     seedDates(store, 1, 30);
