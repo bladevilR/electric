@@ -6565,6 +6565,21 @@ body {
   box-shadow: 0 7px 22px rgb(31 59 96 / 0.06);
 }
 
+.foundation-collector-freshness {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0 12px;
+  color: #52617a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.foundation-backfill-progress {
+  width: 100%;
+  height: 7px;
+  accent-color: #245edb;
+}
+
 .foundation-truth-item {
   position: relative;
   min-height: 72px;

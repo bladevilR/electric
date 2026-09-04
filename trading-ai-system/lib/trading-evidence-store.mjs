@@ -486,6 +486,26 @@ export function openTradingEvidenceStore(options = {}) {
       }));
   }
 
+  function collectionDateOutcomes(jobId) {
+    const id = requiredString(jobId, 'collection_job_id');
+    // New captures carry explicit ownership. Legacy captures must match their
+    // complete source/date/content identity; a job-ID prefix alone is ambiguous.
+    return database.prepare(`SELECT source_id AS sourceId, business_date AS businessDate,
+      MAX(accepted) AS accepted,
+      MAX(CASE WHEN json_extract(evidence_json, '$.reasonCode') = 'no_data' THEN 1 ELSE 0 END) AS noData
+      FROM raw_captures WHERE json_extract(evidence_json, '$.jobId') = ? OR (
+        json_extract(evidence_json, '$.jobId') IS NULL AND (
+          id = ? || ':' || source_id || ':' || business_date || ':' || content_sha256 OR
+          id = ? || ':' || source_id || ':' || business_date || ':no-data'
+        )
+      ) GROUP BY source_id, business_date`).all(id, id, id);
+  }
+
+  function collectionRetryAt(now) {
+    return database.prepare("SELECT MAX(next_attempt_at) AS deadline FROM collection_chunks WHERE state='rate_limited' AND next_attempt_at > ?")
+      .get(assertIso(now, 'now')).deadline || null;
+  }
+
   function normalizeFact(fact = {}) {
     rejectSensitive(fact, 'fact');
     const identity = pointIdentity(fact);
@@ -836,6 +856,8 @@ export function openTradingEvidenceStore(options = {}) {
     listCollectionChunks,
     appendCapture,
     queryCaptures,
+    collectionDateOutcomes,
+    collectionRetryAt,
     appendFacts,
     queryFacts,
     getCoverage,

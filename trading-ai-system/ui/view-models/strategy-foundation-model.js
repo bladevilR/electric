@@ -279,9 +279,9 @@ export function buildStrategyFoundationModel(input = {}) {
     || (collectorState === 'error' && collectorStatus.browser?.lastErrorCode === 'service_unavailable' && Boolean(collectorStatus.browser?.lastReadyAt));
   const completedChunks = Number(latestCollectionJob?.completedChunks || 0);
   const totalChunks = Number(latestCollectionJob?.totalChunks || 0);
-  const backfillProgressPct = totalChunks
-    ? Math.round((completedChunks / totalChunks) * 100)
-    : Number(latestCollectionJob?.progressPct || 0);
+  const backfillProgressPct = latestCollectionJob?.dayProgress
+    ? Number(latestCollectionJob.progressPct || 0)
+    : totalChunks ? Math.round((completedChunks / totalChunks) * 100) : Number(latestCollectionJob?.progressPct || 0);
   const forecastReport = input.forecastReport || {};
   const marketSeries = input.marketCockpit?.series || {};
   const accuracyReport = input.accuracyReport || {};
@@ -536,12 +536,15 @@ export function buildStrategyFoundationModel(input = {}) {
             : 'unknown',
       },
       backfill: {
+        ...latestCollectionJob,
         id: latestCollectionJob?.id || null,
         state: latestCollectionJob?.state || 'not_started',
         progressPct: backfillProgressPct,
         completedChunks,
         totalChunks,
       },
+      statusObservedAt: collectorStatus.observedAt || null,
+      statusPollError: collectorStatus.pollError || null,
       range: {
         dateCount: Number(canonicalCoverage.dateCount || 0),
         earliestDate: canonicalCoverage.earliestDate || null,

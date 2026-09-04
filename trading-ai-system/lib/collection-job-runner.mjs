@@ -83,6 +83,15 @@ export function createCollectionJobRunner(options = {}) {
   if (!runtime || typeof runtime.getPage !== 'function') throw new Error('collector_runtime_required');
   if (!adapters.length) throw new Error('collector_adapters_required');
   const adapterBySource = new Map(adapters.map((adapter) => [adapter.sourceId, adapter]));
+  let creating = null;
+  let executing = null;
+
+  async function pace() {
+    if (queryDelayMs > 0) {
+      const jitter = Math.round(queryDelayMs * 0.2 * (random() * 2 - 1));
+      await sleep(Math.max(0, queryDelayMs + jitter));
+    }
+  }
 
   async function requireReady() {
     const started = await runtime.start();
@@ -92,6 +101,21 @@ export function createCollectionJobRunner(options = {}) {
   }
 
   async function createFullBackfill(input = {}) {
+    // Concurrent HTTP requests must not navigate the shared Chrome at the same time.
+    if (creating) await creating;
+    const unfinished = store.listCollectionJobs().filter(job => ['running', 'paused'].includes(job.state));
+    const existing = unfinished.find(job => job.state === 'running') || unfinished[0];
+    if (existing) {
+      if ((!input.id || input.id === existing.id) && (!input.fromDate || input.fromDate === existing.earliestDate)
+        && (!input.toDate || input.toDate === existing.latestDate)) return { ...status(existing.id), reused: true };
+      throw errorWithCode('collection_job_active');
+    }
+    if (executing) throw errorWithCode('collection_job_active');
+    creating = createJob(input);
+    try { return await creating; } finally { creating = null; }
+  }
+
+  async function createJob(input) {
     const page = await requireReady();
     const requestedFrom = input.fromDate ? assertDate(input.fromDate, 'from_date') : null;
     const requestedTo = input.toDate ? assertDate(input.toDate, 'to_date') : null;
@@ -144,11 +168,36 @@ export function createCollectionJobRunner(options = {}) {
     const chunks = store.listCollectionChunks(jobId);
     const completedChunks = chunks.filter((chunk) => chunk.state === 'completed').length;
     const failedChunks = chunks.filter((chunk) => chunk.state === 'failed').length;
+    const dayProgress = { total: 0, processed: 0, accepted: 0, noData: 0, unverified: 0 };
+    for (const chunk of chunks) {
+      const days = Math.round((dateMs(chunk.endDate) - dateMs(chunk.startDate)) / 86400000) + 1;
+      dayProgress.total += days;
+      dayProgress.processed += chunk.state === 'completed' ? days
+        : Math.min(days, Math.max(0, Math.round((dateMs(chunk.cursorDate || chunk.startDate) - dateMs(chunk.startDate)) / 86400000)));
+    }
+    for (const outcome of store.collectionDateOutcomes(jobId)) {
+      const committed = chunks.some(chunk => chunk.sourceId === outcome.sourceId && outcome.businessDate >= chunk.startDate
+        && outcome.businessDate <= chunk.endDate && (chunk.state === 'completed' || outcome.businessDate < chunk.cursorDate));
+      if (!committed) continue;
+      if (outcome.accepted) dayProgress.accepted += 1;
+      else if (outcome.noData) dayProgress.noData += 1;
+    }
+    dayProgress.unverified = Math.max(0, dayProgress.processed - dayProgress.accepted - dayProgress.noData);
+    const active = chunks.find(chunk => chunk.state === 'rate_limited')
+      || chunks.find(chunk => chunk.state === 'paused') || chunks.find(chunk => !['completed', 'failed'].includes(chunk.state));
+    const cooldown = [...chunks.filter(chunk => chunk.nextAttemptAt && Date.parse(chunk.nextAttemptAt) > Date.parse(clock()))
+      .map(chunk => chunk.nextAttemptAt), store.collectionRetryAt(clock())].filter(Boolean).sort().at(-1) || null;
     return {
       ...job,
       completedChunks,
       failedChunks,
-      progressPct: chunks.length ? Math.round(completedChunks / chunks.length * 100) : 0,
+      progressPct: dayProgress.total ? Math.floor(dayProgress.processed / dayProgress.total * 10000) / 100 : 0,
+      dayProgress,
+      currentSourceId: active?.sourceId || null,
+      currentDate: active?.cursorDate || active?.startDate || null,
+      nextAttemptAt: cooldown,
+      lastErrorCode: job.lastErrorCode || active?.lastErrorCode || null,
+      lastErrorMessage: job.lastErrorMessage || active?.lastErrorMessage || null,
       chunks,
     };
   }
@@ -164,10 +213,19 @@ export function createCollectionJobRunner(options = {}) {
   }
 
   async function runNext(jobId) {
+    if (creating || executing) throw errorWithCode('collection_job_active');
+    executing = jobId;
+    try { return await runDay(jobId); } finally { executing = null; }
+  }
+
+  async function runDay(jobId) {
     const job = store.getCollectionJob(jobId);
     if (!job) throw errorWithCode('collection_job_not_found');
     if (job.state === 'paused') throw errorWithCode('collection_job_paused');
     if (job.state === 'completed') return status(jobId);
+    // A platform throttle applies to the whole browser session, not just one date.
+    const current = status(jobId);
+    if (current.nextAttemptAt) return current;
     const now = clock();
     const chunk = store.listCollectionChunks(jobId).find((candidate) =>
       ['pending', 'running', 'rate_limited'].includes(candidate.state) &&
@@ -209,6 +267,7 @@ export function createCollectionJobRunner(options = {}) {
           structureFingerprint: validated.structureFingerprint,
           contentSha256: validated.contentSha256,
           evidence: {
+            jobId,
             adapterId: adapter.id,
             pageTitle: validated.pageTitle,
             queryDate: validated.queryDate,
@@ -230,11 +289,9 @@ export function createCollectionJobRunner(options = {}) {
         });
       });
       refreshProgress(jobId);
-      runtime.transition('ready');
-      if (queryDelayMs > 0) {
-        const jitter = Math.round(queryDelayMs * 0.2 * (random() * 2 - 1));
-        await sleep(Math.max(0, queryDelayMs + jitter));
-      }
+      if (store.getCollectionJob(jobId).state === 'running') store.updateCollectionJob(jobId, {lastErrorCode:null,lastErrorMessage:null});
+      runtime.transition(store.getCollectionJob(jobId).state === 'paused' ? 'paused' : 'ready');
+      await pace();
       return status(jobId);
     } catch (error) {
       const code = error?.code || 'collection_failed';
@@ -254,7 +311,7 @@ export function createCollectionJobRunner(options = {}) {
             rowCount: 0,
             accepted: false,
             contentSha256: sha256(`${chunk.sourceId}|${businessDate}|no_data`),
-            evidence: { adapterId: adapter.id, queryDate: businessDate, reasonCode: 'no_data' },
+            evidence: { jobId, adapterId: adapter.id, queryDate: businessDate, reasonCode: 'no_data' },
           });
           store.upsertCollectionChunk({
             ...chunk,
@@ -267,7 +324,9 @@ export function createCollectionJobRunner(options = {}) {
           });
         });
         refreshProgress(jobId);
-        runtime.transition('ready');
+        if (store.getCollectionJob(jobId).state === 'running') store.updateCollectionJob(jobId, {lastErrorCode:null,lastErrorMessage:null});
+        runtime.transition(store.getCollectionJob(jobId).state === 'paused' ? 'paused' : 'ready');
+        await pace();
         return status(jobId);
       } else if (code === 'rate_limited') {
         const delayMs = Math.min(60000 * (2 ** (attemptCount - 1)), 1800000);
@@ -275,17 +334,17 @@ export function createCollectionJobRunner(options = {}) {
           ...chunk,
           state: 'rate_limited',
           attemptCount,
-          nextAttemptAt: new Date(Date.parse(now) + delayMs).toISOString(),
+          nextAttemptAt: new Date(Date.parse(clock()) + delayMs).toISOString(),
           lastErrorCode: code,
           lastErrorMessage: message,
         });
-        runtime.transition('rate_limited', { errorCode: code, errorMessage: message });
+        runtime.transition(store.getCollectionJob(jobId).state === 'paused' ? 'paused' : 'rate_limited', { errorCode: code, errorMessage: message });
       } else if (PAUSE_CODES.has(code)) {
         if (code === 'service_unavailable') store.appendCapture({
           id: `${jobId}:${chunk.sourceId}:${businessDate}:service-unavailable:${attemptCount}`,
           sourceId:chunk.sourceId,businessDate,pageUrl:typeof page?.url === 'function' ? page.url() : `collector-source:${chunk.sourceId}`,
           capturedAt:now,rowCount:0,accepted:false,contentSha256:sha256(`${chunk.sourceId}|${businessDate}|${code}|${now}`),
-          evidence:{adapterId:adapter.id,queryDate:businessDate,reasonCode:code,reason:'平台接口维护；未成功获取数据，不代表该日期无数据。'},
+          evidence:{jobId,adapterId:adapter.id,queryDate:businessDate,reasonCode:code,reason:'平台接口维护；未成功获取数据，不代表该日期无数据。'},
         });
         store.upsertCollectionChunk({ ...chunk, state: 'paused', attemptCount, lastErrorCode: code, lastErrorMessage: message });
         store.updateCollectionJob(jobId, { state: 'paused', lastErrorCode: code, lastErrorMessage: message });
@@ -299,7 +358,7 @@ export function createCollectionJobRunner(options = {}) {
           lastErrorCode: code,
           lastErrorMessage: message,
         });
-        store.updateCollectionJob(jobId, { lastErrorCode: code, lastErrorMessage: message });
+        store.updateCollectionJob(jobId, { ...(attemptCount >= 3 ? {state:'paused'} : {}), lastErrorCode: code, lastErrorMessage: message });
         runtime.transition('error', { errorCode: code, errorMessage: message });
       }
       throw error;
@@ -307,12 +366,16 @@ export function createCollectionJobRunner(options = {}) {
   }
 
   function pause(jobId) {
+    if (['completed', 'failed'].includes(status(jobId).state)) return status(jobId);
     const updated = store.updateCollectionJob(jobId, { state: 'paused', lastErrorCode: 'operator_paused', lastErrorMessage: null });
     runtime.transition('paused');
     return { ...status(jobId), ...updated };
   }
 
   function resume(jobId) {
+    if (creating || (executing && executing !== jobId)) throw errorWithCode('collection_job_active');
+    if (['completed', 'failed'].includes(status(jobId).state)) return status(jobId);
+    if (store.listCollectionJobs({state:'running'}).some(job => job.id !== jobId)) throw errorWithCode('collection_job_active');
     for (const chunk of store.listCollectionChunks(jobId)) {
       if (chunk.state === 'paused') store.upsertCollectionChunk({...chunk,state:'pending',nextAttemptAt:null,lastErrorCode:null,lastErrorMessage:null});
     }

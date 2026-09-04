@@ -162,3 +162,38 @@ test('Playwright collects history, publishes a forecast, evaluates actuals, and 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('live status refresh preserves the selected tab, unsaved filters and focus, and recovers from disconnects', {timeout:60000}, async () => {
+  const directory=await mkdtemp(path.join(os.tmpdir(),'collector-poll-browser-'));
+  const platform=await startMockPlatform();
+  let application, browser;
+  try {
+    application=await startApplication(directory,platform);
+    browser=await chromium.launch({channel:'chrome',headless:true});
+    const page=await browser.newPage({viewport:{width:1440,height:1000}});
+    const errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    let processed=1, offline=false;
+    await page.route('**/api/collector/status',async route=>{
+      if(offline) return route.abort('connectionrefused');
+      return route.fulfill({json:{observedAt:new Date().toISOString(),browser:{state:'ready'},jobs:[{id:'ui-job',state:'running',totalChunks:1,completedChunks:0,progressPct:processed,
+        dayProgress:{total:100,processed,accepted:processed,noData:0,unverified:0},currentDate:'2026-07-02',currentSourceId:'JSPEC-LOAD',scheduler:{phase:'collecting'}}]}});
+    });
+    await page.goto(`${application.baseUrl}/?view=data-sources`,{waitUntil:'networkidle'});
+    await page.getByRole('tab',{name:'负荷预测'}).click();
+    const input=page.locator('[data-foundation-date]');
+    // Set without a change event, as a user who has not yet submitted an edit.
+    await input.evaluate(element=>{element.value='2026-07-13';element.focus();});
+    processed=2;
+    await page.waitForFunction(()=>document.querySelector('.foundation-truth-strip')?.textContent.includes('已查询 2/100'),{},{timeout:12000});
+    assert.equal(await input.inputValue(),'2026-07-13');
+    assert.equal(await input.evaluate(element=>document.activeElement===element),true);
+    assert.equal(await page.getByRole('tab',{name:'负荷预测'}).getAttribute('aria-selected'),'true');
+    offline=true;
+    await page.waitForFunction(()=>document.querySelector('.foundation-collector-freshness')?.textContent.includes('状态更新失败'),{},{timeout:12000});
+    offline=false; processed=3;
+    await page.waitForFunction(()=>document.querySelector('.foundation-truth-strip')?.textContent.includes('已查询 3/100'),{},{timeout:12000});
+    assert.doesNotMatch(await page.locator('.foundation-collector-freshness').innerText(),/状态更新失败/);
+    assert.deepEqual(errors,[]);
+  } finally {await browser?.close();await application?.close();await platform.close();await rm(directory,{recursive:true,force:true});}
+});

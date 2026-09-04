@@ -73,6 +73,7 @@ import { openTradingEvidenceStore } from './lib/trading-evidence-store.mjs';
 import { migrateLegacyEvidence } from './lib/evidence-json-migration.mjs';
 import { createPlaywrightCollectorRuntime } from './lib/playwright-collector-runtime.mjs';
 import { createCollectionJobRunner } from './lib/collection-job-runner.mjs';
+import { createCollectionJobScheduler } from './lib/collection-job-scheduler.mjs';
 import { createPriceAdapter } from './lib/jspec-adapters/price.mjs';
 import { createLoadAdapter } from './lib/jspec-adapters/load.mjs';
 import { createOpenMeteoTemperatureAdapter } from './lib/weather-forecast-provider.mjs';
@@ -179,7 +180,8 @@ const forecastPublisher = createForecastPublisher({
   codeCommitSha: process.env.TRADING_CODE_COMMIT_SHA || 'working-tree',
   expectedPointCount,
 });
-const activeCollectionLoops = new Map();
+const collectionScheduler = createCollectionJobScheduler({runner:collectionRunner, store:evidenceStore});
+collectionScheduler.recoverInterrupted();
 let evidenceMigrationStatus = { state: 'running' };
 const evidenceMigrationPromise = migrateLegacyEvidence({
   store: evidenceStore,
@@ -688,7 +690,7 @@ function evidenceErrorCode(error) {
 
 function evidenceErrorStatus(code) {
   if (code.includes('not_found')) return 404;
-  if (code.includes('already_exists') || code.includes('conflict')) return 409;
+  if (code.includes('already_exists') || code.includes('conflict') || ['collection_job_active','collector_stopping'].includes(code)) return 409;
   if (code.includes('blocked') || code.includes('incomplete') || code.includes('not_ready')) return 422;
   if (['login_required', 'login_expired', 'collector_browser_not_started', 'collector_not_ready', 'page_changed', 'rate_limited'].includes(code)) return 503;
   if (code.includes('invalid') || code.includes('required') || code.includes('paused')) return 400;
@@ -732,29 +734,13 @@ function publicCollectorStatus() {
       forecastInputField: 'temperatureForecastC',
       actualEvaluationField: 'temperatureActualC',
     },
-    jobs: evidenceStore.listCollectionJobs().slice(0, 10),
+    observedAt: new Date().toISOString(),
+    jobs: evidenceStore.listCollectionJobs().slice(0, 10).map(job => {
+      const {chunks, ...summary} = collectionRunner.status(job.id);
+      return {...summary, scheduler:collectionScheduler.status(job.id)};
+    }),
     storage: { engine: 'SQLite', path: evidenceStorePath },
   };
-}
-
-function startCollectionLoop(jobId) {
-  if (activeCollectionLoops.has(jobId)) return activeCollectionLoops.get(jobId);
-  const loop = (async () => {
-    while (true) {
-      const current = collectionRunner.status(jobId);
-      if (['paused', 'completed', 'failed'].includes(current.state)) return current;
-      try {
-        const next = await collectionRunner.runNext(jobId);
-        if (next.state === 'completed') return next;
-      } catch (error) {
-        const code = evidenceErrorCode(error);
-        if (code === 'rate_limited') return collectionRunner.status(jobId);
-        return collectionRunner.status(jobId);
-      }
-    }
-  })().finally(() => activeCollectionLoops.delete(jobId));
-  activeCollectionLoops.set(jobId, loop);
-  return loop;
 }
 
 async function handleApi(request, response, url) {
@@ -782,7 +768,7 @@ async function handleApi(request, response, url) {
 
   if (request.method === 'POST' && url.pathname === '/api/collector/browser/start') {
     try {
-      const browser = await collectorRuntime.start();
+      const browser = await collectionScheduler.openBrowser(() => collectorRuntime.start());
       sendJson(response, { browser, requiresManualUkeyLogin: browser.state === 'login_required' }, browser.state === 'error' ? 503 : 200);
     } catch (error) {
       sendEvidenceError(response, error);
@@ -792,7 +778,7 @@ async function handleApi(request, response, url) {
 
   if (request.method === 'POST' && url.pathname === '/api/collector/browser/stop') {
     try {
-      sendJson(response, { browser: await collectorRuntime.stop() });
+      sendJson(response, { browser: await collectionScheduler.stop(() => collectorRuntime.stop()) });
     } catch (error) {
       sendEvidenceError(response, error);
     }
@@ -803,14 +789,13 @@ async function handleApi(request, response, url) {
     try {
       await evidenceMigrationPromise;
       const body = await readJsonBody(request);
-      const job = await collectionRunner.createFullBackfill({
+      const job = await collectionScheduler.createBackfill({
         id: body.id,
         fromDate: body.fromDate || body.from,
         toDate: body.toDate || body.to,
       });
-      startCollectionLoop(job.id);
       await appendAuditEvent(auditLogPath, { type: 'evidence_backfill_started', actor: request.headers['x-operator-id'] || 'local-operator', outcome: 'started', jobId: job.id });
-      sendJson(response, { job, started: true }, 202);
+      sendJson(response, { job, started: job.state === 'running', reused: Boolean(job.reused) }, 202);
     } catch (error) {
       sendEvidenceError(response, error);
     }
@@ -823,16 +808,15 @@ async function handleApi(request, response, url) {
       const jobId = decodeURIComponent(collectionJobMatch[1]);
       const action = collectionJobMatch[2];
       if (request.method === 'GET' && !action) {
-        sendJson(response, { job: collectionRunner.status(jobId) });
+        sendJson(response, { job: {...collectionRunner.status(jobId), scheduler:collectionScheduler.status(jobId)} });
         return;
       }
       if (request.method === 'POST' && action === 'pause') {
-        sendJson(response, { job: collectionRunner.pause(jobId) });
+        sendJson(response, { job: collectionScheduler.pause(jobId) });
         return;
       }
       if (request.method === 'POST' && action === 'resume') {
-        const job = collectionRunner.resume(jobId);
-        startCollectionLoop(jobId);
+        const job = collectionScheduler.resume(jobId);
         sendJson(response, { job });
         return;
       }

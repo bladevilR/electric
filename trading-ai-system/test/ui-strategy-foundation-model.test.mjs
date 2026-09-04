@@ -440,6 +440,20 @@ test('foundation model reports the newest collection job instead of a stale comp
   assert.equal(model.collection.backfill.progressPct, 0);
 });
 
+test('day-level API progress wins over incomplete month chunks and exposes query outcomes', () => {
+  const model = buildStrategyFoundationModel({ collectorStatus: {
+    observedAt:'2026-09-04T08:00:00Z',
+    jobs:[{id:'daily',state:'running',completedChunks:0,totalChunks:99,progressPct:0.68,
+      dayProgress:{total:2931,processed:20,accepted:0,noData:20,unverified:0},
+      currentSourceId:'JSPEC-DAYAHEAD-USER',currentDate:'2024-01-21',nextAttemptAt:'2026-09-04T08:01:00Z',
+      lastErrorCode:'rate_limited',scheduler:{phase:'waiting'}}],
+  }});
+  assert.equal(model.collection.backfill.progressPct,0.68);
+  assert.equal(model.collection.backfill.dayProgress.noData,20);
+  assert.equal(model.collection.backfill.currentDate,'2024-01-21');
+  assert.equal(model.collection.backfill.scheduler.phase,'waiting');
+});
+
 test('baseline-only price evidence names the real inputs formula and missing drivers', () => {
   const model = buildStrategyFoundationModel({
     mode: 'real',

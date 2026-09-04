@@ -4,6 +4,21 @@ import assert from 'node:assert/strict';
 import { renderDataSourcesView } from '../ui/views/data-sources-view.js';
 import { renderAccuracyHistory } from '../ui/components/foundation-forecast-chart.js';
 
+test('backfill shows checked days, empty results, retry date and stale status without implying data completeness', () => {
+  const html = renderDataSourcesView({foundationInput:{collectorStatus:{pollError:'连接中断',observedAt:'2026-09-04T08:00:00Z',
+    jobs:[{id:'daily',state:'running',completedChunks:0,totalChunks:99,progressPct:0.68,
+      dayProgress:{total:2931,processed:20,accepted:0,noData:20,unverified:0},currentSourceId:'JSPEC-DAYAHEAD-USER',currentDate:'2024-01-21',
+      nextAttemptAt:'2026-09-04T08:01:00Z',lastErrorCode:'rate_limited',scheduler:{phase:'waiting'}}]}}});
+  assert.match(html,/0\.68%/);
+  assert.match(html,/20\/2931/);
+  assert.match(html,/成功取数 0/);
+  assert.match(html,/空数据 20/);
+  assert.match(html,/2024-01-21/);
+  assert.match(html,/16:01/);
+  assert.match(html,/状态更新失败/);
+  assert.match(html,/不是数据完整率/);
+});
+
 test('history chart and provenance modes render distinct real data surfaces',()=>{
   const base={historyFacts:{query:{fieldId:'actualAverageLoadMw'},rows:[{businessDate:'2026-02-28',pointIndex:1,fieldId:'actualAverageLoadMw',value:40,unit:'MW',sourceId:'LOCAL-LOAD:核对单.xlsx'}]}};
   const chart=renderDataSourcesView({foundationInput:{...base,historyMode:'chart'}});

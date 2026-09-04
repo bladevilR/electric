@@ -67,7 +67,7 @@ const metricCard = (id, label, value, suffix, explanation, openExplanation, acti
   </div>
 `;
 
-function truthStrip(model) {
+export function renderCollectionTruthStrip(model) {
   const current = model.collection.current;
   const history = model.collection.history;
   const lastAttempt = evidenceTimeText(model.collection.lastSampleAt);
@@ -108,6 +108,15 @@ function truthStrip(model) {
   const ukeyLoggedIn = model.collection.ukey.state === 'logged_in';
   const range = model.collection.range;
   const backfill = model.collection.backfill;
+  const days = backfill.dayProgress;
+  const sourceLabel = {'JSPEC-DAYAHEAD-USER':'日前电价','JSPEC-LOAD':'用户负荷'}[backfill.currentSourceId]
+    || (backfill.currentSourceId?.startsWith('OPEN-METEO') ? '温度预报与实况' : backfill.currentSourceId);
+  const reason = {operator_paused:'已手动暂停',collector_restarted:'服务重启后已暂停，断点保留',service_unavailable:'平台接口维护，未跳过当前日期',
+    login_expired:'登录已过期，请在专用 Chrome 登录后继续',login_required:'请在专用 Chrome 登录后继续',rate_limited:'平台限流',
+    collection_stalled:'检查点未推进，已保护性暂停'}[backfill.lastErrorCode] || backfill.lastErrorMessage || backfill.lastErrorCode;
+  const phase = backfill.state === 'completed' ? '查询已完成' : backfill.scheduler?.phase === 'draining' ? '暂停中，正在保存当前查询'
+    : backfill.state === 'paused' ? (reason || '已暂停') : backfill.scheduler?.phase === 'waiting' ? '等待自动重试'
+      : backfill.state === 'running' ? '正在逐日查询' : '尚未开始';
   const jobAction = backfill.state === 'running'
     ? { id: 'pause-backfill', label: '暂停回填' }
     : backfill.state === 'paused'
@@ -141,10 +150,15 @@ function truthStrip(model) {
       <div class="foundation-truth-item ${backfill.state === 'completed' ? 'is-ready' : 'is-warning'}">
         <small>回填进度</small>
         <strong>${numberText(backfill.progressPct, '%')}</strong>
-        <span>${backfill.totalChunks ? `${backfill.completedChunks}/${backfill.totalChunks} 个分片` : '尚未开始全量历史回填'}</span>
-        <span>分片处理完成不代表各类数据已齐全</span>
+        <span>${days ? `已查询 ${days.processed}/${days.total} 个来源日 · ${esc(phase)}` : backfill.totalChunks ? `${backfill.completedChunks}/${backfill.totalChunks} 个分片` : '尚未开始全量历史回填'}</span>
+        ${days ? `<progress class="foundation-backfill-progress" value="${days.processed}" max="${days.total || 1}" aria-label="回填查询进度"></progress><span>成功取数 ${days.accepted} · 空数据 ${days.noData}${days.unverified ? ` · 待核实 ${days.unverified}` : ''}</span>` : ''}
+        ${backfill.currentDate ? `<span>断点：${esc(sourceLabel)} · ${esc(backfill.currentDate)}</span>` : ''}
+        ${backfill.nextAttemptAt && backfill.state === 'running' ? `<span>自动重试：${esc(evidenceTimeText(backfill.nextAttemptAt))}（北京时间）</span>` : ''}
+        ${reason && backfill.state !== 'paused' ? `<span>${esc(reason)}</span>` : ''}
+        <span>查询进度不是数据完整率；同一天的不同来源分别计数</span>
         <div class="foundation-strip-actions"><button type="button" class="foundation-secondary-button" ${browserActionAttribute}>打开专用 Chrome</button><button type="button" class="foundation-primary-button" data-foundation-action="${jobAction.id}" data-job-id="${esc(backfill.id || '')}">${jobAction.label}</button></div>
       </div>
+      <p class="foundation-collector-freshness" role="status">${model.collection.statusPollError ? `状态更新失败，显示上次结果；正在重连 · ${esc(model.collection.statusPollError)}` : `状态自动更新${model.collection.statusObservedAt ? ` · 最近同步 ${esc(evidenceTimeText(model.collection.statusObservedAt))}` : ''}`}</p>
     </section>
   `;
 }
@@ -386,7 +400,7 @@ export function renderDataSourcesView(state = {}) {
         <div><small>FOUNDATION &amp; FORECAST EVIDENCE</small><h1>基础数据与预测依据</h1><p>价格、温度与负荷共同影响 96 点申报策略；每条预测均可追溯来源、版本与准确度。</p></div>
         <div class="foundation-heading-controls"><label>交易日<input type="date" value="${esc(model.identity.targetDate || '')}" data-foundation-date></label><button type="button" class="foundation-primary-button" data-foundation-action="start-backfill">开始全量回填</button><span class="mode-identity">${esc(model.identity.environment)}</span></div>
       </header>
-      ${truthStrip(model)}
+      ${renderCollectionTruthStrip(model)}
       ${forecastTabs(model, activeId)}
       ${activeId === 'load' ? `<section class="foundation-section"><strong>真实用户负荷历史：${Number(model.loadHistory.dateCount || 0)} 天</strong><p>最近有数据日：${esc(model.loadHistory.latestDate || '暂无')}。历史记录不代表当前交易日已采集。</p>${model.loadHistory.latestComparableDate ? `<button class="foundation-secondary-button" type="button" data-foundation-action="open-load-backtest" data-date="${esc(model.loadHistory.latestComparableDate)}">查看最近可回测日 ${esc(model.loadHistory.latestComparableDate)}</button>` : ''}${model.loadHistory.latestDate ? `<button class="foundation-secondary-button" type="button" data-foundation-action="open-load-backtest" data-date="${esc(model.loadHistory.latestDate)}">查看最近实际负荷 ${esc(model.loadHistory.latestDate)}</button>` : ''}</section>` : ''}
       <section class="foundation-section foundation-forecast" id="foundationForecastPanel" role="tabpanel" aria-labelledby="foundationTab-${activeId}">

@@ -5,7 +5,9 @@ import {
 } from './lib/strategy-evolution.mjs';
 import { scheduleWorkbenchMotion } from './workbench-motion.js';
 import { renderNavigation } from './ui/navigation.js';
-import { renderDataSourcesView } from './ui/views/data-sources-view.js';
+import { renderDataSourcesView, renderCollectionTruthStrip } from './ui/views/data-sources-view.js';
+import { buildStrategyFoundationModel } from './ui/view-models/strategy-foundation-model.js';
+import { createCollectorStatusPoller } from './ui/collector-status-poller.js';
 import { renderMarketCockpitView } from './ui/views/market-cockpit-view.js';
 import { renderPriceForecastView } from './ui/views/price-forecast-view.js';
 import { renderDeclarationStrategyView } from './ui/views/declaration-strategy-view.js';
@@ -2863,6 +2865,37 @@ function loadingMarkup(message = '正在核对今日数据…') {
   `;
 }
 
+function updateCollectionStrip() {
+  const strip=rootElement()?.querySelector('.foundation-truth-strip');
+  if(!strip || !browserState.payload) return;
+  const model=buildStrategyFoundationModel({...browserState,workbench:browserState.payload,targetDate:browserState.payload.date,mode:browserState.payload.demoMode?'demo':'real'});
+  const focusAction=strip.contains(document.activeElement) ? document.activeElement?.dataset.foundationAction : null;
+  const template=document.createElement('template');
+  template.innerHTML=renderCollectionTruthStrip(model).trim();
+  const replacement=template.content.firstElementChild;
+  strip.replaceWith(replacement);
+  if(browserState.pendingAction) replacement.querySelectorAll('button').forEach(button=>{button.disabled=true;});
+  if(focusAction) [...replacement.querySelectorAll('[data-foundation-action]')].find(button=>button.dataset.foundationAction===focusAction)?.focus({preventScroll:true});
+}
+
+const collectorStatusPoller=createCollectorStatusPoller({
+  read:({signal})=>fetch('/api/collector/status',{cache:'no-store',signal}).then(responseJson),
+  onStatus:status=>{
+    if(Date.parse(status.observedAt || '') < Date.parse(browserState.collectorStatus?.observedAt || '')) return;
+    browserState.collectorStatus={...status,pollError:null};
+    updateCollectionStrip();
+  },
+  onError:error=>{
+    browserState.collectorStatus={...browserState.collectorStatus,pollError:error.message};
+    updateCollectionStrip();
+  },
+});
+
+function syncCollectionPolling() {
+  if(browserState.payload && !browserState.payload.demoMode && browserState.activeView==='data-sources' && !document.hidden) collectorStatusPoller.start();
+  else collectorStatusPoller.stop();
+}
+
 function renderBrowser() {
   const root = rootElement();
   if (!root) return;
@@ -2893,7 +2926,7 @@ function renderBrowser() {
   if (browserState.pendingAction) {
     root.setAttribute('aria-busy', 'true');
     root
-      .querySelectorAll('[data-primary-action], [data-evolution-action]')
+      .querySelectorAll('[data-primary-action], [data-evolution-action], [data-foundation-action="start-browser"], [data-foundation-action="start-backfill"], [data-foundation-action="pause-backfill"], [data-foundation-action="resume-backfill"]')
       .forEach((button) => {
         button.disabled = true;
         button.setAttribute('aria-disabled', 'true');
@@ -2902,6 +2935,7 @@ function renderBrowser() {
     root.removeAttribute('aria-busy');
   }
   scheduleWorkbenchMotion(root);
+  syncCollectionPolling();
 }
 
 async function responseJson(response) {
@@ -3308,7 +3342,8 @@ function bindBrowserEvents() {
                 headers: { 'content-type': 'application/json' },
                 body: '{}',
               }).then(responseJson);
-              browserState.actionMessage = `全量历史回填已启动：${result.job?.id || '任务已创建'}。`;
+              browserState.actionMessage = result.job?.state === 'paused' ? '已有回填任务已暂停，断点保留；点击“继续回填”恢复。'
+                : result.reused ? '已有回填任务正在执行，未重复创建。' : `全量历史回填已启动：${result.job?.id || '任务已创建'}。`;
             }
           } else {
             browserState.actionMessage = buildCollectorBrowserStartMessage(browser);
@@ -3325,6 +3360,8 @@ function bindBrowserEvents() {
       if (action === 'pause-backfill' || action === 'resume-backfill') {
         const jobId = foundationAction.dataset.jobId;
         if (!jobId || !claimPendingAction(browserState, action)) return;
+        browserState.error='';
+        renderBrowser();
         try {
           const verb = action === 'pause-backfill' ? 'pause' : 'resume';
           await fetch(`/api/collector/jobs/${encodeURIComponent(jobId)}/${verb}`, { method: 'POST', cache: 'no-store' }).then(responseJson);
@@ -3675,6 +3712,9 @@ function bindBrowserEvents() {
 }
 
 if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange',syncCollectionPolling);
+  window.addEventListener('pagehide',()=>collectorStatusPoller.stop());
+  window.addEventListener('pageshow',syncCollectionPolling);
   bindBrowserEvents();
   loadWorkbench();
 }
