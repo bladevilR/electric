@@ -233,6 +233,7 @@ export function buildStrategyFoundationModel(input = {}) {
   const ukeyStatus = input.ukeyStatus || {};
   const collectorStatus = input.collectorStatus || {};
   const canonicalFacts = input.historyFacts?.rows || [];
+  const loadReport = input.loadForecastReport || {};
   const canonicalCoverage = input.historyCoverage?.coverage || input.historyCoverage || {};
   const history = ukeyStatus.visibleHistory || {};
   const targetDate = String(input.targetDate || workbench.date || '');
@@ -274,6 +275,8 @@ export function buildStrategyFoundationModel(input = {}) {
     .sort((left, right) =>
       (Date.parse(right?.createdAt || '') || 0) - (Date.parse(left?.createdAt || '') || 0)
     )[0] || null;
+  const browserSessionReady = ['ready','collecting','paused','rate_limited'].includes(collectorState)
+    || (collectorState === 'error' && collectorStatus.browser?.lastErrorCode === 'service_unavailable' && Boolean(collectorStatus.browser?.lastReadyAt));
   const completedChunks = Number(latestCollectionJob?.completedChunks || 0);
   const totalChunks = Number(latestCollectionJob?.totalChunks || 0);
   const backfillProgressPct = totalChunks
@@ -355,17 +358,23 @@ export function buildStrategyFoundationModel(input = {}) {
       id: 'load',
       label: '负荷预测',
       unit: 'MW',
-      description: '比较实际负荷、当前负荷预测与上一版本预测。',
+      description: loadReport.caveat || '比较同一用户口径的实际负荷与预测；全省系统负荷不能替代用户负荷。',
       source: {
         ...marketSeries,
-        evidenceActual: fieldPoints(canonicalFacts, ['actualLoadMw', 'actualAverageLoadMw'], targetDate),
-        evidenceForecast: fieldPoints(canonicalFacts, ['loadForecastMw', 'systemLoadForecastMw'], targetDate),
+        evidenceActual: loadReport.rows?.some(row => row.actualValue !== null && row.actualValue !== undefined)
+          ? loadReport.rows.filter(row => row.actualValue !== null && row.actualValue !== undefined).map(row => ({pointIndex:row.pointIndex,value:row.actualValue}))
+          : fieldPoints(canonicalFacts, ['actualAverageLoadMw', 'actualLoadMw'], targetDate),
+        evidenceForecast: loadReport.status ? (loadReport.rows || []).map(row => ({pointIndex:row.pointIndex,value:row.pointForecast})) : fieldPoints(canonicalFacts, ['loadForecastMw'], targetDate),
       },
       actualKeys: ['evidenceActual', 'actualAverageLoadMw'],
-      currentKeys: ['evidenceForecast', 'systemLoadForecastMw', 'netLoadForecastMw'],
-      previousKeys: ['previousSystemLoadForecastMw'],
+      currentKeys: ['evidenceForecast', ...(isDemo ? ['systemLoadForecastMw', 'netLoadForecastMw'] : [])],
+      previousKeys: isDemo ? ['previousSystemLoadForecastMw'] : [],
     }),
   ];
+  if (loadReport.kind) {
+    tabs[2].series[1].label = loadReport.kind === 'historical_backtest' ? '事后回测预测（非当时发布）' : '当前估算（未发布）';
+    if (loadReport.status !== 'ready') tabs[2].series[1].points = [];
+  }
   const priceIntervalLower = runFieldPoints(latestPriceRun?.rows, 'p10');
   const priceIntervalUpper = runFieldPoints(latestPriceRun?.rows, 'p90');
   if (priceIntervalLower.length && priceIntervalUpper.length) {
@@ -446,6 +455,12 @@ export function buildStrategyFoundationModel(input = {}) {
     temperature: accuracyForTarget('temperature'),
     load: accuracyForTarget('load'),
   };
+  if (loadReport.status) accuracyByTab.load = {
+    metrics: { ...{mae:null,rmse:null,mape:null,baselineSkill:null}, ...(loadReport.metrics || {}) },
+    history: loadReport.history || [], versions: [], kind: loadReport.kind,
+    modelVersion: [loadReport.modelId, loadReport.modelVersion].filter(Boolean).join(' · ') || null,
+    sampleDays: loadReport.sampleDays ?? null, lastBacktestAt: loadReport.generatedAt || null,
+  };
   const priceReadiness = latestPriceRun?.readiness || {};
   const priceMissingReasonLabels = {
     historical_complete_dates_below_30: '完整历史少于 30 天，暂不启用多因素模型',
@@ -503,6 +518,7 @@ export function buildStrategyFoundationModel(input = {}) {
       simulation: { kind: 'simulation', label: '模拟方案' },
       collectorState,
       collectorError,
+      collectorErrorCode: collectorStatus.browser?.lastErrorCode || null,
       lastPageTitle: collectorStatus.browser?.lastPageTitle || ukeyStatus.collector?.lastPageTitle || null,
       lastPageUrl: collectorStatus.browser?.lastPageUrl || ukeyStatus.collector?.lastPageUrl || null,
       lastSampleAt: ukeyStatus.collector?.lastSampleAt || null,
@@ -510,10 +526,10 @@ export function buildStrategyFoundationModel(input = {}) {
       readinessStatus,
       dedicatedChrome: {
         state: collectorState,
-        connected: ['ready', 'collecting', 'paused', 'rate_limited'].includes(collectorState),
+        connected: browserSessionReady,
       },
       ukey: {
-        state: ['ready', 'collecting', 'paused', 'rate_limited'].includes(collectorState)
+        state: browserSessionReady
           ? 'logged_in'
           : ['login_required', 'login_expired'].includes(collectorState)
             ? collectorState
@@ -539,6 +555,7 @@ export function buildStrategyFoundationModel(input = {}) {
     forecast: {
       evidenceByTab: {
         price: priceEvidence,
+        load: { source: loadReport.sources?.length ? `用户实际负荷 · ${loadReport.sources.length} 个来源（展开查看）` : '用户实际日电量 / 本地结算核对单', sourceDetails:loadReport.sources || [], dataCutoff:loadReport.dataCutoff, trainingPeriod:loadReport.trainingStartDate ? `${loadReport.trainingStartDate} 至 ${loadReport.trainingEndDate}` : null, formula: loadReport.formula || '同点用户历史负荷中位数（MW）', caveat: loadReport.caveat || '尚未形成同一用户口径的负荷预测证据。' },
       },
       tabs: tabs.map((tab) => {
         const interval = tab.series.find((series) => series.role === 'interval');
@@ -559,14 +576,21 @@ export function buildStrategyFoundationModel(input = {}) {
     },
     historyExplorer: {
       rows: canonicalFacts,
+      query: input.historyFacts?.query || {},
+      nextOffset: input.historyFacts?.nextOffset ?? null,
+      mode: input.historyMode || 'detail',
+      captures: input.historyCaptures?.captures || [],
+      sourceIds: uniqueValues([...(loadReport.allSources || loadReport.sources || []),...canonicalFacts.map(row=>row.sourceId),input.historyFacts?.query?.sourceId]),
       range: {
         earliestDate: canonicalCoverage.earliestDate || null,
         latestDate: canonicalCoverage.latestDate || null,
       },
       storagePath: collectorStatus.storage?.path || null,
     },
+    loadHistory: { ...(loadReport.coverage || {}), latestComparableDate: loadReport.latestComparableDate || null, status: loadReport.status || 'unavailable' },
     accuracy: { ...accuracyByTab.price, byTab: accuracyByTab },
     failures: {
+      load: loadReport.loadError || null,
       forecast: forecastReport.loadError || null,
       accuracy: accuracyReport.loadError || null,
       versions: input.forecastRuns?.loadError || null,

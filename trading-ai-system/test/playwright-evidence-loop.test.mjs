@@ -59,7 +59,13 @@ async function startMockPlatform() {
 }
 
 async function startApplication(directory, platform) {
-  const port = 9000 + Math.floor(Math.random() * 500);
+  // Let Windows choose an available non-reserved port instead of guessing a
+  // port from a range that may be reserved by Hyper-V / system services.
+  const probe = http.createServer();
+  probe.listen(0, '127.0.0.1');
+  await once(probe, 'listening');
+  const port = probe.address().port;
+  await new Promise(resolve => probe.close(resolve));
   const args = [
     '--no-warnings', 'server.mjs', '--port', String(port),
     '--standard', path.join(systemRoot, 'data', 'standard-96.sample.json'),
@@ -118,9 +124,10 @@ async function waitForJob(baseUrl, jobId) {
 test('Playwright collects history, publishes a forecast, evaluates actuals, and renders the evidence workbench', { timeout: 60000 }, async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'playwright-evidence-loop-'));
   const platform = await startMockPlatform();
-  const application = await startApplication(directory, platform);
+  let application;
   let browser;
   try {
+    application = await startApplication(directory, platform);
     const backfill = await json(await fetch(`${application.baseUrl}/api/collector/jobs/backfill`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
     }));
@@ -150,7 +157,7 @@ test('Playwright collects history, publishes a forecast, evaluates actuals, and 
     assert.notEqual((await page.locator('.foundation-metric > strong').first().innerText()).trim(), '—');
   } finally {
     if (browser) await browser.close();
-    await application.close();
+    await application?.close();
     await platform.close();
     await rm(directory, { recursive: true, force: true });
   }

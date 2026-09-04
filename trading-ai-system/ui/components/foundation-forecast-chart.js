@@ -38,7 +38,7 @@ export function renderFoundationForecastChart(tab = {}) {
     title: `${tab.label}曲线`,
     unit: tab.unit,
     series,
-  })}<p class="foundation-chart-note">实线区分实际值与本次预测，虚线表示上一版预测；实际结果仅用于发布后的回溯。</p></div>`;
+  })}<p class="foundation-chart-note">${esc(tab.id === 'load' ? tab.description : '实线区分实际值与本次预测，虚线表示上一版预测；实际结果仅用于发布后的回溯。')}</p></div>`;
 }
 
 export function renderAccuracyHistory(history = [], unit = '') {

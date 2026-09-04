@@ -2720,6 +2720,9 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       collectorStatus: options.collectorStatus || {},
       historyFacts: options.historyFacts || {},
       historyCoverage: options.historyCoverage || {},
+      loadForecastReport: options.loadForecastReport || {},
+      historyMode: options.historyMode || 'detail',
+      historyCaptures: options.historyCaptures || {},
     },
   };
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
@@ -2784,6 +2787,9 @@ const browserState = {
   collectorStatus: {},
   historyFacts: {},
   historyCoverage: {},
+  loadForecastReport: {},
+  historyMode: 'detail',
+  historyCaptures: {},
 };
 
 export function claimPendingAction(state, actionId) {
@@ -3023,7 +3029,7 @@ async function loadWorkbench(date = '') {
     // cannot make an otherwise valid point-in-time request look like a future query.
     const asOf = new Date(Date.now() - 1000).toISOString();
     const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
-    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns,browserState.collectorStatus,browserState.historyFacts,browserState.historyCoverage] = await Promise.all([
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns,browserState.collectorStatus,browserState.historyFacts,browserState.historyCoverage,browserState.loadForecastReport] = await Promise.all([
       fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
@@ -3035,12 +3041,15 @@ async function loadWorkbench(date = '') {
       fetch('/api/collector/status',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,browser:{state:'unavailable'},jobs:[]})),
       fetch(`/api/history/facts?date=${encodeURIComponent(selectedDate)}&limit=1000`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,rows:[]})),
       fetch('/api/history/coverage',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,coverage:{}})),
+      fetch(`/api/forecast/load?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(error=>({loadError:error.message})),
     ]);
     if (!browserState.historyFacts?.rows?.length && browserState.historyCoverage?.coverage?.latestDate) {
       browserState.historyFacts = await fetch(`/api/history/facts?date=${encodeURIComponent(browserState.historyCoverage.coverage.latestDate)}&limit=1000`, { cache: 'no-store' })
         .then(responseJson)
         .catch((error) => ({ loadError: error.message, rows: [] }));
     }
+    browserState.historyCaptures = {captures:[]};
+    if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
         fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
@@ -3102,6 +3111,14 @@ async function loadForecastReport(date = '') {
     browserState.forecastLoading = false;
     renderBrowser();
   }
+}
+
+async function loadHistoryCaptures() {
+  const query = browserState.historyFacts?.query || {};
+  const params = new URLSearchParams();
+  for (const key of ['from','to','sourceId']) if (query[key]) params.set(key, query[key]);
+  if (query.businessDate) params.set('date', query.businessDate);
+  browserState.historyCaptures = await fetch(`/api/history/captures?${params}`, {cache:'no-store'}).then(responseJson);
 }
 
 export function buildCollectorActionMessage(result = {}) {
@@ -3366,11 +3383,27 @@ function bindBrowserEvents() {
           ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
+      if (action === 'open-load-backtest') {
+        await loadWorkbench(foundationAction.dataset.date);
+        browserState.activeView = 'data-sources';
+        renderBrowser();
+        return;
+      }
+      if (action === 'history-next') {
+        const query = new URLSearchParams(Object.entries(browserState.historyFacts.query || {}).filter(([,value])=>value !== undefined && value !== null));
+        if (query.has('businessDate')) { query.set('date',query.get('businessDate'));query.delete('businessDate'); }
+        query.set('offset',foundationAction.dataset.offset);
+        browserState.historyFacts = await fetch(`/api/history/facts?${query}`,{cache:'no-store'}).then(responseJson);
+        renderBrowser();
+        return;
+      }
     }
     const historyMode = event.target.closest('[data-history-mode]');
     if (historyMode) {
-      root.querySelectorAll('[data-history-mode]').forEach((button) => button.classList.toggle('is-active', button === historyMode));
-      browserState.actionMessage = `基础数据历史已切换为“${historyMode.textContent.trim()}”视图。`;
+      browserState.historyMode = historyMode.dataset.historyMode;
+      try { if (browserState.historyMode === 'evidence') await loadHistoryCaptures(); }
+      catch (error) { browserState.historyCaptures = {captures:[]}; browserState.error = `采集证据查询失败：${error.message}`; }
+      renderBrowser();
       return;
     }
     const riskButton = event.target.closest('[data-risk-profile]');
@@ -3560,6 +3593,7 @@ function bindBrowserEvents() {
       if (values.source) parameters.set('sourceId', values.source);
       try {
         browserState.historyFacts = await fetch(`/api/history/facts?${parameters}`, { cache: 'no-store' }).then(responseJson);
+        if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
         browserState.actionMessage = `已加载 ${browserState.historyFacts.rows?.length || 0} 条基础数据历史。`;
       } catch (error) {
         browserState.error = `历史查询失败：${error.message}`;

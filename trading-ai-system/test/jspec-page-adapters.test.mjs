@@ -27,6 +27,34 @@ async function withPage(run) {
   }
 }
 
+test('load collection reports service maintenance instead of misclassifying it as no data',async()=>{
+  await withPage(async page=>{
+    await page.setContent('<p>您访问的服务正在维护中，请稍后再试！</p><table><tbody><tr><td>暂无数据</td></tr></tbody></table>');
+    const adapter=createLoadAdapter();
+    assert.equal((await adapter.detect(page)).state,'service_unavailable');
+    await assert.rejects(adapter.extract(page),error=>error.code==='service_unavailable');
+  });
+});
+
+test('load extraction confirms time intervals and source units and never erases a negative sign',async()=>{
+  await withPage(async page=>{
+    const adapter=createLoadAdapter();
+    const html=(unit,value)=>`<input type="date" value="2026-02-28"><table><thead><tr><th>时间</th><th>实际电量${unit}</th></tr></thead><tbody>${Array.from({length:96},(_,i)=>`<tr><td>${i===95?'24:00':`${String(Math.floor((i+1)/4)).padStart(2,'0')}:${String((i+1)%4*15).padStart(2,'0')}`}</td><td>${value}</td></tr>`).join('')}</tbody></table>`;
+    for(const [unit,value,mw] of [['(kWh)',250,1],['(MWh)',2,8]]) {
+      await page.setContent(html(unit,value));
+      const result=adapter.validate(await adapter.extract(page),{businessDate:'2026-02-28'});
+      assert.equal(result.facts.find(f=>f.fieldId==='actualAverageLoadMw')?.value,mw);
+    }
+    await page.setContent(html('(kWh)',-20));
+    const negative=await adapter.extract(page);
+    assert.equal(negative.facts[0].value,-20);
+    assert.throws(()=>adapter.validate(negative,{businessDate:'2026-02-28'}),/invalid_actual_load/);
+    await page.setContent(html('',20));
+    const unknownUnit=await adapter.extract(page);
+    assert.throws(()=>adapter.validate(unknownUnit,{businessDate:'2026-02-28'}));
+  });
+});
+
 test('production JSPEC adapters navigate through their micro-frontend base paths', async () => {
   const visited = [];
   const page = {

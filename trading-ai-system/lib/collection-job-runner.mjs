@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-const PAUSE_CODES = new Set(['login_expired', 'required_column_missing', 'query_date_mismatch', 'page_changed', 'date_control_missing']);
+const PAUSE_CODES = new Set(['login_expired', 'required_column_missing', 'query_date_mismatch', 'page_changed', 'date_control_missing', 'service_unavailable']);
 
 function sha256(value) {
   return createHash('sha256').update(String(value)).digest('hex');
@@ -281,9 +281,15 @@ export function createCollectionJobRunner(options = {}) {
         });
         runtime.transition('rate_limited', { errorCode: code, errorMessage: message });
       } else if (PAUSE_CODES.has(code)) {
+        if (code === 'service_unavailable') store.appendCapture({
+          id: `${jobId}:${chunk.sourceId}:${businessDate}:service-unavailable:${attemptCount}`,
+          sourceId:chunk.sourceId,businessDate,pageUrl:typeof page?.url === 'function' ? page.url() : `collector-source:${chunk.sourceId}`,
+          capturedAt:now,rowCount:0,accepted:false,contentSha256:sha256(`${chunk.sourceId}|${businessDate}|${code}|${now}`),
+          evidence:{adapterId:adapter.id,queryDate:businessDate,reasonCode:code,reason:'平台接口维护；未成功获取数据，不代表该日期无数据。'},
+        });
         store.upsertCollectionChunk({ ...chunk, state: 'paused', attemptCount, lastErrorCode: code, lastErrorMessage: message });
         store.updateCollectionJob(jobId, { state: 'paused', lastErrorCode: code, lastErrorMessage: message });
-        runtime.transition(code === 'login_expired' ? 'login_expired' : 'page_changed', { errorCode: code, errorMessage: message });
+        runtime.transition(code === 'login_expired' ? 'login_expired' : code === 'service_unavailable' ? 'error' : 'page_changed', { errorCode: code, errorMessage: message });
       } else {
         store.upsertCollectionChunk({
           ...chunk,
@@ -307,6 +313,9 @@ export function createCollectionJobRunner(options = {}) {
   }
 
   function resume(jobId) {
+    for (const chunk of store.listCollectionChunks(jobId)) {
+      if (chunk.state === 'paused') store.upsertCollectionChunk({...chunk,state:'pending',nextAttemptAt:null,lastErrorCode:null,lastErrorMessage:null});
+    }
     const updated = store.updateCollectionJob(jobId, { state: 'running', lastErrorCode: null, lastErrorMessage: null });
     runtime.transition('ready');
     return { ...status(jobId), ...updated };

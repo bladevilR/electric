@@ -4,6 +4,24 @@ import assert from 'node:assert/strict';
 import { renderDataSourcesView } from '../ui/views/data-sources-view.js';
 import { renderAccuracyHistory } from '../ui/components/foundation-forecast-chart.js';
 
+test('history chart and provenance modes render distinct real data surfaces',()=>{
+  const base={historyFacts:{query:{fieldId:'actualAverageLoadMw'},rows:[{businessDate:'2026-02-28',pointIndex:1,fieldId:'actualAverageLoadMw',value:40,unit:'MW',sourceId:'LOCAL-LOAD:核对单.xlsx'}]}};
+  const chart=renderDataSourcesView({foundationInput:{...base,historyMode:'chart'}});
+  assert.match(chart,/历史曲线 · 2026-02-28/);
+  const evidence=renderDataSourcesView({foundationInput:{...base,historyMode:'evidence',historyCaptures:{captures:[{businessDate:'2026-02-28',sourceId:'LOCAL-LOAD:核对单.xlsx',contentSha256:'a'.repeat(64),evidence:{sourceFile:'核对单.xlsx',sourceSheet:'28',conversion:'MW = kWh / 1000 / 0.25'}}]}}});
+  assert.match(evidence,/MW = kWh \/ 1000 \/ 0.25/);
+  assert.match(evidence,/来源文件/);
+  assert.doesNotMatch(evidence,/foundation-history-table/);
+});
+
+test('load workbench exposes historical backtest identity, real-load filters and every returned point',()=>{
+  const html=renderDataSourcesView({mode:'real',targetDate:'2026-02-28',activeForecastTab:'load',foundationInput:{loadForecastReport:{kind:'historical_backtest',status:'ready',rows:[{pointIndex:1,pointForecast:42,actualValue:40}],metrics:{mae:2},sources:['LOCAL-LOAD:核对单.xlsx'],coverage:{dateCount:214,latestDate:'2026-05-05'},latestComparableDate:'2026-02-28',caveat:'事后回测，不是当时发布的预测'},historyFacts:{query:{from:'2026-02-28',to:'2026-02-28',fieldId:'actualAverageLoadMw'},rows:Array.from({length:96},(_,i)=>({businessDate:'2026-02-28',pointIndex:i+1,fieldId:'actualAverageLoadMw',value:40,unit:'MW',sourceId:'LOCAL-LOAD:核对单.xlsx'}))}}});
+  assert.match(html,/事后回测/);assert.match(html,/查看最近可回测日/);
+  assert.match(html,/value="actualAverageLoadMw" selected/);
+  assert.match(html,/<td>96<\/td>/);
+  assert.match(html,/核对单/);
+});
+
 function render(overrides = {}) {
   return renderDataSourcesView({
     mode: 'real',

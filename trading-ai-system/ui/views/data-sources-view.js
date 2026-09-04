@@ -1,4 +1,5 @@
 import { renderFieldCatalogTable } from '../components/field-catalog-table.js';
+import { renderHistoryContent } from '../components/foundation-history-content.js';
 import {
   renderAccuracyHistory,
   renderFoundationForecastChart,
@@ -86,7 +87,7 @@ function truthStrip(model) {
       }`,
       'is-danger',
     ],
-    error: ['采集器异常', model.collection.collectorError || '请检查浏览器连接', 'is-danger'],
+    error: [model.collection.collectorErrorCode === 'service_unavailable' ? '平台数据接口维护中' : '采集器异常', model.collection.collectorError || '请检查浏览器连接', 'is-danger'],
     unavailable: [
       '采集状态不可用',
       model.collection.collectorError || '状态接口暂时不可访问',
@@ -141,6 +142,7 @@ function truthStrip(model) {
         <small>回填进度</small>
         <strong>${numberText(backfill.progressPct, '%')}</strong>
         <span>${backfill.totalChunks ? `${backfill.completedChunks}/${backfill.totalChunks} 个分片` : '尚未开始全量历史回填'}</span>
+        <span>分片处理完成不代表各类数据已齐全</span>
         <div class="foundation-strip-actions"><button type="button" class="foundation-secondary-button" ${browserActionAttribute}>打开专用 Chrome</button><button type="button" class="foundation-primary-button" data-foundation-action="${jobAction.id}" data-job-id="${esc(backfill.id || '')}">${jobAction.label}</button></div>
       </div>
     </section>
@@ -289,8 +291,8 @@ function sandboxSection(model, controls, openExplanation, activeTriggerKey) {
 }
 
 function historySection(model) {
-  const rows = model.historyExplorer.rows || [];
-  const preview = rows.slice(0, 12);
+  const query = model.historyExplorer.query || {};
+  const options = (items, selected) => items.map(([value,label]) => `<option value="${esc(value)}"${value === (selected || '') ? ' selected' : ''}>${esc(label)}</option>`).join('');
   return `
     <section class="foundation-section foundation-history" aria-labelledby="foundationHistoryTitle">
       <header class="foundation-section-heading">
@@ -298,19 +300,15 @@ function historySection(model) {
         <span class="foundation-storage-badge">${esc(model.collection.storageEngine || '尚未初始化')}</span>
       </header>
       <div class="foundation-history-filters">
-        <label>开始日期<input type="date" value="${esc(model.historyExplorer.range.earliestDate || '')}" data-history-filter="from"></label>
-        <label>结束日期<input type="date" value="${esc(model.historyExplorer.range.latestDate || '')}" data-history-filter="to"></label>
-        <label>数据字段<select data-history-filter="field"><option value="">全部</option><option value="dayAheadUserPriceFinalYuanPerMwh">价格</option><option value="temperatureForecastC">温度预报</option><option value="loadForecastMw">负荷预测</option></select></label>
-        <label>数据来源<select data-history-filter="source"><option value="">全部</option><option value="JSPEC-DAYAHEAD-USER">JSPEC 价格</option><option value="JSPEC-LOAD">JSPEC 负荷</option><option value="OPEN-METEO-PREVIOUS-RUNS:suzhou-center-v1">Open-Meteo</option></select></label>
+        <label>开始日期<input type="date" value="${esc(query.from || query.businessDate || model.identity.targetDate || '')}" data-history-filter="from"></label>
+        <label>结束日期<input type="date" value="${esc(query.to || query.businessDate || model.identity.targetDate || '')}" data-history-filter="to"></label>
+        <label>数据字段<select data-history-filter="field">${options([['','全部'],['dayAheadUserPriceFinalYuanPerMwh','价格'],['temperatureForecastC','温度预报'],['actualAverageLoadMw','用户实际负荷 MW'],['actualKwh','用户实际电量 kWh'],['loadForecastMw','负荷预测']],query.fieldId)}</select></label>
+        <label>数据来源<select data-history-filter="source">${options([['','全部'],...[...new Set(['JSPEC-DAYAHEAD-USER','JSPEC-LOAD','OPEN-METEO-PREVIOUS-RUNS:suzhou-center-v1',...(model.historyExplorer.sourceIds || [])])].map(id=>[id,id.startsWith('OPEN-METEO-') ? `Open-Meteo · ${id.includes('ARCHIVE') ? '历史天气' : '温度预报'}` : id.startsWith('LOCAL-LOAD:') ? id.slice(11) : id])],query.sourceId)}</select></label>
       </div>
       <div class="foundation-history-modes" role="group" aria-label="历史数据查看形式">
-        <button type="button" class="is-active" data-history-mode="chart">曲线</button>
-        <button type="button" data-history-mode="detail">明细</button>
-        <button type="button" data-history-mode="evidence">采集证据</button>
+        ${[['chart','曲线'],['detail','明细'],['evidence','采集证据']].map(([id,label])=>`<button type="button" class="${model.historyExplorer.mode === id ? 'is-active' : ''}" aria-pressed="${model.historyExplorer.mode === id}" data-history-mode="${id}">${label}</button>`).join('')}
       </div>
-      ${preview.length
-        ? `<div class="local-scroll foundation-history-table"><table><thead><tr><th>业务日期</th><th>点位</th><th>字段</th><th>值</th><th>来源</th><th>可用时间</th><th>版本</th></tr></thead><tbody>${preview.map((row) => `<tr><td>${esc(row.businessDate)}</td><td>${esc(row.pointIndex)}</td><td>${esc(row.fieldId)}</td><td>${esc(row.value)}</td><td>${esc(row.sourceId)}</td><td>${esc(evidenceTimeText(row.availableAt) || row.availableAt)}</td><td>${esc(row.sourceRevision)}</td></tr>`).join('')}</tbody></table></div>`
-        : `<div class="foundation-history-empty" role="status"><strong>尚无可查询的基础数据历史</strong><p>打开专用 Chrome 完成 UKey 登录并启动回填后，价格与负荷将写入 SQLite；温度预报由 Open-Meteo 独立补齐。</p></div>`}
+      ${renderHistoryContent(model.historyExplorer)}
     </section>
   `;
 }
@@ -390,10 +388,11 @@ export function renderDataSourcesView(state = {}) {
       </header>
       ${truthStrip(model)}
       ${forecastTabs(model, activeId)}
+      ${activeId === 'load' ? `<section class="foundation-section"><strong>真实用户负荷历史：${Number(model.loadHistory.dateCount || 0)} 天</strong><p>最近有数据日：${esc(model.loadHistory.latestDate || '暂无')}。历史记录不代表当前交易日已采集。</p>${model.loadHistory.latestComparableDate ? `<button class="foundation-secondary-button" type="button" data-foundation-action="open-load-backtest" data-date="${esc(model.loadHistory.latestComparableDate)}">查看最近可回测日 ${esc(model.loadHistory.latestComparableDate)}</button>` : ''}${model.loadHistory.latestDate ? `<button class="foundation-secondary-button" type="button" data-foundation-action="open-load-backtest" data-date="${esc(model.loadHistory.latestDate)}">查看最近实际负荷 ${esc(model.loadHistory.latestDate)}</button>` : ''}</section>` : ''}
       <section class="foundation-section foundation-forecast" id="foundationForecastPanel" role="tabpanel" aria-labelledby="foundationTab-${activeId}">
         ${inlineAlert(
           '预测证据加载失败',
-          [model.failures.forecast, model.failures.versions].filter(Boolean).join('；')
+          (activeId === 'load' ? [model.failures.load] : [model.failures.forecast, model.failures.versions]).filter(Boolean).join('；')
         )}
         <div class="foundation-forecast-layout">
           ${renderFoundationForecastChart(activeTab)}
@@ -404,8 +403,10 @@ export function renderDataSourcesView(state = {}) {
             <dl>
               <div><dt>数据来源</dt><dd>${esc(activeForecastEvidence.source || (activeId === 'temperature' ? `${model.collection.weather.provider || '天气预报源'} · ${numberText(model.collection.weather.forecastLeadHours, 'h 提前量')}` : activeId === 'load' ? 'JSPEC 负荷预测' : `JSPEC 历史价格 + ${model.collection.weather.provider || '天气预报源'} 温度预报 + JSPEC 负荷预测`))}</dd></div>
               <div><dt>核心公式</dt><dd>${esc(activeForecastEvidence.formula || (activeId === 'price' ? '价格 = 同点基线 + 温度贡献 + 负荷贡献' : activeId === 'temperature' ? '小时预报 → 15分钟线性对齐' : '同点历史 + 日历与气象特征'))}</dd></div>
+              ${activeForecastEvidence.sourceDetails?.length ? `<div><dt>来源明细</dt><dd><details><summary>查看 ${activeForecastEvidence.sourceDetails.length} 个来源</summary>${activeForecastEvidence.sourceDetails.map(source=>`<p>${esc(source)}</p>`).join('')}</details></dd></div>` : ''}
+              ${activeForecastEvidence.trainingPeriod ? `<div><dt>训练日期区间</dt><dd>${esc(activeForecastEvidence.trainingPeriod)}</dd></div>` : ''}
               <div><dt>当前模型</dt><dd>${esc(activeAccuracy.modelVersion || '尚无有效版本')}</dd></div>
-              <div><dt>数据截止</dt><dd>${esc(evidenceTimeText(model.identity.dataCutoff) || '尚无可用证据')}</dd></div>
+              <div><dt>${activeId === 'load' ? '证据可用时间' : '数据截止'}</dt><dd>${esc(evidenceTimeText(activeId === 'load' ? activeForecastEvidence.dataCutoff : model.identity.dataCutoff) || '尚无可用证据')}</dd></div>
               <div><dt>样本天数</dt><dd>${numberText(activeAccuracy.sampleDays, ' 天')}</dd></div>
               <div><dt>最近回测</dt><dd>${esc(evidenceTimeText(activeAccuracy.lastBacktestAt) || '尚未完成')}</dd></div>
               ${activeForecastEvidence.caveat ? `<div><dt>当前限制</dt><dd>${esc(activeForecastEvidence.caveat)}</dd></div>` : ''}

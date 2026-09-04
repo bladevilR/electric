@@ -464,6 +464,8 @@ export function openTradingEvidenceStore(options = {}) {
   function queryCaptures(filters = {}) {
     const where = whereClause(filters, {
       sourceId: { column: 'source_id' },
+      from: { column: 'business_date', operator: '>=', normalize: value => assertDate(value, 'from_date') },
+      to: { column: 'business_date', operator: '<=', normalize: value => assertDate(value, 'to_date') },
       businessDate: { column: 'business_date', normalize: (value) => assertDate(value, 'business_date') },
       accepted: { column: 'accepted', normalize: (value) => value ? 1 : 0 },
     });
@@ -505,7 +507,7 @@ export function openTradingEvidenceStore(options = {}) {
 
   function appendFacts(facts = []) {
     if (!Array.isArray(facts)) throw new Error('facts_array_required');
-    const select = database.prepare(`SELECT id FROM facts
+    const select = database.prepare(`SELECT id, value_json, unit, available_at, captured_at FROM facts
       WHERE source_id=? AND field_id=? AND business_date=? AND dimension_key=? AND source_revision=?`);
     const insert = database.prepare(`INSERT INTO facts(
       id, source_id, field_id, business_date, point_index, dimension_key, value_json,
@@ -518,7 +520,12 @@ export function openTradingEvidenceStore(options = {}) {
         const normalized = normalizeFact(fact);
         const existing = select.get(normalized.sourceId, normalized.fieldId, normalized.businessDate, normalized.dimensionKey, normalized.sourceRevision);
         if (existing) {
-          if (existing.id !== normalized.id) throw new Error('fact_revision_conflict');
+          // Re-observing unchanged source content must not create a revision or
+          // move the first-known availability forward. Changes and backdating
+          // under the same source revision remain contract violations.
+          const unchangedLaterCapture = existing.value_json === stableJson(normalized.value) && existing.unit === normalized.unit
+            && normalized.availableAt >= existing.available_at && normalized.capturedAt >= existing.captured_at;
+          if (existing.id !== normalized.id && !unchangedLaterCapture) throw new Error('fact_revision_conflict');
           skipped += 1;
           continue;
         }

@@ -6,6 +6,28 @@ import {
   buildStrategyFoundationModel,
 } from '../ui/view-models/strategy-foundation-model.js';
 
+test('local user-load report drives its own curve, accuracy and source evidence', () => {
+  const model=buildStrategyFoundationModel({mode:'real',targetDate:'2026-02-28',loadForecastReport:{kind:'historical_backtest',status:'ready',rows:[{pointIndex:1,pointForecast:42,actualValue:40}],metrics:{mae:2,rmse:2,mape:5},history:[{date:'2026-02-28',mae:2}],modelId:'user_load_same_slot_median_28',modelVersion:'1.0.0',sampleDays:28,generatedAt:'2026-09-04T00:00:00Z',sources:['LOCAL-LOAD:核对单.xlsx'],formula:'median(prior actual MW)',caveat:'事后回测，不是当时发布的预测',coverage:{dateCount:214,latestDate:'2026-05-05'},latestComparableDate:'2026-02-28'}});
+  assert.equal(model.forecastTabs[2].series[1].points[0].value,42);
+  assert.equal(model.forecastTabs[2].series[0].points[0].value,40);
+  assert.equal(model.accuracy.byTab.load.metrics.mae,2);
+  assert.match(model.forecastTabs[2].description,/事后回测/);
+  assert.equal(model.loadHistory.latestComparableDate,'2026-02-28');
+});
+
+test('a failed user-load report cannot fall back to a provincial load forecast',()=>{
+  const model=buildStrategyFoundationModel({mode:'real',loadForecastReport:{loadError:'failed'},marketCockpit:{series:{systemLoadForecastMw:{points:[{pointIndex:1,value:90000}]},previousSystemLoadForecastMw:{points:[{pointIndex:1,value:89000}]}}}});
+  assert.equal(model.forecastTabs[2].series[1].points.length,0);
+  assert.equal(model.forecastTabs[2].series[2].points.length,0);
+  assert.equal(model.failures.load,'failed');
+});
+
+test('an authenticated browser with a maintenance error is not labelled logged out',()=>{
+  const model=buildStrategyFoundationModel({collectorStatus:{browser:{state:'error',lastErrorCode:'service_unavailable',lastReadyAt:'2026-09-04T06:00:00Z',lastPageUrl:'https://www.jspec.com.cn/#/dashboard'}}});
+  assert.equal(model.collection.dedicatedChrome.connected,true);
+  assert.equal(model.collection.ukey.state,'logged_in');
+});
+
 test('foundation model separates current, historical, and simulated truth', () => {
   const model = buildStrategyFoundationModel({
     mode: 'real',
@@ -193,7 +215,7 @@ test('price chart only accepts the canonical price forecast target', () => {
   assert.deepEqual(model.forecastTabs[0].series[1].points, [{ pointIndex: 1, value: 321 }]);
 });
 
-test('market cockpit contract maps actual and forecast load without inventing temperature', () => {
+test('market cockpit actual user load does not borrow the provincial forecast or invent temperature', () => {
   const model = buildStrategyFoundationModel({
     marketCockpit: {
       series: {
@@ -204,7 +226,7 @@ test('market cockpit contract maps actual and forecast load without inventing te
   });
 
   assert.equal(model.forecastTabs[2].series[0].points[0].value, 610);
-  assert.equal(model.forecastTabs[2].series[1].points[0].value, 625);
+  assert.equal(model.forecastTabs[2].series[1].points.length, 0);
   assert.deepEqual(model.forecastTabs[1].series.flatMap((series) => series.points), []);
 });
 

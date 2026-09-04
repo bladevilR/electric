@@ -97,6 +97,17 @@ test('as-of fact queries exclude revisions published after the decision cutoff',
   });
 });
 
+test('a repeated capture of identical content keeps its first availability while conflicting content is rejected',async()=>{
+  await withStore(store=>{
+    store.appendFacts([priceFact]);
+    const later={...priceFact,availableAt:fixedNow,capturedAt:fixedNow};
+    assert.deepEqual(store.appendFacts([later]),{inserted:0,skipped:1});
+    assert.equal(store.queryFacts({})[0].availableAt,priceFact.availableAt);
+    assert.throws(()=>store.appendFacts([{...later,value:999}]),/fact_revision_conflict/);
+    assert.throws(()=>store.appendFacts([{...priceFact,availableAt:'2026-06-01T00:00:00.000Z'}]),/fact_revision_conflict/);
+  });
+});
+
 test('collection jobs and chunks keep restart checkpoints', async () => {
   await withStore((store) => {
     const job = store.createCollectionJob({

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 const LOGIN_PATTERN = /(?:#\/outNet|\/outNet|\/login|\/signin)|UKey\s*登录|外网登录|用户登录|请登录/i;
 const RATE_LIMIT_PATTERN = /api\s*访问频率|访问频率过高|请求频率过高|操作过于频繁|too many requests|rate limit/i;
 const EMPTY_PATTERN = /暂无数据|无数据|查询结果为空|没有符合条件的数据/i;
+const SERVICE_UNAVAILABLE_PATTERN = /服务正在维护|系统维护中|服务暂不可用|service unavailable/i;
 const DATE_INPUT_SELECTOR = [
   'input[type="date"]',
   'input[placeholder*="日期"]',
@@ -20,7 +21,7 @@ function cleanText(value) {
 }
 
 function numericValue(value) {
-  const text = cleanText(value).replace(/,/g, '').replace(/[—–-]/g, '');
+  const text = cleanText(value).replace(/,/g, '').replace(/[—–]/g, '');
   if (!text) return null;
   const match = text.match(/[-+]?\d+(?:\.\d+)?/);
   if (!match) return null;
@@ -172,6 +173,7 @@ export function createJspecAdapter(config = {}) {
     const text = `${page.url()}\n${await bodyText(page)}`;
     if (LOGIN_PATTERN.test(text)) return { state: 'login_expired' };
     if (RATE_LIMIT_PATTERN.test(text)) return { state: 'rate_limited' };
+    if (SERVICE_UNAVAILABLE_PATTERN.test(text)) return { state: 'service_unavailable' };
     if (EMPTY_PATTERN.test(text)) return { state: 'no_data' };
     return { state: 'ready' };
   }
@@ -224,6 +226,7 @@ export function createJspecAdapter(config = {}) {
       if (!response.ok()) fail('query_response_failed', `JSPEC query returned HTTP ${response.status()}.`);
       const responseText = await response.text().catch(() => '');
       if (RATE_LIMIT_PATTERN.test(responseText)) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
+      if (SERVICE_UNAVAILABLE_PATTERN.test(responseText)) fail('service_unavailable', '平台接口返回：服务正在维护中，请稍后再试。当前日期未采集成功，不等于没有数据。');
       verifiedQueryPages.add(page);
       await page.waitForTimeout(Math.max(0, Number(config.postSubmitSettleMs || 0)));
     }
@@ -235,6 +238,7 @@ export function createJspecAdapter(config = {}) {
     const state = await detect(page);
     if (state.state === 'login_expired') fail('login_expired', 'The dedicated browser session requires UKey login.');
     if (state.state === 'rate_limited' && !responseVerified) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
+    if (state.state === 'service_unavailable') fail('service_unavailable', '平台接口返回：服务正在维护中，请稍后再试。当前日期未采集成功，不等于没有数据。');
     const row = page.locator('table tbody tr').first();
     try {
       await row.waitFor({ state: 'visible', timeout: Number(config.resultTimeoutMs || 15000) });
@@ -284,6 +288,7 @@ export function createJspecAdapter(config = {}) {
     const stateText = `${raw.url}\n${raw.bodyText}`;
     if (LOGIN_PATTERN.test(stateText)) fail('login_expired', 'The dedicated browser session requires UKey login.');
     if (RATE_LIMIT_PATTERN.test(stateText)) fail('rate_limited', 'JSPEC reported an access-frequency limit.');
+    if (SERVICE_UNAVAILABLE_PATTERN.test(stateText)) fail('service_unavailable', '平台接口返回：服务正在维护中，请稍后再试。当前日期未采集成功，不等于没有数据。');
     const selected = chooseTable(raw.tables, columns);
     const table = selected?.table || { headers: [], rows: [] };
     const mapped = selected?.mapped || new Map();
@@ -324,6 +329,7 @@ export function createJspecAdapter(config = {}) {
       queryDate,
       headers: table.headers.map(cleanText),
       mappedFields: [...mapped.keys()],
+      intervalMinutes: table.rows.length === 96 && timeColumn >= 0 && table.rows.every((cells,index)=>pointFromTime(cells[timeColumn])===index+1) ? 15 : null,
       facts,
       structureFingerprint,
       contentSha256,

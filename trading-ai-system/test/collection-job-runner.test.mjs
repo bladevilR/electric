@@ -219,3 +219,18 @@ test('a no-data trading date is recorded as rejected evidence and does not stall
     await context.close();
   }
 });
+
+test('service maintenance preserves the date checkpoint and records failed evidence without claiming no data',async()=>{
+  const context=await fixture([adapter({id:'load',sourceId:'JSPEC-LOAD',earliestDate:'2026-07-04',latestDate:'2026-07-04',errorCode:'service_unavailable'})]);
+  try {
+    const job=await context.runner.createFullBackfill({id:'job-maintenance'});
+    await assert.rejects(context.runner.runNext(job.id),error=>error.code==='service_unavailable');
+    assert.equal(context.runner.status(job.id).state,'paused');
+    assert.equal(context.runner.status(job.id).completedChunks,0);
+    assert.equal(context.store.queryCaptures({})[0].evidence.reasonCode,'service_unavailable');
+    assert.equal(context.store.queryFacts({}).length,0);
+    context.runner.resume(job.id);
+    assert.equal(context.runner.status(job.id).chunks[0].state,'pending');
+    await assert.rejects(context.runner.runNext(job.id),error=>error.code==='service_unavailable');
+  }finally {await context.close();}
+});

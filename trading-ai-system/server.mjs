@@ -77,6 +77,8 @@ import { createPriceAdapter } from './lib/jspec-adapters/price.mjs';
 import { createLoadAdapter } from './lib/jspec-adapters/load.mjs';
 import { createOpenMeteoTemperatureAdapter } from './lib/weather-forecast-provider.mjs';
 import { createForecastPublisher } from './lib/forecast-publisher.mjs';
+import { importLocalLoadHistory } from './lib/local-load-history.mjs';
+import { buildLoadForecastReport } from './lib/load-forecast-report.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -122,6 +124,7 @@ const ledgerDataRoot = process.platform === 'win32' && process.env.LOCALAPPDATA
 const forecastLedgerPath = path.resolve(getArgValue('--forecast-ledger', process.env.TRADING_FORECAST_LEDGER_PATH || path.join(ledgerDataRoot, 'forecast-ledger.json')));
 const outcomeLedgerPath = path.resolve(getArgValue('--outcome-ledger', process.env.TRADING_OUTCOME_LEDGER_PATH || path.join(ledgerDataRoot, 'outcome-ledger.json')));
 const evidenceStorePath = path.resolve(getArgValue('--evidence-store', process.env.TRADING_EVIDENCE_STORE_PATH || path.join(ledgerDataRoot, 'trading-evidence.sqlite')));
+const localLoadHistoryPath = path.resolve(getArgValue('--local-load-history', process.env.TRADING_LOCAL_LOAD_HISTORY_PATH || path.join(path.dirname(evidenceStorePath), 'local-load-history.json')));
 const collectorProfilePath = path.resolve(getArgValue('--collector-profile', process.env.TRADING_COLLECTOR_PROFILE_PATH || path.join(ledgerDataRoot, 'jspec-playwright-profile')));
 const expectedPointCount = Number(getArgValue('--expected-point-count', process.env.TRADING_EXPECTED_POINT_COUNT || 96));
 const collectorLaunchUrl = getArgValue('--collector-launch-url', process.env.TRADING_COLLECTOR_LAUNCH_URL || '');
@@ -164,7 +167,10 @@ const evidenceAdapters = [
       ? { responseUrlPattern: /Dd2jyUserClearingResult\/queryDd2jyRqClearing/i, postSubmitSettleMs: 500 }
       : {}),
   }),
-  createLoadAdapter({ expectedPointCount, earliestDate: collectorHistoryEarliest, latestDate: collectorHistoryLatest }),
+  createLoadAdapter({ expectedPointCount, earliestDate: collectorHistoryEarliest, latestDate: collectorHistoryLatest,
+    ...(!collectorLaunchUrl || /jspec\.com\.cn/i.test(collectorLaunchUrl)
+      ? {responseUrlPattern:/electricity\/queryDailyElectricity/i,postSubmitSettleMs:500} : {}),
+  }),
   createOpenMeteoTemperatureAdapter(weatherConfig),
 ];
 const collectionRunner = createCollectionJobRunner({ store: evidenceStore, runtime: collectorRuntime, adapters: evidenceAdapters, queryDelayMs: collectorQueryDelayMs });
@@ -181,9 +187,10 @@ const evidenceMigrationPromise = migrateLegacyEvidence({
   pointInTimePath: pointInTimeStorePath,
   forecastLedgerPath,
   outcomeLedgerPath,
-}).then((summary) => {
-  evidenceMigrationStatus = { state: 'completed', ...summary };
-  return summary;
+}).then(async (summary) => {
+  const localLoadHistory = await importLocalLoadHistory({ store: evidenceStore, filePath: localLoadHistoryPath });
+  evidenceMigrationStatus = { state: 'completed', ...summary, localLoadHistory };
+  return evidenceMigrationStatus;
 }).catch((error) => {
   evidenceMigrationStatus = { state: 'failed', errorCode: String(error?.message || 'legacy_migration_failed').split(':')[0] };
   return evidenceMigrationStatus;
@@ -751,6 +758,22 @@ function startCollectionLoop(jobId) {
 }
 
 async function handleApi(request, response, url) {
+  if (url.pathname.startsWith('/api/history/') || url.pathname.startsWith('/api/forecast/')) await evidenceMigrationPromise;
+  if (request.method === 'GET' && url.pathname === '/api/forecast/load') {
+    try {
+      const targetDate = assertEvidenceDate(url.searchParams.get('date'), 'target_date');
+      const facts = ['actualAverageLoadMw', 'actualLoadMw'].flatMap(fieldId => evidenceStore.queryFacts({ fieldId, limit: 100000 }));
+      sendJson(response, buildLoadForecastReport(facts, { targetDate }));
+    } catch (error) { sendEvidenceError(response, error); }
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/history/captures') {
+    try {
+      const date = url.searchParams.get('date');
+      sendJson(response, { captures: evidenceStore.queryCaptures({ ...(date ? { businessDate: assertEvidenceDate(date, 'business_date') } : {}), from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined, ...(url.searchParams.get('sourceId') ? { sourceId: url.searchParams.get('sourceId') } : {}), limit: 1000 }) });
+    } catch (error) { sendEvidenceError(response, error); }
+    return;
+  }
   if (request.method === 'GET' && url.pathname === '/api/collector/status') {
     await evidenceMigrationPromise;
     sendJson(response, publicCollectorStatus());
