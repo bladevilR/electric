@@ -9,7 +9,13 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 const root=fileURLToPath(new URL('..',import.meta.url));
-const launch=()=>chromium.launch({headless:true,...(process.platform==='win32'?{channel:'chrome'}:{})});
+const launch = async () => {
+  try {
+    return await chromium.launch({ headless: true });
+  } catch {
+    return await chromium.launch({ headless: true, channel: 'chrome' });
+  }
+};
 async function freePort(){let port=0;do{port=await new Promise((resolve,reject)=>{const s=createServer();s.once('error',reject);s.listen(0,'127.0.0.1',()=>{const candidate=s.address().port;s.close(e=>e?reject(e):resolve(candidate));});});}while(port<12000);return port;}
 async function start(){
   const port=await freePort(),temp=await mkdtemp(path.join(os.tmpdir(),'cockpit-browser-'));

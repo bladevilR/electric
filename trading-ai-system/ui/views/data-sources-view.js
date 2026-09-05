@@ -51,7 +51,7 @@ function accuracySection(accuracy, tab, state) {
   const m = accuracy.metrics || {};
   const metrics = [['mae','平均误差',m.mae,unitLabel(tab.unit)],['rmse','大误差参考',m.rmse,unitLabel(tab.unit)],['mape','平均误差比例',m.mape,'%'],['baselineSkill','相比参考方法',m.baselineSkill,'%']];
   const available = metrics.filter(([, ,v])=>v!=null);
-  return `<section class="foundation-section foundation-accuracy" aria-labelledby="foundationAccuracyTitle"><header class="foundation-section-heading"><div><h2 id="foundationAccuracyTitle">预测得准不准</h2><p>只比较同一天、同一时段的预测和实际结果。</p></div>${action('focus-versions','查看以往预测')}</header>
+  return `<section class="foundation-section foundation-accuracy" aria-labelledby="foundationAccuracyTitle"><header class="foundation-section-heading"><div><h2 id="foundationAccuracyTitle">预测精度与误差评估</h2><p>严格基于同日同时段的预测与实况比对。</p></div>${action('focus-versions','查看以往预测')}</header>
     ${available.length ? `<div class="foundation-metrics-grid">${available.map(([id,label,value,unit])=>`<div class="foundation-metric"><div><span>${label}</span>${renderExplanationButton(id,label,`metric-${id}`,state.openExplanation===id)}</div><strong>${numberText(value)} <small>${esc(unit)}</small></strong>${state.openExplanation===id ? renderFoundationTooltip({id,...EXPLANATION_COPY[id]}) : ''}</div>`).join('')}</div>` : '<p class="foundation-muted-note">所选日期暂时没有可比较的结果；可以在上方打开已有的历史复盘。</p>'}
     <details class="foundation-past-comparisons" id="foundationVersionPanel" tabindex="-1"><summary>以往预测与误差记录</summary>${renderAccuracyHistory(accuracy.history,tab.unit)}
       ${accuracy.versions?.length ? `<div class="local-scroll"><table><thead><tr><th>预测方法</th><th>生成时间</th><th>参考天数</th><th>平均误差</th><th>状态</th></tr></thead><tbody>${accuracy.versions.map(v=>`<tr><td>${esc(methodLabel(v.modelVersion || v.modelId))}</td><td>${dateTime(v.issuedAt||v.createdAt)}</td><td>${numberText(v.sampleDays||v.sampleCount)}</td><td>${numberText(v.mae)}</td><td>${statusLabel(v.status)}</td></tr>`).join('')}</tbody></table></div>` : '<p>尚无同口径的多次预测记录。</p>'}
@@ -70,16 +70,16 @@ function historySection(model) {
 }
 
 function strategySection(model,state) {
-  const stages = [['sources','数据从哪来'],['quality','检查能否使用'],['forecasts','预测价格和用电'],['fusion','分析购电需求'],['optimizer','比较申报方案'],['risk','检查业务限制'],['review','人工确认']];
-  return `<section class="foundation-section foundation-derivation"><header class="foundation-section-heading"><div><h2>这些数据怎样形成策略</h2><p>先判断需要买多少电，再比较不同时段的成本，最后检查业务限制。</p></div></header>
+  const stages = [['sources','数据源接入'],['quality','质量核验与清洗'],['forecasts','价格与负荷预测'],['fusion','需求与缺口分析'],['optimizer','申报方案优化'],['risk','合规与边界约束'],['review','人工确认']];
+  return `<section class="foundation-section foundation-derivation"><header class="foundation-section-heading"><div><h2>策略生成逻辑链路</h2><p>整合用电需求预测与多维价格信号，在业务与物理约束下求解最优申报方案。</p></div></header>
     <ol class="foundation-derivation-chain">${stages.map(([id,label])=>`<li><button type="button" data-foundation-action="open-explanation" data-explanation-id="${id}" data-foundation-trigger="derivation-${id}" aria-controls="foundationEvidenceDrawer" aria-expanded="${state.openExplanation===id}">${label}<span>查看说明</span></button></li>`).join('')}</ol>
-    <div class="foundation-strategy-summary"><p><strong>价格</strong>帮助比较成本；<strong>天气</strong>帮助理解用电变化；<strong>用电预测</strong>和已购电量决定需要补充多少。每项实际采用的数据和方法，以对应曲线的说明为准。</p><p>这张图说明计算思路，不代表今天已经形成可执行方案。历史用电复盘不能替代当前持仓和交易限额。</p></div>
+    <div class="foundation-strategy-summary"><p><strong>价格</strong>辅助成本核算；<strong>天气</strong>反映用电弹性；<strong>用电预测</strong>与持仓头寸共同决定申报需求。每项算法口径与特征以对应说明为准。</p><p>该链路说明计算架构，不代表已形成不可变更方案。历史复盘不可直接等同于实盘持仓与风控限额。</p></div>
   </section>`;
 }
 
 function sandboxSection(model,state) {
   const r=applyFoundationSandbox(model,state.sandboxControls || model.sandbox.defaults);
-  return `<details class="foundation-section foundation-sandbox"><summary>调整策略试试看 · 不改变正式方案</summary><p>仅模拟，不会提交交易。数据和限制齐全时，才能计算调整前后的效果。</p>
+  return `<details class="foundation-section foundation-sandbox"><summary>策略参数情景推演（沙盘仿真）· 调整策略试试看（仅模拟，不改变正式方案）</summary><p>仅模拟，不会提交交易。数据和限制齐全时，才能计算调整前后的效果。</p>
     <div class="foundation-sandbox-controls"><div class="foundation-weight-controls">${[['priceWeight','价格因素','更关注低价时段'],['temperatureWeight','温度因素','更关注天气影响'],['loadWeight','用电需求','更关注预计缺口']].map(([id,label,hint])=>`<label><span>${label}</span><input type="range" min="0" max="1" step="0.05" value="${r.controls[id]}" data-sandbox-control="${id}"><output>重视程度 ${Math.round(r.controls[id]*100)}%</output><small>${hint}</small></label>`).join('')}</div>
     <fieldset class="foundation-risk-control"><legend>风险偏好</legend>${[['conservative','保守'],['balanced','均衡'],['active','积极']].map(([id,label])=>`<button type="button" data-risk-profile="${id}" aria-pressed="${r.controls.riskProfile===id}">${label}</button>`).join('')}</fieldset></div>
     ${renderSandboxChart(model.sandbox.formalRows,r.series)}<p>模拟测算 · 预计成本变化：${numberText(r.estimatedCostChangeYuan,' 元')}；转移电量：${numberText(r.peakValleyShiftMwh,' 兆瓦时')}。</p><footer>${action('reset-sandbox','恢复推荐参数')}${action('apply-simulation','应用到模拟方案')}</footer></details>`;
@@ -93,7 +93,7 @@ export function renderDataSourcesView(state={}) {
   const hasCurve=tab.series.some(s=>s.points?.length), stage=model.derivation.evidenceByExplanation[state.openExplanation];
   const method=activeId==='temperature' ? '采用天气预报，按每 15 分钟一个时段对齐。' : activeId==='load' ? '参考过去相同时间段的用电规律，历史结果与实际用电逐段比较。' : /rolling_same_slot_median/.test(a.modelVersion || '') ? '参考过去同一时段的电价，选取中间价格作为预测；当前方法没有使用缺失的温度和用电数据。' : '当前采用的方法和使用数据需要与预测记录核对；不会把缺失的影响因素当成已使用。';
   return `<section class="cockpit-view foundation-workbench${state.openExplanation?' has-evidence-open':''}${state.provenanceOpen?' has-provenance-open':''}" data-view="data-sources" data-foundation-root>
-    <header class="foundation-page-heading"><div><h1>电价预测与复盘</h1><p>每月看趋势，每天看误差。温度和用电作为价格预测的辅助依据。</p></div><div class="foundation-heading-controls"><label>查看日期<input type="date" value="${esc(state.reviewState?.selection?.date||model.identity.targetDate)}" data-foundation-date></label><span class="mode-identity">${model.identity.environment==='演示环境'?'演示数据':'真实数据'}</span>${action('open-provenance','数据来源','data-foundation-trigger="storage-location"')}</div></header>
+    <header class="foundation-page-heading"><div><h1>多源数据对齐与预测复盘</h1><p>全景洞察月度趋势与逐日误差，为市场交易与申报优化提供稳健数据基底。</p></div><div class="foundation-heading-controls"><label>查看日期<input type="date" value="${esc(state.reviewState?.selection?.date||model.identity.targetDate)}" data-foundation-date></label><span class="mode-identity">${model.identity.environment==='演示环境'?'演示数据':'真实数据'}</span>${action('open-provenance','数据来源','data-foundation-trigger="storage-location"')}</div></header>
     ${renderCollectionTruthStrip(model)}
     <div class="foundation-forecast-tabs" role="tablist" aria-label="选择预测类型">${model.forecastTabs.map(t=>`<button type="button" role="tab" id="foundationTab-${t.id}" data-forecast-tab="${t.id}" aria-selected="${t.id===activeId}" aria-controls="foundationForecastPanel" tabindex="${t.id===activeId?0:-1}">${esc(t.label)}</button>`).join('')}</div>
     ${state.reviewState ? renderForecastReview(state.reviewState.report,state.reviewState) : `<section class="foundation-section foundation-forecast" id="foundationForecastPanel" role="tabpanel" aria-labelledby="foundationTab-${activeId}">

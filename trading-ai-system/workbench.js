@@ -1234,12 +1234,20 @@ export function buildDemoActionResult(payload, actionId) {
 }
 
 function dashboardSidebar(payload, activeStage, dialogOpen = false) {
+  const iconFoundation = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`;
+  const iconOptimize = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+  const iconForecast = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+  const iconEvolution = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+  const iconReview = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+  const iconGuide = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  const iconEvidence = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
   const navItems = [
-    { id: 'foundation', stage: 'foundation', label: '基础数据与依据', icon: '数' },
-    { id: 'optimize', stage: 'connect', label: '申报优化', icon: '⌁' },
-    { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
-    { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
-    { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
+    { id: 'foundation', stage: 'foundation', label: '基础数据与依据', iconSvg: iconFoundation },
+    { id: 'optimize', stage: 'connect', label: '申报优化', iconSvg: iconOptimize },
+    { id: 'forecast', stage: 'forecast', label: '价格预测', iconSvg: iconForecast },
+    { id: 'evolution', stage: 'evolve', label: '策略进化', iconSvg: iconEvolution },
+    { id: 'review', stage: 'settle', label: '复盘回顾', iconSvg: iconReview },
   ];
   const activeNavigation =
     activeStage === 'foundation'
@@ -1272,7 +1280,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
                 data-dashboard-nav="${escapeHtml(item.id)}"
                 data-stage="${escapeHtml(item.stage)}"
               >
-                <span class="nav-icon" aria-hidden="true">${escapeHtml(item.icon)}</span>
+                <span class="nav-icon" aria-hidden="true">${item.iconSvg}</span>
                 <span class="nav-label">${escapeHtml(item.label)}</span>
               </button>
             `
@@ -1286,7 +1294,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
         rel="noreferrer"
         aria-label="一分钟上手"
       >
-        <span class="nav-icon" aria-hidden="true">?</span>
+        <span class="nav-icon" aria-hidden="true">${iconGuide}</span>
         <span class="nav-label">一分钟上手</span>
       </a>
       <div class="dashboard-model-status">
@@ -1297,7 +1305,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
         </div>
       </div>
       <button id="evidence-trigger-sidebar" class="sidebar-evidence-button" type="button" data-action="open-evidence" aria-label="证据与审计">
-        <span aria-hidden="true">◎</span>
+        <span class="nav-icon" aria-hidden="true">${iconEvidence}</span>
         <span class="nav-label">证据与审计</span>
       </button>
     </aside>
@@ -2734,16 +2742,24 @@ export function renderWorkbenchMarkup(payload, options = {}) {
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
   const activeCockpitView = options.activeView || 'market-cockpit';
   const legacyWorkspace =
+    !options.activeView || activeCockpitView === 'declaration-strategy'
+      ? `${dashboardTopbar(payload, mode)}${mainContent}`
+      : '';
+  const sidebarStage =
     activeCockpitView === 'data-sources'
-      ? ''
-      : `${dashboardTopbar(payload, mode)}${mainContent}`;
+      ? 'foundation'
+      : activeCockpitView === 'price-forecast'
+      ? 'forecast'
+      : activeCockpitView === 'history-review'
+      ? 'settle'
+      : activeCockpitView === 'model-governance'
+      ? 'evolve'
+      : activeCockpitView === 'declaration-strategy'
+      ? 'connect'
+      : (activeStage || 'connect');
   return `
     <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
-      ${dashboardSidebar(
-        payload,
-        activeCockpitView === 'data-sources' ? 'foundation' : activeStage,
-        evidenceOpen
-      )}
+      ${dashboardSidebar(payload, sidebarStage, evidenceOpen)}
       <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
         ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
         <section class="cockpit-experience${activeCockpitView === 'data-sources' ? '' : ' is-workflow'}" aria-label="六步市场决策工作流">
@@ -2873,13 +2889,15 @@ function closeEvidenceDialog() {
 }
 
 function focusFoundationDisclosure() {
-  if (typeof requestAnimationFrame === 'undefined') return;
-  requestAnimationFrame(() => {
-    const selector = browserState.foundationUi.provenanceOpen
-      ? '.foundation-provenance [data-foundation-action="close-provenance"]'
-      : '.foundation-evidence-drawer [data-foundation-action="close-explanation"]';
-    rootElement()?.querySelector(selector)?.focus();
-  });
+  const selector = browserState.foundationUi.provenanceOpen
+    ? '.foundation-provenance [data-foundation-action="close-provenance"]'
+    : '.foundation-evidence-drawer [data-foundation-action="close-explanation"]';
+  rootElement()?.querySelector(selector)?.focus();
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame(() => {
+      rootElement()?.querySelector(selector)?.focus();
+    });
+  }
 }
 
 function closeFoundationDisclosure() {
@@ -2888,10 +2906,16 @@ function closeFoundationDisclosure() {
     type: 'close_disclosure',
   });
   renderBrowser();
-  if (typeof requestAnimationFrame === 'undefined') return;
-  requestAnimationFrame(() => {
+  if (returnSelector) {
     rootElement()?.querySelector(returnSelector)?.focus();
-  });
+  }
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame(() => {
+      if (returnSelector && document.activeElement !== rootElement()?.querySelector(returnSelector)) {
+        rootElement()?.querySelector(returnSelector)?.focus();
+      }
+    });
+  }
 }
 
 function loadingMarkup(message = '正在核对今日数据…') {
@@ -3541,7 +3565,28 @@ function bindBrowserEvents() {
       return;
     }
     const cockpitButton = event.target.closest('[data-cockpit-view]');
-    if (cockpitButton) { browserState.activeView = cockpitButton.dataset.cockpitView; const url = new URL(window.location.href); url.searchParams.set('view', browserState.activeView); history.replaceState(null,'',url); renderBrowser(); return; }
+    if (cockpitButton) {
+      browserState.activeView = cockpitButton.dataset.cockpitView;
+      const stageMap = {
+        'data-sources': 'foundation',
+        'price-forecast': 'forecast',
+        'declaration-strategy': 'connect',
+        'history-review': 'settle',
+        'model-governance': 'evolve',
+        'market-cockpit': 'connect',
+      };
+      if (stageMap[browserState.activeView]) {
+        browserState.activeStage = stageMap[browserState.activeView];
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', browserState.activeView);
+      history.replaceState(null, '', url);
+      renderBrowser();
+      if (browserState.activeView === 'price-forecast') {
+        loadForecastReport(browserState.payload?.date || '').catch(() => {});
+      }
+      return;
+    }
     const cockpitEvidence = event.target.closest('[data-evidence-ref]');
     if (cockpitEvidence) { browserState.selectedEvidence = cockpitEvidence.dataset.evidenceRef || 'missing-evidence'; browserState.evidenceReturnSelector = '.cockpit-experience [data-evidence-ref]'; browserState.evidenceOpen = true; renderBrowser(); focusEvidenceDialog(); return; }
     const mockStageButton = event.target.closest('[data-mock-stage]');
@@ -3582,6 +3627,19 @@ function bindBrowserEvents() {
     const dashboardNav = event.target.closest('[data-dashboard-nav]');
     if (dashboardNav) {
       const destination = dashboardNav.dataset.dashboardNav;
+      const viewMap = {
+        'foundation': 'data-sources',
+        'forecast': 'price-forecast',
+        'optimize': 'declaration-strategy',
+        'evolution': 'model-governance',
+        'review': 'history-review',
+      };
+      if (viewMap[destination]) {
+        browserState.activeView = viewMap[destination];
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', browserState.activeView);
+        history.replaceState(null, '', url);
+      }
       if (destination === 'review') {
         browserState.mode = 'review';
         browserState.activeStage = dashboardNav.dataset.stage || 'settle';
