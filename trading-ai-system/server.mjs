@@ -69,6 +69,19 @@ import {
   buildCompetitionTrace,
   indexCompetitionEvidence,
 } from './lib/competition-trace.mjs';
+import { openTradingEvidenceStore } from './lib/trading-evidence-store.mjs';
+import { migrateLegacyEvidence } from './lib/evidence-json-migration.mjs';
+import { createPlaywrightCollectorRuntime } from './lib/playwright-collector-runtime.mjs';
+import { assertCollectorOwnerAvailable } from './lib/collector-owner-guard.mjs';
+import { createCollectionJobRunner } from './lib/collection-job-runner.mjs';
+import { createCollectionJobScheduler } from './lib/collection-job-scheduler.mjs';
+import { createPriceAdapter } from './lib/jspec-adapters/price.mjs';
+import { createLoadAdapter } from './lib/jspec-adapters/load.mjs';
+import { createOpenMeteoTemperatureAdapter } from './lib/weather-forecast-provider.mjs';
+import { createForecastPublisher } from './lib/forecast-publisher.mjs';
+import { importLocalLoadHistory } from './lib/local-load-history.mjs';
+import { buildLoadForecastReport } from './lib/load-forecast-report.mjs';
+import {readForecastReview} from './lib/forecast-review.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(rootDir, '..');
@@ -113,8 +126,86 @@ const ledgerDataRoot = process.platform === 'win32' && process.env.LOCALAPPDATA
   : path.resolve(rootDir, 'data');
 const forecastLedgerPath = path.resolve(getArgValue('--forecast-ledger', process.env.TRADING_FORECAST_LEDGER_PATH || path.join(ledgerDataRoot, 'forecast-ledger.json')));
 const outcomeLedgerPath = path.resolve(getArgValue('--outcome-ledger', process.env.TRADING_OUTCOME_LEDGER_PATH || path.join(ledgerDataRoot, 'outcome-ledger.json')));
+const evidenceStorePath = path.resolve(getArgValue('--evidence-store', process.env.TRADING_EVIDENCE_STORE_PATH || path.join(ledgerDataRoot, 'trading-evidence.sqlite')));
+const localLoadHistoryPath = path.resolve(getArgValue('--local-load-history', process.env.TRADING_LOCAL_LOAD_HISTORY_PATH || path.join(path.dirname(evidenceStorePath), 'local-load-history.json')));
+const collectorProfilePath = path.resolve(getArgValue('--collector-profile', process.env.TRADING_COLLECTOR_PROFILE_PATH || path.join(ledgerDataRoot, 'jspec-playwright-profile')));
+const collectorOwnerStatePath = path.resolve(getArgValue('--collector-owner-state', process.env.TRADING_COLLECTOR_OWNER_STATE || path.join(path.dirname(evidenceStorePath),'collector-owner.json')));
+const expectedPointCount = Number(getArgValue('--expected-point-count', process.env.TRADING_EXPECTED_POINT_COUNT || 96));
+const collectorLaunchUrl = getArgValue('--collector-launch-url', process.env.TRADING_COLLECTOR_LAUNCH_URL || '');
+const collectorExecutablePath = getArgValue('--collector-executable', process.env.TRADING_COLLECTOR_EXECUTABLE_PATH || '');
+const collectorHeadless = String(getArgValue('--collector-headless', process.env.TRADING_COLLECTOR_HEADLESS || 'false')).toLowerCase() === 'true';
+const collectorQueryDelayMs = Number(getArgValue('--collector-query-delay-ms', process.env.TRADING_COLLECTOR_QUERY_DELAY_MS || 20000));
+const collectorHistoryEarliest = getArgValue('--collector-history-earliest', process.env.TRADING_COLLECTOR_HISTORY_EARLIEST || '2024-01-01');
+const collectorHistoryLatest = getArgValue(
+  '--collector-history-latest',
+  process.env.TRADING_COLLECTOR_HISTORY_LATEST || new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+);
 const startTime = Date.now();
 const ukeyBrowserCollector = createUkeyBrowserCollector({ rootDir, env: process.env });
+const evidenceStore = openTradingEvidenceStore({ filePath: evidenceStorePath });
+const collectorRuntime = createPlaywrightCollectorRuntime({
+  rootDir,
+  profileDir: collectorProfilePath,
+  beforeStart: async () => {
+    let owner;
+    try { owner=JSON.parse(await readFile(collectorOwnerStatePath,'utf8')); }
+    catch(error) { if(error.code==='ENOENT') return; throw error; }
+    assertCollectorOwnerAvailable(owner,{profileDir:collectorProfilePath});
+  },
+  env: process.env,
+  ...(collectorLaunchUrl ? { launchUrl: collectorLaunchUrl } : {}),
+  ...(collectorExecutablePath ? { executablePath: collectorExecutablePath } : {}),
+  headless: collectorHeadless,
+});
+const weatherConfig = {
+  provider: 'Open-Meteo',
+  locationId: process.env.TRADING_WEATHER_LOCATION_ID || 'suzhou-center-v1',
+  latitude: Number(process.env.TRADING_WEATHER_LATITUDE || 31.2989),
+  longitude: Number(process.env.TRADING_WEATHER_LONGITUDE || 120.5853),
+  forecastLeadHours: Number(process.env.TRADING_WEATHER_FORECAST_LEAD_HOURS || 24),
+  earliestDate: getArgValue('--weather-earliest', process.env.TRADING_WEATHER_EARLIEST || '2024-01-01'),
+  latestDate: getArgValue('--weather-latest', process.env.TRADING_WEATHER_LATEST || '' ) || undefined,
+  previousRunsEndpoint: getArgValue('--weather-forecast-endpoint', process.env.TRADING_WEATHER_FORECAST_ENDPOINT || '') || undefined,
+  archiveEndpoint: getArgValue('--weather-archive-endpoint', process.env.TRADING_WEATHER_ARCHIVE_ENDPOINT || '') || undefined,
+};
+const evidenceAdapters = [
+  createPriceAdapter({
+    expectedPointCount,
+    earliestDate: collectorHistoryEarliest,
+    latestDate: collectorHistoryLatest,
+    ...(!collectorLaunchUrl || /jspec\.com\.cn/i.test(collectorLaunchUrl)
+      ? { responseUrlPattern: /Dd2jyUserClearingResult\/queryDd2jyRqClearing/i, postSubmitSettleMs: 500 }
+      : {}),
+  }),
+  createLoadAdapter({ expectedPointCount, earliestDate: collectorHistoryEarliest, latestDate: collectorHistoryLatest,
+    ...(!collectorLaunchUrl || /jspec\.com\.cn/i.test(collectorLaunchUrl)
+      ? {responseUrlPattern:/electricity\/queryDailyElectricity/i,postSubmitSettleMs:500} : {}),
+  }),
+  createOpenMeteoTemperatureAdapter(weatherConfig),
+];
+const collectionRunner = createCollectionJobRunner({ store: evidenceStore, runtime: collectorRuntime, adapters: evidenceAdapters, queryDelayMs: collectorQueryDelayMs });
+const forecastPublisher = createForecastPublisher({
+  store: evidenceStore,
+  codeCommitSha: process.env.TRADING_CODE_COMMIT_SHA || 'working-tree',
+  expectedPointCount,
+});
+const collectionScheduler = createCollectionJobScheduler({runner:collectionRunner, store:evidenceStore});
+collectionScheduler.recoverInterrupted();
+let evidenceMigrationStatus = { state: 'running' };
+const evidenceMigrationPromise = migrateLegacyEvidence({
+  store: evidenceStore,
+  visibleHistoryPath,
+  pointInTimePath: pointInTimeStorePath,
+  forecastLedgerPath,
+  outcomeLedgerPath,
+}).then(async (summary) => {
+  const localLoadHistory = await importLocalLoadHistory({ store: evidenceStore, filePath: localLoadHistoryPath });
+  evidenceMigrationStatus = { state: 'completed', ...summary, localLoadHistory };
+  return evidenceMigrationStatus;
+}).catch((error) => {
+  evidenceMigrationStatus = { state: 'failed', errorCode: String(error?.message || 'legacy_migration_failed').split(':')[0] };
+  return evidenceMigrationStatus;
+});
 let settlementReferenceCache = null;
 let strategyValidationCache = null;
 let declarationOptimizerValidationCache = null;
@@ -595,13 +686,314 @@ async function loadUkeyStatus(dataset = null) {
       rowCount: visibleHistory.rowCount || 0,
       dateCount: visibleHistory.dateCount || 0,
       dates: visibleHistory.dates || [],
+      coverageByDate: visibleHistory.coverageByDate || {},
       generatedAt: visibleHistory.generatedAt || null,
       storagePath: visibleHistoryPath,
     },
   };
 }
 
+function evidenceErrorCode(error) {
+  return String(error?.code || error?.message || 'evidence_operation_failed').split(':')[0];
+}
+
+function evidenceErrorStatus(code) {
+  if (code.includes('not_found')) return 404;
+  if (code.includes('already_exists') || code.includes('conflict') || ['collection_job_active','collector_stopping','collector_in_use'].includes(code)) return 409;
+  if (code.includes('blocked') || code.includes('incomplete') || code.includes('not_ready')) return 422;
+  if (['login_required', 'login_expired', 'collector_browser_not_started', 'collector_not_ready', 'page_changed', 'rate_limited'].includes(code)) return 503;
+  if (code.includes('invalid') || code.includes('required') || code.includes('paused')) return 400;
+  return 500;
+}
+
+function sendEvidenceError(response, error) {
+  const code = evidenceErrorCode(error);
+  sendJson(response, { ok: false, error: { code, message: code } }, evidenceErrorStatus(code));
+}
+
+function assertEvidenceDate(value, field, { optional = false } = {}) {
+  if (optional && !value) return '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) throw new Error(`${field}_invalid`);
+  return String(value);
+}
+
+function evidenceRange(url) {
+  const from = assertEvidenceDate(url.searchParams.get('from') || '', 'from_date', { optional: true });
+  const to = assertEvidenceDate(url.searchParams.get('to') || '', 'to_date', { optional: true });
+  if (from && to && from > to) throw new Error('date_range_invalid');
+  return { from, to };
+}
+
+function csvCell(value) {
+  const text = value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function publicCollectorStatus() {
+  const raw = collectorRuntime.status();
+  return {
+    browser: { ...raw, state: raw.state === 'uninitialized' ? 'stopped' : raw.state },
+    migration: evidenceMigrationStatus,
+    weather: {
+      provider: weatherConfig.provider,
+      locationId: weatherConfig.locationId,
+      latitude: weatherConfig.latitude,
+      longitude: weatherConfig.longitude,
+      forecastLeadHours: weatherConfig.forecastLeadHours,
+      forecastInputField: 'temperatureForecastC',
+      actualEvaluationField: 'temperatureActualC',
+    },
+    observedAt: new Date().toISOString(),
+    jobs: evidenceStore.listCollectionJobs().slice(0, 10).map(job => {
+      const {chunks, ...summary} = collectionRunner.status(job.id);
+      return {...summary, scheduler:collectionScheduler.status(job.id)};
+    }),
+    storage: { engine: 'SQLite', path: evidenceStorePath },
+  };
+}
+
+async function supplementalCollectorStatus() {
+  let owner;
+  try { owner=JSON.parse(await readFile(collectorOwnerStatePath,'utf8')); }
+  catch { return null; }
+  try { assertCollectorOwnerAvailable(owner,{profileDir:collectorProfilePath});return null; }
+  catch(error) {
+    if(!['collector_in_use','rate_limited'].includes(error.code))return null;
+    return {phase:owner.phase,source:owner.source,currentDate:owner.currentDate,collectedDays:owner.collectedDays,
+      nextAttemptAt:owner.nextAttemptAt||null,reasonCode:owner.error?.reasonCode||null,updatedAt:owner.updatedAt};
+  }
+}
+
 async function handleApi(request, response, url) {
+  if (url.pathname.startsWith('/api/history/') || url.pathname.startsWith('/api/forecast/')) await evidenceMigrationPromise;
+  if (request.method === 'GET' && url.pathname === '/api/forecast/review') {
+    try {
+      sendJson(response,readForecastReview(evidenceStore,{
+        month:url.searchParams.get('month'),targetDate:url.searchParams.get('date')||undefined,
+        type:url.searchParams.get('type')||'price',
+      }));
+    } catch(error) {
+      const code=evidenceErrorCode(error);
+      sendJson(response,{ok:false,error:{code,message:code.includes('invalid')?'请选择有效的月份、日期和预测类型。':'所选日期暂时读取失败，请重试。'}},evidenceErrorStatus(code));
+    }
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/forecast/load') {
+    try {
+      const targetDate = assertEvidenceDate(url.searchParams.get('date'), 'target_date');
+      const facts = ['actualAverageLoadMw', 'actualLoadMw'].flatMap(fieldId => evidenceStore.queryFacts({ fieldId, limit: 100000 }));
+      sendJson(response, buildLoadForecastReport(facts, { targetDate }));
+    } catch (error) { sendEvidenceError(response, error); }
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/history/captures') {
+    try {
+      const date = url.searchParams.get('date');
+      sendJson(response, { captures: evidenceStore.queryCaptures({ ...(date ? { businessDate: assertEvidenceDate(date, 'business_date') } : {}), from: url.searchParams.get('from') || undefined, to: url.searchParams.get('to') || undefined, ...(url.searchParams.get('sourceId') ? { sourceId: url.searchParams.get('sourceId') } : {}), limit: 1000 }) });
+    } catch (error) { sendEvidenceError(response, error); }
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/collector/status') {
+    await evidenceMigrationPromise;
+    sendJson(response, {...publicCollectorStatus(),supplemental:await supplementalCollectorStatus()});
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/collector/browser/start') {
+    try {
+      const browser = await collectionScheduler.openBrowser(() => collectorRuntime.start());
+      sendJson(response, { browser, requiresManualUkeyLogin: browser.state === 'login_required' }, browser.state === 'error' ? 503 : 200);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/collector/browser/stop') {
+    try {
+      sendJson(response, { browser: await collectionScheduler.stop(() => collectorRuntime.stop()) });
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/collector/jobs/backfill') {
+    try {
+      await evidenceMigrationPromise;
+      const body = await readJsonBody(request);
+      const job = await collectionScheduler.createBackfill({
+        id: body.id,
+        fromDate: body.fromDate || body.from,
+        toDate: body.toDate || body.to,
+      });
+      await appendAuditEvent(auditLogPath, { type: 'evidence_backfill_started', actor: request.headers['x-operator-id'] || 'local-operator', outcome: 'started', jobId: job.id });
+      sendJson(response, { job, started: job.state === 'running', reused: Boolean(job.reused) }, 202);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  const collectionJobMatch = url.pathname.match(/^\/api\/collector\/jobs\/([^/]+)(?:\/(pause|resume))?$/);
+  if (collectionJobMatch) {
+    try {
+      const jobId = decodeURIComponent(collectionJobMatch[1]);
+      const action = collectionJobMatch[2];
+      if (request.method === 'GET' && !action) {
+        sendJson(response, { job: {...collectionRunner.status(jobId), scheduler:collectionScheduler.status(jobId)} });
+        return;
+      }
+      if (request.method === 'POST' && action === 'pause') {
+        sendJson(response, { job: collectionScheduler.pause(jobId) });
+        return;
+      }
+      if (request.method === 'POST' && action === 'resume') {
+        const job = collectionScheduler.resume(jobId);
+        sendJson(response, { job });
+        return;
+      }
+    } catch (error) {
+      sendEvidenceError(response, error);
+      return;
+    }
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/history/facts') {
+    try {
+      const { from, to } = evidenceRange(url);
+      const rawLimit = Number(url.searchParams.get('limit') || 200);
+      const rawOffset = Number(url.searchParams.get('offset') || 0);
+      if (!Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 1000 || !Number.isInteger(rawOffset) || rawOffset < 0) throw new Error('pagination_invalid');
+      const query = {
+        fieldId: url.searchParams.get('fieldId') || undefined,
+        sourceId: url.searchParams.get('sourceId') || undefined,
+        businessDate: url.searchParams.get('date') ? assertEvidenceDate(url.searchParams.get('date'), 'business_date') : undefined,
+        from: from || undefined,
+        to: to || undefined,
+        pointIndex: url.searchParams.get('pointIndex') || undefined,
+        limit: rawLimit,
+        offset: rawOffset,
+      };
+      const rows = evidenceStore.queryFacts(query);
+      sendJson(response, { query: { ...query, limit: rawLimit, offset: rawOffset }, rows, nextOffset: rows.length === rawLimit ? rawOffset + rawLimit : null });
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/history/export') {
+    try {
+      const { from, to } = evidenceRange(url);
+      const format = url.searchParams.get('format') || 'csv';
+      if (!['csv', 'json'].includes(format)) throw new Error('export_format_invalid');
+      const query = {
+        fieldId: url.searchParams.get('fieldId') || undefined,
+        sourceId: url.searchParams.get('sourceId') || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        limit: 100000,
+      };
+      const rows = evidenceStore.queryFacts(query);
+      if (format === 'json') {
+        sendJson(response, { query, rows, exportedAt: new Date().toISOString() });
+        return;
+      }
+      const columns = ['businessDate', 'pointIndex', 'fieldId', 'value', 'unit', 'sourceId', 'availableAt', 'capturedAt', 'sourceRevision', 'factId'];
+      const csv = [columns.join(','), ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(','))].join('\r\n');
+      response.writeHead(200, {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="trading-evidence-${from || 'all'}-${to || 'all'}.csv"`,
+        'cache-control': 'no-store',
+      });
+      response.end(`\ufeff${csv}\r\n`);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/history/coverage') {
+    try {
+      const { from, to } = evidenceRange(url);
+      const query = { fieldId: url.searchParams.get('fieldId') || undefined, sourceId: url.searchParams.get('sourceId') || undefined, from: from || undefined, to: to || undefined };
+      sendJson(response, { query, coverage: evidenceStore.getCoverage(query) });
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/forecast/publish') {
+    try {
+      const body = await readJsonBody(request);
+      const targetDate = assertEvidenceDate(body.targetDate, 'target_date');
+      const run = forecastPublisher.publishLiveForecast(targetDate, { decisionCutoffAt: body.decisionCutoffAt, forecastRunId: body.forecastRunId });
+      await appendAuditEvent(auditLogPath, { type: 'live_forecast_published', actor: request.headers['x-operator-id'] || 'local-operator', outcome: 'published', forecastRunId: run.forecastRunId, targetDate });
+      sendJson(response, { run }, 201);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/forecast/outcomes/backfill') {
+    try {
+      const body = await readJsonBody(request);
+      const from = assertEvidenceDate(body.from, 'from_date');
+      const to = assertEvidenceDate(body.to || body.from, 'to_date');
+      if (from > to) throw new Error('date_range_invalid');
+      const result = forecastPublisher.backfillOutcomes({
+        from,
+        to,
+        targetField: body.targetField,
+        actualLabelVersion: body.actualLabelVersion || 'final',
+      });
+      sendJson(response, result, 201);
+    } catch (error) {
+      sendEvidenceError(response, error);
+    }
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
+    try {
+      const runType = url.searchParams.get('runType') || '';
+      if (runType && !['live_issued', 'point_in_time_replay'].includes(runType)) throw new Error('forecast_run_type_invalid');
+      const date = url.searchParams.get('date') ? assertEvidenceDate(url.searchParams.get('date'), 'target_date') : '';
+      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+      const offset = Math.max(0, Number(Buffer.from(url.searchParams.get('cursor') || 'MA==', 'base64').toString('utf8')) || 0);
+      const runs = evidenceStore.queryForecastRuns({ forecastRunType: runType || undefined, targetTradingDate: date || undefined, targetField: url.searchParams.get('targetField') || undefined });
+      if (runs.length) {
+        sendJson(response, { runs: runs.slice(offset, offset + limit), nextCursor: offset + limit < runs.length ? Buffer.from(String(offset + limit)).toString('base64') : null, storage: 'sqlite' });
+        return;
+      }
+    } catch (error) {
+      sendEvidenceError(response, error);
+      return;
+    }
+  }
+
+  if (request.method === 'GET' && url.pathname === '/api/forecast/accuracy') {
+    try {
+      const runType = url.searchParams.get('runType') || 'live_issued';
+      const actualLabelVersion = url.searchParams.get('actualLabelVersion') || 'final';
+      if (!['live_issued', 'point_in_time_replay'].includes(runType)) throw new Error('forecast_run_type_invalid');
+      if (!['temporary', 'current', 'final', 'settlement_initial', 'settlement_final', 'settlement_adjusted'].includes(actualLabelVersion)) throw new Error('outcome_label_invalid');
+      const { from, to } = evidenceRange(url);
+      const storedRuns = evidenceStore.queryForecastRuns({ forecastRunType: runType, from: from || undefined, to: to || undefined });
+      if (storedRuns.length) {
+        const report = forecastPublisher.evaluate({ from: from || undefined, to: to || undefined, runType, actualLabelVersion });
+        sendJson(response, { ...report, filter: { from: from || null, to: to || null, runType, actualLabelVersion }, runTypes: [runType], storage: 'sqlite' });
+        return;
+      }
+    } catch (error) {
+      sendEvidenceError(response, error);
+      return;
+    }
+  }
+
   if (request.method === 'GET' && ['/api/market/context','/api/weather/coverage','/api/supply-network/coverage'].includes(url.pathname)) {
     const date = url.searchParams.get('date') || '', asOf = url.searchParams.get('asOf') || '';
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(asOf))) { sendJson(response, { error: { code: 'date_or_as_of_invalid' } }, 400); return; }
@@ -632,7 +1024,34 @@ async function handleApi(request, response, url) {
     sendJson(response,buildMarketCockpit({snapshot,mode:url.searchParams.get('mode')||'real'}));return;
   }
   if (request.method === 'GET' && url.pathname === '/api/strategy/trace') {
-    sendJson(response,buildStrategyTrace({targetDate:url.searchParams.get('date'),pointIndex:Number(url.searchParams.get('pointIndex'))||null,evidence:{asOf:url.searchParams.get('asOf')}}));return;
+    const targetDate = url.searchParams.get('date') || '';
+    const asOf = url.searchParams.get('asOf') || '';
+    const requestedPoint = url.searchParams.get('pointIndex');
+    const pointIndex = requestedPoint === null || requestedPoint === '' ? null : Number(requestedPoint);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(targetDate) ||
+      !Number.isFinite(Date.parse(asOf)) ||
+      Date.parse(asOf) > Date.now() ||
+      (pointIndex !== null && (!Number.isInteger(pointIndex) || pointIndex < 1 || pointIndex > 96))
+    ) {
+      sendJson(response, { error: { code: 'strategy_trace_query_invalid' } }, 400);
+      return;
+    }
+    const [store, ledger] = await Promise.all([
+      readPointInTimeStore(pointInTimeStorePath),
+      readForecastLedger(forecastLedgerPath),
+    ]);
+    sendJson(
+      response,
+      buildStrategyTrace({
+        targetDate,
+        pointIndex,
+        asOf,
+        facts: store.facts,
+        forecastRuns: ledger.runs,
+      })
+    );
+    return;
   }
   if (request.method === 'GET' && url.pathname === '/api/forecast/runs') {
     const runType = url.searchParams.get('runType') || '';

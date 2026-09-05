@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>用户侧日前出清</title></head>
+<body data-jspec-page="business">
+  <label>交易日期 <input id="tradeDate" type="date" min="2026-05-01" max="2026-07-31" value="2026-07-30"></label>
+  <button id="queryButton" type="button">查询</button>
+  <p>查询日期：<output id="queryDate">2026-07-30</output></p>
+  <table><thead><tr><th>点位</th><th>日前价格</th></tr></thead><tbody id="rows"></tbody></table>
+  <button id="nextPage" type="button" aria-label="下一页">下一页</button>
+  <script>
+    const pages = [
+      [[1, 342.3], [2, 350.1]],
+      [[3, 355.8], [4, 349.6]],
+    ];
+    let pageIndex = 0;
+    function render() {
+      rows.innerHTML = pages[pageIndex].map(([point, value]) => `<tr><td>${point}</td><td>${value}</td></tr>`).join('');
+      nextPage.disabled = pageIndex === pages.length - 1;
+    }
+    queryButton.addEventListener('click', () => { queryDate.value = tradeDate.value; pageIndex = 0; render(); });
+    nextPage.addEventListener('click', () => { pageIndex += 1; render(); });
+    render();
+  </script>
+</body>
+</html>

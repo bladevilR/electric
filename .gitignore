@@ -28,6 +28,7 @@ __jspec_app.js
 *.pem
 *.pfx
 *.png
+!trading-ai-system/design/strategy-foundation-evidence-target.png
 *.ppt
 *.pptx
 *.wav
@@ -75,3 +76,20 @@ trading-ai-system/start-ukey-assistant.bat
 work_crops/
 对话.txt
 企业转型与能源服务.txt
+
+# Generated delivery archives, bundled runtimes and database copies
+trading-ai-system/output/load-repair-20260904/package-staging/
+trading-ai-system/output/load-repair-20260904/package-verification/
+trading-ai-system/output/load-repair-20260904/*.zip
+trading-ai-system/output/system-delivery-20260903/package-*/
+trading-ai-system/output/system-delivery-20260903/zip-verify-*/
+trading-ai-system/output/system-delivery-20260903/*.zip
+trading-ai-system/output/system-delivery-20260904/staging/
+trading-ai-system/output/system-delivery-20260904/verify-extracted/
+trading-ai-system/output/system-delivery-20260904/*.zip
+
+# SQLite database files and runtime journals
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+

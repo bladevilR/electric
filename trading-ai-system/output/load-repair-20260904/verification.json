@@ -1,0 +1,26 @@
+{
+  "verifiedAt": "2026-09-04T07:14:14.624Z",
+  "dateCount": 214,
+  "actualPoints": 20544,
+  "firstDate": "2025-06-01",
+  "lastDate": "2026-05-05",
+  "backtestDate": "2026-02-28",
+  "backtestMetrics": {
+    "mae": 5.370062499999999,
+    "rmse": 6.693809780311957,
+    "mape": 7.927869840493652,
+    "baselineSkill": null
+  },
+  "checks": [
+    "history-table-96",
+    "history-curve-96",
+    "actual-forecast-overlay-96",
+    "source-file-hash-and-conversion",
+    "date-filters-persist",
+    "evidence-refreshes-with-date",
+    "stale-data-no-current-forecast",
+    "mobile-no-page-overflow",
+    "no-page-errors"
+  ],
+  "errors": []
+}

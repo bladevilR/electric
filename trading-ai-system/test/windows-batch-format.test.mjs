@@ -46,6 +46,13 @@ test('Windows launcher opens the final submission demo directly', async () => {
   assert.match(launcher, /\?demo=submission&v=20260830-workstation-v12/);
 });
 
+test('Windows launcher accepts an explicit local workbench URL for real-data delivery', async () => {
+  const launcher = await readFile(powershellLauncherPath, 'utf8');
+
+  assert.match(launcher, /\[string\]\$OpenUrl\s*=\s*""/);
+  assert.match(launcher, /\$workbenchUrl\s*=\s*if \(\$OpenUrl\)/);
+});
+
 test('Windows launcher stores cumulative trading history in LocalAppData', async () => {
   const launcher = await readFile(powershellLauncherPath, 'utf8');
 

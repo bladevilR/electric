@@ -17,7 +17,7 @@ import {
 import * as ukeyBrowserCollectorModule from '../lib/ukey-browser-collector.mjs';
 import { chromium } from 'playwright';
 
-const chromeExecutable = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chromeExecutable = buildManagedBrowserLaunch({ rootDir: process.cwd() }).executablePath;
 
 test('buildManagedBrowserLaunch binds CDP to localhost and uses the managed JSPEC profile', () => {
   const launch = buildManagedBrowserLaunch({

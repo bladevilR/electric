@@ -5,12 +5,20 @@ import {
 } from './lib/strategy-evolution.mjs';
 import { scheduleWorkbenchMotion } from './workbench-motion.js';
 import { renderNavigation } from './ui/navigation.js';
-import { renderDataSourcesView } from './ui/views/data-sources-view.js';
+import { renderDataSourcesView, renderCollectionTruthStrip } from './ui/views/data-sources-view.js';
+import { buildStrategyFoundationModel } from './ui/view-models/strategy-foundation-model.js';
+import { createCollectorStatusPoller } from './ui/collector-status-poller.js';
+import {createReviewController} from './ui/review-controller.js';
+import { plainText } from './ui/presentation-language.js';
 import { renderMarketCockpitView } from './ui/views/market-cockpit-view.js';
 import { renderPriceForecastView } from './ui/views/price-forecast-view.js';
 import { renderDeclarationStrategyView } from './ui/views/declaration-strategy-view.js';
 import { renderHistoryReviewView } from './ui/views/history-review-view.js';
 import { renderModelGovernanceView } from './ui/views/model-governance-view.js';
+import {
+  createFoundationUiState,
+  reduceFoundationUiState,
+} from './ui/app-state.js';
 
 const moneyFormatter = new Intl.NumberFormat('zh-CN', {
   maximumFractionDigits: 0,
@@ -885,6 +893,10 @@ export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
   return {
     status: 'baseline_ready',
     targetDate,
+    modelVersion: 'price-baseline-v3',
+    dataCutoff: `${targetDate}T07:30:00+08:00`,
+    sampleDays: 214,
+    lastBacktestAt: `${targetDate}T07:18:00+08:00`,
     readiness: {
       status: 'baseline_ready',
       historicalDateCount: 5,
@@ -892,6 +904,103 @@ export function buildStandaloneDemoForecastReport(targetDate = '2026-07-31') {
       missingReasons: [],
     },
     forecasts,
+    actuals: forecasts.map((row, index) => ({
+      pointIndex: row.pointIndex,
+      value: Number(
+        (row.pointForecast * (1 + Math.sin((index + 3) / 7) * 0.045)).toFixed(2)
+      ),
+    })),
+    previousForecasts: forecasts.map((row, index) => ({
+      pointIndex: row.pointIndex,
+      value: Number(
+        (row.pointForecast * (1 + Math.cos((index + 5) / 9) * 0.075)).toFixed(2)
+      ),
+    })),
+  };
+}
+
+function buildDemoFoundationMarketSeries() {
+  const rows = Array.from({ length: 96 }, (_, index) => {
+    const pointIndex = index + 1;
+    const hour = index / 4;
+    const temperatureForecast =
+      25.5 + 6.8 * Math.sin(((hour - 8) / 24) * Math.PI * 2);
+    const loadForecast =
+      505 +
+      105 * Math.exp(-((hour - 10) ** 2) / 10) +
+      165 * Math.exp(-((hour - 19) ** 2) / 11);
+    return {
+      pointIndex,
+      temperatureForecast,
+      temperatureActual: temperatureForecast + Math.sin((index + 2) / 8) * 0.8,
+      temperaturePrevious: temperatureForecast + Math.cos((index + 4) / 10) * 1.25,
+      loadForecast,
+      loadActual: loadForecast * (1 + Math.sin((index + 1) / 9) * 0.028),
+      loadPrevious: loadForecast * (1 + Math.cos((index + 5) / 11) * 0.045),
+    };
+  });
+  const series = (key) =>
+    rows.map((row) => ({ pointIndex: row.pointIndex, value: Number(row[key].toFixed(2)) }));
+  return {
+    identity: { asOf: '2026-07-31T07:30:00+08:00' },
+    series: {
+      temperatureActualC: series('temperatureActual'),
+      temperatureForecastC: series('temperatureForecast'),
+      temperaturePreviousForecastC: series('temperaturePrevious'),
+      actualAverageLoadMw: series('loadActual'),
+      systemLoadForecastMw: series('loadForecast'),
+      previousSystemLoadForecastMw: series('loadPrevious'),
+    },
+  };
+}
+
+function buildDemoFoundationStrategyTrace(targetDate = '2026-07-31') {
+  const stage = (id, title, evidence = {}) => ({
+    id,
+    title,
+    status: evidence.status || 'available',
+    missingFields: evidence.missingFields || [],
+    conclusion: {
+      conclusionId: `demo:${targetDate}:${id}`,
+      summary: evidence.summary || '演示证据链已形成',
+      status: evidence.status === 'degraded' ? 'degraded' : 'supported',
+      inputRefs: evidence.inputRefs || [],
+      featureSnapshotId: evidence.featureSnapshotId || 'demo:feature-snapshot:v5',
+      forecastRunIds: evidence.forecastRunIds || [],
+      modelVersions: evidence.modelVersions || [],
+      constraintRefs: evidence.constraintRefs || [],
+      warnings: evidence.warnings || [],
+    },
+  });
+  return {
+    targetDate,
+    stages: [
+      stage('evidence', '时点证据', { inputRefs: ['demo:jspec:96-points'] }),
+      stage('load', '负荷预测', {
+        forecastRunIds: ['demo:load-run:20260731'],
+        modelVersions: ['demo:load-forecast-v5'],
+      }),
+      stage('price', '价格分布', {
+        forecastRunIds: ['demo:price-run:20260731'],
+        modelVersions: ['demo:price-baseline-v3'],
+      }),
+      stage('supplyNetwork', '供给与网络', {
+        inputRefs: ['demo:supply-network:snapshot'],
+      }),
+      stage('positionLimits', '持仓与限额', {
+        inputRefs: ['demo:position:snapshot'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+      stage('objectiveConstraints', '目标与硬约束', {
+        modelVersions: ['demo:optimizer-v2'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+      stage('recommendation', '推荐申报', {
+        inputRefs: ['demo:recommendation:96-points'],
+        modelVersions: ['demo:optimizer-v2'],
+        constraintRefs: ['demo:constraint-v7'],
+      }),
+    ],
   };
 }
 
@@ -1125,12 +1234,20 @@ export function buildDemoActionResult(payload, actionId) {
 }
 
 function dashboardSidebar(payload, activeStage, dialogOpen = false) {
+  const iconFoundation = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`;
+  const iconOptimize = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+  const iconForecast = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+  const iconEvolution = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+  const iconReview = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`;
+  const iconGuide = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+  const iconEvidence = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
   const navItems = [
-    { id: 'foundation', stage: 'foundation', label: '基础数据', icon: '数' },
-    { id: 'optimize', stage: 'connect', label: '申报优化', icon: '⌁' },
-    { id: 'forecast', stage: 'forecast', label: '价格预测', icon: '预' },
-    { id: 'evolution', stage: 'evolve', label: '策略进化', icon: '↻' },
-    { id: 'review', stage: 'settle', label: '复盘回顾', icon: '◇' },
+    { id: 'foundation', stage: 'foundation', label: '基础数据与依据', iconSvg: iconFoundation },
+    { id: 'optimize', stage: 'connect', label: '申报优化', iconSvg: iconOptimize },
+    { id: 'forecast', stage: 'forecast', label: '价格预测', iconSvg: iconForecast },
+    { id: 'evolution', stage: 'evolve', label: '策略进化', iconSvg: iconEvolution },
+    { id: 'review', stage: 'settle', label: '复盘回顾', iconSvg: iconReview },
   ];
   const activeNavigation =
     activeStage === 'foundation'
@@ -1145,7 +1262,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
   return `
     <aside class="dashboard-sidebar"${dialogOpen ? ' inert' : ''}>
       <div class="dashboard-brand">
-        <span class="brand-mark" aria-hidden="true">ϟ</span>
+        <img class="brand-mark" src="./assets/app-icon.png" alt="">
         <div class="brand-copy">
           <strong>电力交易 AI</strong>
           <small>智能申报决策</small>
@@ -1163,7 +1280,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
                 data-dashboard-nav="${escapeHtml(item.id)}"
                 data-stage="${escapeHtml(item.stage)}"
               >
-                <span class="nav-icon" aria-hidden="true">${escapeHtml(item.icon)}</span>
+                <span class="nav-icon" aria-hidden="true">${item.iconSvg}</span>
                 <span class="nav-label">${escapeHtml(item.label)}</span>
               </button>
             `
@@ -1177,7 +1294,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
         rel="noreferrer"
         aria-label="一分钟上手"
       >
-        <span class="nav-icon" aria-hidden="true">?</span>
+        <span class="nav-icon" aria-hidden="true">${iconGuide}</span>
         <span class="nav-label">一分钟上手</span>
       </a>
       <div class="dashboard-model-status">
@@ -1188,7 +1305,7 @@ function dashboardSidebar(payload, activeStage, dialogOpen = false) {
         </div>
       </div>
       <button id="evidence-trigger-sidebar" class="sidebar-evidence-button" type="button" data-action="open-evidence" aria-label="证据与审计">
-        <span aria-hidden="true">◎</span>
+        <span class="nav-icon" aria-hidden="true">${iconEvidence}</span>
         <span class="nav-label">证据与审计</span>
       </button>
     </aside>
@@ -2586,31 +2703,96 @@ export function renderWorkbenchMarkup(payload, options = {}) {
       : activeStage === 'evolve'
         ? renderStrategyEvolutionDashboard(payload)
         : renderDeclarationDashboard(payload, { activeStage });
-  const cockpitState = { ...options, mode: payload.demoMode ? 'demo' : 'real', targetDate: payload.date, dataSources: options.dataSources || {}, fieldCatalog: options.fieldCatalog || {}, marketCockpit: options.marketCockpit || {}, forecastReport: options.forecastReport || {}, strategyReport: { recommendation: payload.declarationRecommendation, trace: options.strategyTrace }, accuracyReport: options.accuracyReport || {}, governanceReport: options.governanceReport || {} };
+  const foundationUi = options.foundationUi || createFoundationUiState();
+  const cockpitState = {
+    ...options,
+    ...foundationUi,
+    mode: payload.demoMode ? 'demo' : 'real',
+    targetDate: options.activeView==='data-sources' && options.reviewState?.selection?.date || payload.date,
+    reviewState: payload.demoMode ? null : options.reviewState,
+    dataSources: options.dataSources || {},
+    fieldCatalog: options.fieldCatalog || {},
+    marketCockpit: options.marketCockpit || {},
+    forecastReport: options.forecastReport || {},
+    strategyReport: {
+      recommendation: payload.declarationRecommendation,
+      trace: options.strategyTrace,
+    },
+    accuracyReport: options.accuracyReport || {},
+    forecastRuns: options.forecastRuns || {},
+    governanceReport: options.governanceReport || {},
+    openExplanation: foundationUi.explanation,
+    foundationInput: {
+      workbench: payload,
+      ukeyStatus: options.ukeyStatus || {},
+      forecastReport: options.forecastReport || {},
+      accuracyReport: options.accuracyReport || {},
+      forecastRuns: options.forecastRuns || {},
+      marketCockpit: options.marketCockpit || {},
+      strategyTrace: options.strategyTrace || {},
+      collectorStatus: options.collectorStatus || {},
+      historyFacts: options.reviewState?.report?.historyFacts || options.historyFacts || {},
+      historyCoverage: options.historyCoverage || {},
+      loadForecastReport: options.loadForecastReport || {},
+      reviewPreview: options.reviewPreview || {},
+      historyMode: options.historyMode || 'detail',
+      historyCaptures: options.historyCaptures || {},
+    },
+  };
   const cockpitViews = { 'data-sources': renderDataSourcesView, 'market-cockpit': renderMarketCockpitView, 'price-forecast': renderPriceForecastView, 'declaration-strategy': renderDeclarationStrategyView, 'history-review': renderHistoryReviewView, 'model-governance': renderModelGovernanceView };
   const activeCockpitView = options.activeView || 'market-cockpit';
+  const legacyWorkspace =
+    !options.activeView || activeCockpitView === 'declaration-strategy'
+      ? `${dashboardTopbar(payload, mode)}${mainContent}`
+      : '';
+  const sidebarStage =
+    activeCockpitView === 'data-sources'
+      ? 'foundation'
+      : activeCockpitView === 'price-forecast'
+      ? 'forecast'
+      : activeCockpitView === 'history-review'
+      ? 'settle'
+      : activeCockpitView === 'model-governance'
+      ? 'evolve'
+      : activeCockpitView === 'declaration-strategy'
+      ? 'connect'
+      : (activeStage || 'connect');
   return `
     <div class="workbench-shell dashboard-shell${payload.presentationDisclosure ? ' is-submission-shell' : ''}">
-      ${dashboardSidebar(payload, activeStage, evidenceOpen)}
+      ${dashboardSidebar(payload, sidebarStage, evidenceOpen)}
       <main class="workbench-main dashboard-main"${evidenceOpen ? ' inert' : ''}>
         ${payload.demoMode ? `<div class="demo-banner ${payload.presentationDisclosure ? 'is-presentation' : ''}" role="status">${escapeHtml(payload.demoLabel)} · ${escapeHtml(payload.presentationDisclosure || '仅用于界面测试，不用于交易')}</div>` : ''}
-        <section class="cockpit-experience" aria-label="六步市场决策工作流">
+        <section class="cockpit-experience${activeCockpitView === 'data-sources' ? '' : ' is-workflow'}" aria-label="六步市场决策工作流">
           ${renderNavigation({ activeView: activeCockpitView })}
           ${cockpitViews[activeCockpitView](cockpitState)}
         </section>
-        ${dashboardTopbar(payload, mode)}
-        ${mainContent}
+        ${legacyWorkspace}
       </main>
       ${evidenceDrawer(payload, evidenceOpen)}
     </div>
   `;
 }
 
+const COCKPIT_VIEW_IDS = new Set([
+  'data-sources',
+  'market-cockpit',
+  'price-forecast',
+  'declaration-strategy',
+  'history-review',
+  'model-governance',
+]);
+
+function initialCockpitView() {
+  if (typeof window === 'undefined') return 'market-cockpit';
+  const requested = new URLSearchParams(window.location.search).get('view');
+  return COCKPIT_VIEW_IDS.has(requested) ? requested : 'market-cockpit';
+}
+
 const browserState = {
   payload: null,
   mode: 'operation',
   activeStage: null,
-  activeView: 'market-cockpit',
+  activeView: initialCockpitView(),
   evidenceOpen: false,
   loading: true,
   forecastReport: null,
@@ -2620,7 +2802,52 @@ const browserState = {
   error: '',
   pendingAction: '',
   evidenceReturnSelector: '#evidence-trigger-sidebar',
+  foundationUi: createFoundationUiState(),
+  ukeyStatus: {},
+  accuracyReport: {},
+  forecastRuns: {},
+  collectorStatus: {},
+  historyFacts: {},
+  historyCoverage: {},
+  loadForecastReport: {},
+  historyMode: 'detail',
+  historyCaptures: {},
+  reviewState: null,
 };
+
+const reviewController=createReviewController({
+  fetchReport:async({month,date,type})=>{
+    const params=new URLSearchParams({month,date,type});
+    const [report,historyFacts]=await Promise.all([
+      fetch(`/api/forecast/review?${params}`,{cache:'no-store'}).then(responseJson),
+      fetch(`/api/history/facts?date=${date}&limit=1000`,{cache:'no-store'}).then(responseJson).catch(()=>({query:{businessDate:date},rows:[]})),
+    ]);
+    return {...report,historyFacts};
+  },
+  onState:state=>{
+    browserState.reviewState=state;
+    browserState.foundationUi=reduceFoundationUiState(browserState.foundationUi,{type:'select_tab',id:state.selection.type});
+    if(state.report?.historyFacts) browserState.historyFacts=state.report.historyFacts;
+    if(typeof window!=='undefined') {
+      const url=new URL(window.location.href);
+      url.searchParams.set('date',state.selection.date);
+      url.searchParams.set('dimension',state.selection.type);
+      window.history.replaceState(null,'',url);
+    }
+    renderBrowser();
+  },
+});
+
+async function selectReview({date,type}={}) {
+  return reviewController.select({date:date||browserState.reviewState?.selection?.date||browserState.payload?.date,type:type||browserState.reviewState?.selection?.type||'price'});
+}
+
+function reviewMonthDate(month) {
+  if(!/^\d{4}-\d{2}$/.test(month)||Number(month.slice(-2))<1||Number(month.slice(-2))>12)return null;
+  const last=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(-2)),0)).getUTCDate();
+  const day=Math.min(last,Number((browserState.reviewState?.selection?.date||browserState.payload?.date||'').slice(-2))||1);
+  return `${month}-${String(day).padStart(2,'0')}`;
+}
 
 export function claimPendingAction(state, actionId) {
   if (!state || state.pendingAction) return false;
@@ -2661,6 +2888,36 @@ function closeEvidenceDialog() {
   });
 }
 
+function focusFoundationDisclosure() {
+  const selector = browserState.foundationUi.provenanceOpen
+    ? '.foundation-provenance [data-foundation-action="close-provenance"]'
+    : '.foundation-evidence-drawer [data-foundation-action="close-explanation"]';
+  rootElement()?.querySelector(selector)?.focus();
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame(() => {
+      rootElement()?.querySelector(selector)?.focus();
+    });
+  }
+}
+
+function closeFoundationDisclosure() {
+  const returnSelector = browserState.foundationUi.returnFocusSelector;
+  browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+    type: 'close_disclosure',
+  });
+  renderBrowser();
+  if (returnSelector) {
+    rootElement()?.querySelector(returnSelector)?.focus();
+  }
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame(() => {
+      if (returnSelector && document.activeElement !== rootElement()?.querySelector(returnSelector)) {
+        rootElement()?.querySelector(returnSelector)?.focus();
+      }
+    });
+  }
+}
+
 function loadingMarkup(message = '正在核对今日数据…') {
   return `
     <div class="loading-screen">
@@ -2671,9 +2928,46 @@ function loadingMarkup(message = '正在核对今日数据…') {
   `;
 }
 
+function updateCollectionStrip() {
+  const strip=rootElement()?.querySelector('.foundation-truth-strip');
+  if(!strip || !browserState.payload) return;
+  const model=buildStrategyFoundationModel({...browserState,workbench:browserState.payload,targetDate:browserState.payload.date,mode:browserState.payload.demoMode?'demo':'real'});
+  const focusAction=strip.contains(document.activeElement) ? document.activeElement?.dataset.foundationAction : null;
+  const detailsOpen=strip.querySelector('[data-collection-details]')?.open;
+  const summaryFocused=document.activeElement===strip.querySelector('summary');
+  const template=document.createElement('template');
+  template.innerHTML=renderCollectionTruthStrip(model).trim();
+  const replacement=template.content.firstElementChild;
+  strip.replaceWith(replacement);
+  if (detailsOpen) replacement.querySelector('[data-collection-details]').open=true;
+  if (summaryFocused) replacement.querySelector('summary')?.focus({preventScroll:true});
+  if(browserState.pendingAction) replacement.querySelectorAll('button').forEach(button=>{button.disabled=true;});
+  if(focusAction) [...replacement.querySelectorAll('[data-foundation-action]')].find(button=>button.dataset.foundationAction===focusAction)?.focus({preventScroll:true});
+}
+
+const collectorStatusPoller=createCollectorStatusPoller({
+  read:({signal})=>fetch('/api/collector/status',{cache:'no-store',signal}).then(responseJson),
+  onStatus:status=>{
+    if(Date.parse(status.observedAt || '') < Date.parse(browserState.collectorStatus?.observedAt || '')) return;
+    browserState.collectorStatus={...status,pollError:null};
+    updateCollectionStrip();
+  },
+  onError:error=>{
+    browserState.collectorStatus={...browserState.collectorStatus,pollError:error.message};
+    updateCollectionStrip();
+  },
+});
+
+function syncCollectionPolling() {
+  if(browserState.payload && !browserState.payload.demoMode && browserState.activeView==='data-sources' && !document.hidden) collectorStatusPoller.start();
+  else collectorStatusPoller.stop();
+}
+
 function renderBrowser() {
   const root = rootElement();
   if (!root) return;
+  const openDisclosures = [...root.querySelectorAll('[data-foundation-root] details[open]')].map(el=>el.id || el.getAttribute('data-disclosure') || el.querySelector('summary')?.textContent.trim()).filter(Boolean);
+  const focusedControl = root.contains(document.activeElement) ? document.activeElement?.dataset.sandboxControl : null;
   if (browserState.loading && !browserState.payload) {
     root.innerHTML = loadingMarkup();
     return;
@@ -2693,15 +2987,20 @@ function renderBrowser() {
     ${
       browserState.actionMessage || browserState.error
         ? `<div class="toast ${browserState.error ? 'is-error' : ''}" role="${browserState.error ? 'alert' : 'status'}">
-            ${escapeHtml(browserState.error || browserState.actionMessage)}
+            ${escapeHtml(plainText(browserState.error || browserState.actionMessage, '操作暂未完成，请检查数据连接后重试。'))}
           </div>`
         : ''
     }
   `;
+  root.querySelectorAll('[data-foundation-root] details').forEach(el=>{
+    const key=el.id || el.getAttribute('data-disclosure') || el.querySelector('summary')?.textContent.trim();
+    if(openDisclosures.includes(key)) el.open=true;
+  });
+  if(focusedControl) root.querySelector(`[data-sandbox-control="${focusedControl}"]`)?.focus({preventScroll:true});
   if (browserState.pendingAction) {
     root.setAttribute('aria-busy', 'true');
     root
-      .querySelectorAll('[data-primary-action], [data-evolution-action]')
+      .querySelectorAll('[data-primary-action], [data-evolution-action], [data-foundation-action="start-browser"], [data-foundation-action="start-backfill"], [data-foundation-action="pause-backfill"], [data-foundation-action="resume-backfill"]')
       .forEach((button) => {
         button.disabled = true;
         button.setAttribute('aria-disabled', 'true');
@@ -2710,11 +3009,12 @@ function renderBrowser() {
     root.removeAttribute('aria-busy');
   }
   scheduleWorkbenchMotion(root);
+  syncCollectionPolling();
 }
 
 async function responseJson(response) {
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `服务返回 ${response.status}`);
+  if (!response.ok) throw new Error(payload.error?.message || payload.error?.code || payload.error || `服务返回 ${response.status}`);
   return payload;
 }
 
@@ -2729,6 +3029,99 @@ async function loadWorkbench(date = '') {
       scenario
     );
     browserState.activeStage = browserState.payload.currentStage;
+    browserState.payload.metrics = {
+      ...(browserState.payload.metrics || {}),
+      marketPricePointCount: 96,
+    };
+    browserState.forecastReport = buildStandaloneDemoForecastReport(
+      browserState.payload.date
+    );
+    browserState.ukeyStatus = {
+      collector: { state: 'stopped' },
+      visibleHistory: {
+        dates: [browserState.payload.date],
+        rowCount: 96,
+        generatedAt: browserState.payload.dataFreshness?.generatedAt,
+      },
+    };
+    browserState.collectorStatus = {
+      browser: { state: 'ready' },
+      weather: { provider: 'Open-Meteo', forecastLeadHours: 24 },
+      jobs: [{ id: 'demo-backfill', state: 'completed', completedChunks: 50, totalChunks: 50 }],
+      storage: { engine: 'SQLite', path: '演示数据（不落生产库）' },
+    };
+    browserState.accuracyReport = {
+      metrics: { mae: 21.4, rmse: 31.8, mape: 6.3, baselineSkill: 9.6 },
+      generatedAt: browserState.payload.dataFreshness?.generatedAt,
+      history: [
+        { date: '2026-07-27', value: 8.4 },
+        { date: '2026-07-28', value: 7.1 },
+        { date: '2026-07-29', value: 6.8 },
+        { date: '2026-07-30', value: 7.5 },
+        { date: '2026-07-31', value: 6.3 },
+      ],
+      versions: [
+        {
+          id: 'price-baseline-v3',
+          modelVersion: 'price-baseline-v3',
+          issuedAt: '2026-07-31 07:30',
+          sampleDays: 214,
+          mae: 21.4,
+          baselineSkill: 9.6,
+          status: '演示回测',
+        },
+      ],
+      byTarget: {
+        temperature: {
+          metrics: { mae: 0.8, rmse: 1.1, mape: 2.7, baselineSkill: 12.4 },
+          modelVersion: 'temp-forecast-v6',
+          sampleDays: 180,
+          lastBacktestAt: '2026-07-31 07:20',
+          history: [
+            { date: '2026-07-27', value: 1.1 },
+            { date: '2026-07-28', value: 0.9 },
+            { date: '2026-07-29', value: 0.85 },
+            { date: '2026-07-30', value: 0.94 },
+            { date: '2026-07-31', value: 0.8 },
+          ],
+          versions: [
+            {
+              id: 'temp-forecast-v6',
+              issuedAt: '2026-07-31 07:20',
+              sampleDays: 180,
+              mae: 0.8,
+              baselineSkill: 12.4,
+              status: '演示回测',
+            },
+          ],
+        },
+        load: {
+          metrics: { mae: 11.8, rmse: 16.2, mape: 2.1, baselineSkill: 8.7 },
+          modelVersion: 'load-forecast-v5',
+          sampleDays: 180,
+          lastBacktestAt: '2026-07-31 07:22',
+          history: [
+            { date: '2026-07-27', value: 14.2 },
+            { date: '2026-07-28', value: 13.4 },
+            { date: '2026-07-29', value: 12.7 },
+            { date: '2026-07-30', value: 12.1 },
+            { date: '2026-07-31', value: 11.8 },
+          ],
+          versions: [
+            {
+              id: 'load-forecast-v5',
+              issuedAt: '2026-07-31 07:22',
+              sampleDays: 180,
+              mae: 11.8,
+              baselineSkill: 8.7,
+              status: '演示回测',
+            },
+          ],
+        },
+      },
+    };
+    browserState.marketCockpit = buildDemoFoundationMarketSeries();
+    browserState.strategyTrace = buildDemoFoundationStrategyTrace(browserState.payload.date);
     browserState.loading = false;
     renderBrowser();
     if (browserState.evidenceOpen) focusEvidenceDialog();
@@ -2738,16 +3131,32 @@ async function loadWorkbench(date = '') {
     const query = date ? `?date=${encodeURIComponent(date)}` : '';
     browserState.payload = await fetch(`/api/workbench${query}`, { cache: 'no-store' }).then(responseJson);
     browserState.activeStage = browserState.payload.currentStage;
+    if(!browserState.reviewState) {
+      const params=new URLSearchParams(window.location.search);
+      void selectReview({date:params.get('date')||browserState.payload.date,type:params.get('dimension')||'price'});
+    }
     renderBrowser();
     const selectedDate = browserState.payload?.date || '';
-    const asOf = new Date().toISOString();
+    // Keep the browser snapshot just behind the server clock so sub-second host skew
+    // cannot make an otherwise valid point-in-time request look like a future query.
+    const asOf = new Date(Date.now() - 1000).toISOString();
     const cockpitQuery = `date=${encodeURIComponent(selectedDate)}&asOf=${encodeURIComponent(asOf)}&mode=real`;
-    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace] = await Promise.all([
+    [browserState.dataSources,browserState.fieldCatalog,browserState.marketCockpit,browserState.strategyTrace,browserState.ukeyStatus,browserState.forecastReport,browserState.accuracyReport,browserState.forecastRuns,browserState.collectorStatus,browserState.historyFacts,browserState.historyCoverage,browserState.loadForecastReport] = await Promise.all([
       fetch('/api/data-sources',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch('/api/field-catalog',{cache:'no-store'}).then(responseJson).catch(()=>({})),
       fetch(`/api/market/cockpit?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({identity:{targetDate:selectedDate,asOf},gaps:[]})),
       fetch(`/api/strategy/trace?${cockpitQuery}`,{cache:'no-store'}).then(responseJson).catch(()=>({stages:[]})),
+      fetch('/api/ukey-assistant',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/model?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/accuracy?to=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message})),
+      fetch(`/api/forecast/runs?date=${encodeURIComponent(selectedDate)}&runType=live_issued&limit=50`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,runs:[]})),
+      fetch('/api/collector/status',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,browser:{state:'unavailable'},jobs:[]})),
+      fetch(`/api/history/facts?date=${encodeURIComponent(selectedDate)}&limit=1000`,{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,rows:[]})),
+      fetch('/api/history/coverage',{cache:'no-store'}).then(responseJson).catch((error)=>({loadError:error.message,coverage:{}})),
+      fetch(`/api/forecast/load?date=${encodeURIComponent(selectedDate)}`,{cache:'no-store'}).then(responseJson).catch(error=>({loadError:error.message})),
     ]);
+    browserState.historyCaptures = {captures:[]};
+    if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
     const [strategyValidation, declarationRecommendation, costStrategy, strategyEvolution] =
       await Promise.all([
         fetch('/api/strategy-validation', { cache: 'no-store' }).then(responseJson),
@@ -2811,6 +3220,14 @@ async function loadForecastReport(date = '') {
   }
 }
 
+async function loadHistoryCaptures() {
+  const query = browserState.historyFacts?.query || {};
+  const params = new URLSearchParams();
+  for (const key of ['from','to','sourceId']) if (query[key]) params.set(key, query[key]);
+  if (query.businessDate) params.set('date', query.businessDate);
+  browserState.historyCaptures = await fetch(`/api/history/captures?${params}`, {cache:'no-store'}).then(responseJson);
+}
+
 export function buildCollectorActionMessage(result = {}) {
   if (result.ok) {
     return `已采集 ${result.snapshot?.rowCount || 0} 行，正在重新校验。`;
@@ -2828,6 +3245,35 @@ export function buildCollectorActionMessage(result = {}) {
   return detail
     ? `采集未完成：${detail}`
     : '没有读到业务表格：请在打开的数据窗口完成 UKey 登录并停在业务页面，再点击一次。';
+}
+
+export function buildCollectorBrowserStartMessage(browser = {}) {
+  if (browser.state === 'login_required') {
+    return '专用 Chrome 已打开并置前；请在该窗口完成 UKey 登录。';
+  }
+  if (browser.state === 'login_expired') {
+    return '专用 Chrome 已打开并置前；UKey 登录已过期，请重新登录。';
+  }
+  if (browser.state === 'page_changed') {
+    return '专用 Chrome 已打开并置前；请在其中打开 JSPEC 业务数据页面。';
+  }
+  if (browser.state === 'error') {
+    return `专用 Chrome 打开失败：${browser.lastErrorMessage || '请检查 Chrome 安装和采集服务状态。'}`;
+  }
+  return '专用 Chrome 已置前并连接。';
+}
+
+export function buildCollectorBackfillPrerequisiteMessage(browser = {}) {
+  if (browser.state === 'page_changed') {
+    return '你已经登录；请在专用 Chrome 中进入任一 JSPEC 业务数据页面，然后再次点击“开始全量回填”。';
+  }
+  if (browser.state === 'login_expired') {
+    return '专用 Chrome 的 UKey 登录已过期；重新登录后再次点击“开始全量回填”。';
+  }
+  if (browser.state === 'error') {
+    return `采集器暂未就绪：${browser.lastErrorMessage || '请检查专用 Chrome 状态。'}`;
+  }
+  return '请在专用 Chrome 中完成 UKey 登录；登录后再次点击“开始全量回填”。';
 }
 
 async function runPrimaryAction(actionId) {
@@ -2863,7 +3309,12 @@ async function runPrimaryAction(actionId) {
     }
   }
   if (actionId === 'collect_today_data') {
-    browserState.actionMessage = '正在打开数据窗口并采集当前页面…';
+    if (browserState.payload?.demoMode) {
+      browserState.actionMessage = '演示环境不会连接真实 UKey；请切换到真实环境启动自动采集。';
+      renderBrowser();
+      return;
+    }
+    browserState.actionMessage = '正在连接数据窗口并启动自动采集…';
     renderBrowser();
     try {
       await fetch('/api/ukey-assistant/browser/start', { method: 'POST', cache: 'no-store' }).then(responseJson);
@@ -2871,7 +3322,15 @@ async function runPrimaryAction(actionId) {
         method: 'POST',
         cache: 'no-store',
       }).then(responseJson);
-      browserState.actionMessage = buildCollectorActionMessage(result);
+      const collector = await fetch('/api/ukey-assistant/collector/start', {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ intervalSeconds: 30 }),
+      }).then(responseJson);
+      browserState.actionMessage = collector?.collector?.state === 'running'
+        ? `${buildCollectorActionMessage(result)} 自动采集已启动，每 30 秒检查一次。`
+        : buildCollectorActionMessage(result);
       await loadWorkbench(browserState.payload?.date || '');
     } catch (error) {
       browserState.error = `采集失败：${error.message}`;
@@ -2912,9 +3371,222 @@ async function runPrimaryAction(actionId) {
 function bindBrowserEvents() {
   const root = rootElement();
   if (!root) return;
+  root.addEventListener('keydown', event => {
+    const reviewDay=event.target.closest('svg [data-review-date]');
+    if(reviewDay && ['Enter',' '].includes(event.key)) {event.preventDefault();reviewDay.dispatchEvent(new MouseEvent('click',{bubbles:true}));return;}
+    const tab=event.target.closest('[data-forecast-tab]');
+    if(!tab || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs=[...root.querySelectorAll('[data-forecast-tab]')],index=tabs.indexOf(tab);
+    const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+    tabs[next].click();
+  });
   root.addEventListener('click', async (event) => {
+    const reviewDay=event.target.closest('[data-review-date]');
+    if(reviewDay) {
+      await selectReview({date:reviewDay.dataset.reviewDate});
+      root.querySelector('[data-review-detail]')?.scrollIntoView({block:'start',behavior:'instant'});
+      return;
+    }
+    const reviewStep=event.target.closest('[data-review-month-step],[data-review-day-step]');
+    if(reviewStep) {
+      const date=browserState.reviewState?.selection?.date||browserState.payload.date;
+      const value=new Date(`${date}T00:00:00Z`);
+      if(reviewStep.dataset.reviewMonthStep) {
+        value.setUTCDate(1);value.setUTCMonth(value.getUTCMonth()+Number(reviewStep.dataset.reviewMonthStep));
+        await selectReview({date:reviewMonthDate(value.toISOString().slice(0,7))});
+      } else {
+        value.setUTCDate(value.getUTCDate()+Number(reviewStep.dataset.reviewDayStep));
+        await selectReview({date:value.toISOString().slice(0,10)});
+      }
+      return;
+    }
+    if(event.target.closest('[data-review-retry]')) {await selectReview();return;}
+    const forecastTab = event.target.closest('[data-forecast-tab]');
+    if (forecastTab) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'select_tab',
+        id: forecastTab.dataset.forecastTab,
+      });
+      if(!browserState.payload?.demoMode) void selectReview({type:forecastTab.dataset.forecastTab});
+      else renderBrowser();
+      requestAnimationFrame(() => {
+        rootElement()
+          ?.querySelector(`[data-forecast-tab="${browserState.foundationUi.activeForecastTab}"]`)
+          ?.focus();
+      });
+      return;
+    }
+    const foundationAction = event.target.closest('[data-foundation-action]');
+    if (foundationAction) {
+      const action = foundationAction.dataset.foundationAction;
+      if (browserState.payload?.demoMode && ['start-browser','start-backfill','pause-backfill','resume-backfill'].includes(action)) {
+        browserState.actionMessage='演示环境不会连接真实交易平台，也不会更新真实数据。';
+        renderBrowser();
+        return;
+      }
+      const triggerSelector = foundationAction.dataset.foundationTrigger
+        ? `[data-foundation-trigger="${foundationAction.dataset.foundationTrigger}"]`
+        : foundationAction.dataset.explanationId
+          ? `[data-explanation-id="${foundationAction.dataset.explanationId}"]`
+          : '[data-foundation-action="open-provenance"]';
+      if (action === 'start-browser' || action === 'start-backfill') {
+        if (!claimPendingAction(browserState, action)) return;
+        browserState.error = '';
+        browserState.actionMessage = action === 'start-browser' ? '正在打开专用 Chrome…' : '正在检查专用 Chrome 与 UKey 登录状态…';
+        renderBrowser();
+        try {
+          let browser = browserState.collectorStatus?.browser || {};
+          if (!['ready', 'collecting', 'paused', 'rate_limited'].includes(browser.state)) {
+            const started = await fetch('/api/collector/browser/start', { method: 'POST', cache: 'no-store' }).then(responseJson);
+            browser = started.browser || {};
+          }
+          if (action === 'start-backfill') {
+            if (!['ready', 'collecting', 'paused', 'rate_limited'].includes(browser.state)) {
+              browserState.actionMessage = buildCollectorBackfillPrerequisiteMessage(browser);
+            } else {
+              const result = await fetch('/api/collector/jobs/backfill', {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'content-type': 'application/json' },
+                body: '{}',
+              }).then(responseJson);
+              browserState.actionMessage = result.job?.state === 'paused' ? '已有回填任务已暂停，断点保留；点击“继续回填”恢复。'
+                : result.reused ? '已有数据更新正在进行，不会重复启动。' : '历史数据更新已开始。';
+            }
+          } else {
+            browserState.actionMessage = buildCollectorBrowserStartMessage(browser);
+          }
+          browserState.collectorStatus = await fetch('/api/collector/status', { cache: 'no-store' }).then(responseJson);
+        } catch (error) {
+          browserState.error = `采集器操作失败：${error.message}`;
+        } finally {
+          releasePendingAction(browserState, action);
+          renderBrowser();
+        }
+        return;
+      }
+      if (action === 'pause-backfill' || action === 'resume-backfill') {
+        const jobId = foundationAction.dataset.jobId;
+        if (!jobId || !claimPendingAction(browserState, action)) return;
+        browserState.error='';
+        renderBrowser();
+        try {
+          const verb = action === 'pause-backfill' ? 'pause' : 'resume';
+          await fetch(`/api/collector/jobs/${encodeURIComponent(jobId)}/${verb}`, { method: 'POST', cache: 'no-store' }).then(responseJson);
+          browserState.collectorStatus = await fetch('/api/collector/status', { cache: 'no-store' }).then(responseJson);
+          browserState.actionMessage = action === 'pause-backfill' ? '历史回填已暂停，检查点已保存。' : '历史回填已从检查点继续。';
+        } catch (error) {
+          browserState.error = `回填任务操作失败：${error.message}`;
+        } finally {
+          releasePendingAction(browserState, action);
+          renderBrowser();
+        }
+        return;
+      }
+      if (action === 'open-explanation') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'open_explanation',
+          id: foundationAction.dataset.explanationId,
+          triggerSelector,
+        });
+        renderBrowser();
+        focusFoundationDisclosure();
+        return;
+      }
+      if (action === 'open-provenance') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'open_provenance',
+          triggerSelector,
+        });
+        renderBrowser();
+        focusFoundationDisclosure();
+        return;
+      }
+      if (action === 'close-explanation' || action === 'close-provenance') {
+        closeFoundationDisclosure();
+        return;
+      }
+      if (action === 'reset-sandbox') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'reset_controls',
+        });
+        renderBrowser();
+        return;
+      }
+      if (action === 'apply-simulation') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+          type: 'apply_simulation',
+        });
+        browserState.actionMessage = '模拟方案已刷新；正式策略和交易数据未被修改。';
+        renderBrowser();
+        return;
+      }
+      if (action === 'focus-versions') {
+        const versions = rootElement()?.querySelector('#foundationVersionPanel');
+        if (versions) versions.open = true;
+        rootElement()?.querySelector('#foundationVersionPanel')?.focus();
+        rootElement()
+          ?.querySelector('#foundationVersionPanel')
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
+      if (action === 'open-load-backtest') {
+        browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {type:'select_tab',id:'load'});
+        await selectReview({date:foundationAction.dataset.date,type:'load'});
+        browserState.activeView = 'data-sources';
+        renderBrowser();
+        return;
+      }
+      if (action === 'history-next') {
+        const query = new URLSearchParams(Object.entries(browserState.historyFacts.query || {}).filter(([,value])=>value !== undefined && value !== null));
+        if (query.has('businessDate')) { query.set('date',query.get('businessDate'));query.delete('businessDate'); }
+        query.set('offset',foundationAction.dataset.offset);
+        browserState.historyFacts = await fetch(`/api/history/facts?${query}`,{cache:'no-store'}).then(responseJson);
+        renderBrowser();
+        return;
+      }
+    }
+    const historyMode = event.target.closest('[data-history-mode]');
+    if (historyMode) {
+      browserState.historyMode = historyMode.dataset.historyMode;
+      try { if (browserState.historyMode === 'evidence') await loadHistoryCaptures(); }
+      catch (error) { browserState.historyCaptures = {captures:[]}; browserState.error = `采集证据查询失败：${error.message}`; }
+      renderBrowser();
+      return;
+    }
+    const riskButton = event.target.closest('[data-risk-profile]');
+    if (riskButton) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'set_risk',
+        id: riskButton.dataset.riskProfile,
+      });
+      renderBrowser();
+      return;
+    }
     const cockpitButton = event.target.closest('[data-cockpit-view]');
-    if (cockpitButton) { browserState.activeView = cockpitButton.dataset.cockpitView; const url = new URL(window.location.href); url.searchParams.set('view', browserState.activeView); history.replaceState(null,'',url); renderBrowser(); return; }
+    if (cockpitButton) {
+      browserState.activeView = cockpitButton.dataset.cockpitView;
+      const stageMap = {
+        'data-sources': 'foundation',
+        'price-forecast': 'forecast',
+        'declaration-strategy': 'connect',
+        'history-review': 'settle',
+        'model-governance': 'evolve',
+        'market-cockpit': 'connect',
+      };
+      if (stageMap[browserState.activeView]) {
+        browserState.activeStage = stageMap[browserState.activeView];
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', browserState.activeView);
+      history.replaceState(null, '', url);
+      renderBrowser();
+      if (browserState.activeView === 'price-forecast') {
+        loadForecastReport(browserState.payload?.date || '').catch(() => {});
+      }
+      return;
+    }
     const cockpitEvidence = event.target.closest('[data-evidence-ref]');
     if (cockpitEvidence) { browserState.selectedEvidence = cockpitEvidence.dataset.evidenceRef || 'missing-evidence'; browserState.evidenceReturnSelector = '.cockpit-experience [data-evidence-ref]'; browserState.evidenceOpen = true; renderBrowser(); focusEvidenceDialog(); return; }
     const mockStageButton = event.target.closest('[data-mock-stage]');
@@ -2955,6 +3627,19 @@ function bindBrowserEvents() {
     const dashboardNav = event.target.closest('[data-dashboard-nav]');
     if (dashboardNav) {
       const destination = dashboardNav.dataset.dashboardNav;
+      const viewMap = {
+        'foundation': 'data-sources',
+        'forecast': 'price-forecast',
+        'optimize': 'declaration-strategy',
+        'evolution': 'model-governance',
+        'review': 'history-review',
+      };
+      if (viewMap[destination]) {
+        browserState.activeView = viewMap[destination];
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', browserState.activeView);
+        history.replaceState(null, '', url);
+      }
       if (destination === 'review') {
         browserState.mode = 'review';
         browserState.activeStage = dashboardNav.dataset.stage || 'settle';
@@ -3067,6 +3752,45 @@ function bindBrowserEvents() {
     }
   });
   root.addEventListener('change', async (event) => {
+    if(event.target.matches('[data-review-month],[data-review-month-jump]')) {
+      const date=reviewMonthDate(event.target.value);
+      if(date) await selectReview({date});
+      return;
+    }
+    if (event.target.matches('[data-sandbox-control]')) {
+      browserState.foundationUi = reduceFoundationUiState(browserState.foundationUi, {
+        type: 'set_control',
+        id: event.target.dataset.sandboxControl,
+        value: event.target.value,
+      });
+      renderBrowser();
+      return;
+    }
+    if (event.target.matches('[data-foundation-date]')) {
+      browserState.activeView = 'data-sources';
+      if(browserState.payload?.demoMode) await loadWorkbench(event.target.value);
+      else await selectReview({date:event.target.value});
+      return;
+    }
+    if (event.target.matches('[data-history-filter]')) {
+      const controls = root.querySelectorAll('[data-history-filter]');
+      const values = Object.fromEntries(Array.from(controls).map((control) => [control.dataset.historyFilter, control.value]));
+      const parameters = new URLSearchParams({ limit: '1000' });
+      if (values.from) parameters.set('from', values.from);
+      if (values.to) parameters.set('to', values.to);
+      if (values.field) parameters.set('fieldId', values.field);
+      if (values.source) parameters.set('sourceId', values.source);
+      try {
+        browserState.historyFacts = await fetch(`/api/history/facts?${parameters}`, { cache: 'no-store' }).then(responseJson);
+        if(browserState.reviewState?.report) browserState.reviewState.report.historyFacts=browserState.historyFacts;
+        if (browserState.historyMode === 'evidence') await loadHistoryCaptures();
+        browserState.actionMessage = `已加载 ${browserState.historyFacts.rows?.length || 0} 条基础数据历史。`;
+      } catch (error) {
+        browserState.error = `历史查询失败：${error.message}`;
+      }
+      renderBrowser();
+      return;
+    }
     if (event.target.matches('[data-date-input]')) {
       const previousStage = browserState.activeStage;
       await loadWorkbench(event.target.value);
@@ -3077,6 +3801,37 @@ function bindBrowserEvents() {
     }
   });
   root.addEventListener('keydown', (event) => {
+    const foundationDisclosureOpen =
+      browserState.foundationUi.explanation || browserState.foundationUi.provenanceOpen;
+    if (foundationDisclosureOpen && event.key === 'Escape') {
+      event.preventDefault();
+      closeFoundationDisclosure();
+      return;
+    }
+    if (foundationDisclosureOpen && event.key === 'Tab') {
+      const foundationDrawer = browserState.foundationUi.provenanceOpen
+        ? root.querySelector('.foundation-provenance')
+        : root.querySelector('.foundation-evidence-drawer');
+      const focusable = foundationDrawer
+        ? Array.from(
+            foundationDrawer.querySelectorAll(
+              'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          )
+        : [];
+      if (!foundationDrawer || !focusable.length) return;
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !foundationDrawer.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+      return;
+    }
     if (!browserState.evidenceOpen) return;
     const drawer = root.querySelector('.evidence-drawer');
     if (!drawer) return;
@@ -3110,6 +3865,9 @@ function bindBrowserEvents() {
 }
 
 if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange',syncCollectionPolling);
+  window.addEventListener('pagehide',()=>collectorStatusPoller.stop());
+  window.addEventListener('pageshow',syncCollectionPolling);
   bindBrowserEvents();
   loadWorkbench();
 }

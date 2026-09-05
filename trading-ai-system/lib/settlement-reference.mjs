@@ -56,14 +56,16 @@ export async function buildSettlementReference(options = {}) {
       windowsHide: true,
     });
 
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString('utf8');
+      stdout += chunk;
     });
     child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString('utf8');
+      stderr += chunk;
     });
     child.on('error', reject);
-    child.on('exit', (code) => {
+    child.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`settlement reference build exited ${code}: ${stderr || stdout}`));
         return;

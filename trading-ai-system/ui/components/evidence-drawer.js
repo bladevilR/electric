@@ -1,2 +1,4 @@
-const esc=(v)=>String(v??'—').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function renderEvidenceDrawer(e={}){const rows=[['来源',e.sourceId],['原始表头',e.rawHeader],['原始值',e.rawValue],['标准值',e.value],['单位转换',e.conversionVersion],['发布时间',e.publishedAt],['目标时刻',e.eventTime],['采集时间',e.capturedAt],['数据版本',e.revision||e.sourceRevision],['质量状态',e.qualityStatus]];return `<aside class="cockpit-evidence" role="dialog" aria-modal="true" aria-label="数值证据"><button data-close-evidence aria-label="关闭证据">×</button><h2>证据链</h2><dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl></aside>`;}
+import {escapeText as esc,sourceLabel,fieldLabel,dateTime,statusLabel,unitLabel} from '../presentation-language.js';
+export function renderEvidenceDrawer(e={}) {
+  return `<aside class="cockpit-evidence" role="dialog" aria-modal="true" aria-label="数值来源"><button data-close-evidence aria-label="关闭来源说明">关闭</button><h2>这个数从哪里来</h2><dl><dt>数据项目</dt><dd>${esc(fieldLabel(e.fieldId))}</dd><dt>来源</dt><dd>${esc(sourceLabel(e.sourceId))}</dd><dt>数值</dt><dd>${typeof e.value==='number'?esc(e.value):'暂无可用数值'} ${esc(unitLabel(e.unit))}</dd><dt>发布时间</dt><dd>${dateTime(e.publishedAt)}</dd><dt>取得时间</dt><dd>${dateTime(e.capturedAt)}</dd><dt>核对结果</dt><dd>${statusLabel(e.qualityStatus)}</dd></dl></aside>`;
+}

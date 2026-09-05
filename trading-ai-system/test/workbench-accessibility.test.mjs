@@ -38,6 +38,14 @@ async function startServer() {
       'server.mjs',
       '--port',
       String(port),
+      '--evidence-store',
+      path.join(temp, 'evidence.sqlite'),
+      '--point-in-time-store',
+      path.join(temp, 'facts.json'),
+      '--forecast-ledger',
+      path.join(temp, 'forecast.json'),
+      '--outcome-ledger',
+      path.join(temp, 'outcomes.json'),
       '--audit',
       path.join(temp, 'audit.ndjson'),
       '--visible-snapshot',
@@ -202,7 +210,7 @@ test(
         await page.goto(`${server.baseUrl}/?demo=submission&v=forecast-scroll-test`, {
           waitUntil: 'networkidle',
         });
-        await page.getByRole('button', { name: '价格预测' }).click();
+        await page.getByRole('button', { name: '价格预测', exact: true }).click();
         await page.waitForSelector('.forecast-table-region');
         const metrics = await page.locator('.forecast-table-region').evaluate((element) => ({
           clientWidth: element.clientWidth,

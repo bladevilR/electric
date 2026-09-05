@@ -164,6 +164,67 @@ test('forecast accuracy API isolates live and replay ledgers', async () => {
   } finally { await server.close(); }
 });
 
+test('strategy trace derives stage support only from cutoff-safe facts and live forecast runs', async () => {
+  const server = await startServer();
+  try {
+    const store = appendFact(emptyStore(), {
+      sourceId: 'JSPEC-P0-3',
+      fieldId: 'realTimeAvgPriceCurrentYuanPerMwh',
+      businessDate: '2026-09-03',
+      pointIndex: 1,
+      value: 318.5,
+      availableAt: '2026-09-03T08:00:00+08:00',
+      capturedAt: '2026-09-03T08:01:00+08:00',
+      sourceRevision: 'r1',
+    });
+    await writePointInTimeStoreAtomic(server.pointInTimeStorePath, store);
+    const run = createForecastRun({
+      forecastRunId: 'live-price-1',
+      forecastRunType: 'live_issued',
+      targetField: 'realTimeAvgPrice',
+      targetTradingDate: '2026-09-03',
+      forecastGeneratedAt: '2026-09-03T08:15:00+08:00',
+      decisionCutoffAt: '2026-09-03T08:00:00+08:00',
+      featureSnapshotId: 'fs-price-1',
+      featureVersion: 'feature-v1',
+      modelId: 'seasonal-median',
+      modelVersion: 'price-v9',
+      codeCommitSha: 'abc1234',
+      trainingStartDate: '2026-08-01',
+      trainingEndDate: '2026-09-02',
+      backtestSplitLabel: 'live',
+      inputCompletenessPct: 100,
+      rows: [{ pointIndex: 1, pointForecast: 320, inputCompletenessPct: 100 }],
+    });
+    await writeForecastLedgerAtomic(
+      server.forecastLedgerPath,
+      appendForecastRun({ version: 1, runs: [] }, run)
+    );
+
+    const response = await fetch(
+      `${server.baseUrl}/api/strategy/trace?date=2026-09-03&pointIndex=1&asOf=${encodeURIComponent(
+        '2026-09-03T09:00:00+08:00'
+      )}`
+    );
+    const trace = await response.json();
+    const evidence = trace.stages.find((stage) => stage.id === 'evidence');
+    const price = trace.stages.find((stage) => stage.id === 'price');
+    const load = trace.stages.find((stage) => stage.id === 'load');
+
+    assert.equal(response.status, 200);
+    assert.equal(evidence.status, 'available');
+    assert.deepEqual(evidence.conclusion.inputRefs, [store.facts[0].factId]);
+    assert.equal(price.status, 'available');
+    assert.deepEqual(price.conclusion.forecastRunIds, ['live-price-1']);
+    assert.deepEqual(price.conclusion.modelVersions, ['price-v9']);
+    assert.equal(price.conclusion.featureSnapshotId, 'fs-price-1');
+    assert.equal(load.status, 'unavailable');
+    assert.equal(load.conclusion.conclusionId, null);
+  } finally {
+    await server.close();
+  }
+});
+
 function visibleSnapshot(date, price) {
   return {
     source: 'visible_page_snapshot',

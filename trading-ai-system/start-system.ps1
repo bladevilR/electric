@@ -3,6 +3,7 @@ param(
   [string]$Standard = "",
   [string]$NodePath = "",
   [string]$LogFile = "",
+  [string]$OpenUrl = "",
   [switch]$NoBrowser,
   [switch]$NoPause,
   [int]$KeepAliveSeconds = 0
@@ -220,7 +221,15 @@ if (-not $node) {
 }
 
 Write-StartupMessage "Using Node runtime: $node"
-$workbenchUrl = "http://127.0.0.1:$Port/?demo=submission&v=20260830-workstation-v12"
+$workbenchUrl = if ($OpenUrl) {
+  $OpenUrl
+} else {
+  "http://127.0.0.1:$Port/?demo=submission&v=20260830-workstation-v12"
+}
+$localUrlPrefix = "http://127.0.0.1:$Port/"
+if (-not $workbenchUrl.StartsWith($localUrlPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+  Stop-Startup -Message "The requested workbench URL is not local." -Details "Expected a URL beginning with: $localUrlPrefix"
+}
 $healthUrl = "http://127.0.0.1:$Port/api/health"
 
 try {

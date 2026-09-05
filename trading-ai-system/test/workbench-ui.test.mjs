@@ -22,6 +22,30 @@ test('collector failure message exposes the concrete browser collection error', 
   );
 });
 
+test('dedicated browser start message does not call an unrecognized JSPEC page connected', () => {
+  assert.equal(typeof workbenchModule.buildCollectorBrowserStartMessage, 'function');
+  assert.equal(
+    workbenchModule.buildCollectorBrowserStartMessage({ state: 'page_changed' }),
+    '专用 Chrome 已打开并置前；请在其中打开 JSPEC 业务数据页面。'
+  );
+  assert.equal(
+    workbenchModule.buildCollectorBrowserStartMessage({ state: 'ready' }),
+    '专用 Chrome 已置前并连接。'
+  );
+});
+
+test('backfill prerequisite message distinguishes a business-page issue from missing login', () => {
+  assert.equal(typeof workbenchModule.buildCollectorBackfillPrerequisiteMessage, 'function');
+  assert.equal(
+    workbenchModule.buildCollectorBackfillPrerequisiteMessage({ state: 'page_changed' }),
+    '你已经登录；请在专用 Chrome 中进入任一 JSPEC 业务数据页面，然后再次点击“开始全量回填”。'
+  );
+  assert.equal(
+    workbenchModule.buildCollectorBackfillPrerequisiteMessage({ state: 'login_required' }),
+    '请在专用 Chrome 中完成 UKey 登录；登录后再次点击“开始全量回填”。'
+  );
+});
+
 test('pending action gate rejects repeat dispatch until the first action is released', () => {
   const state = { pendingAction: '' };
   assert.equal(
@@ -713,6 +737,16 @@ test('dashboard exposes only functional navigation actions', () => {
   assert.equal((html.match(/data-dashboard-nav=/g) || []).length, 5);
   assert.match(html, /data-action="open-evidence"/);
   assert.doesNotMatch(html, /href="#"/);
+});
+
+test('secondary cockpit pages opt into the light workflow surface', () => {
+  const html = renderWorkbenchMarkup(blockedPayload(), {
+    mode: 'operation',
+    activeView: 'price-forecast',
+    evidenceOpen: false,
+  });
+
+  assert.match(html, /class="cockpit-experience is-workflow"/);
 });
 
 test('price forecast stage shows five-day readiness without inventing predictions', () => {
