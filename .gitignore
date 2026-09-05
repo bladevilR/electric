@@ -87,3 +87,9 @@ trading-ai-system/output/system-delivery-20260903/*.zip
 trading-ai-system/output/system-delivery-20260904/staging/
 trading-ai-system/output/system-delivery-20260904/verify-extracted/
 trading-ai-system/output/system-delivery-20260904/*.zip
+
+# SQLite database files and runtime journals
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
